@@ -149,6 +149,15 @@ static gks_state_list_t *gkss;
 
 static double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
 
+#ifndef _WIN32
+enum background_t
+{
+  BACKGROUND_NONE,
+  BACKGROUND_DARK,
+  BACKGROUND_LIGHT,
+};
+#endif
+
 typedef unsigned char Byte;
 typedef unsigned long uLong;
 
@@ -161,8 +170,10 @@ typedef struct ws_state_list_t
 {
   int conid, state, wtype;
 #ifndef _WIN32
+  enum background_t background;
   enum tmux_state_t have_tmux;
   unsigned int image_id_prefix;
+  int scroll;
 #endif
   double mw, mh;
   int w, h, dpi;
@@ -192,7 +203,6 @@ typedef struct ws_state_list_t
 #endif
   int npoints, max_points;
   int empty, current_page_written, page_counter;
-  int scroll;
   double rect[MAX_TNR][2][2];
   unsigned char *patterns;
   int pattern_counter, use_symbols;
@@ -1128,6 +1138,20 @@ static void open_page(void)
            p->wtype == 150 || p->wtype == 151 || p->wtype == 152 || p->wtype == 153)
     {
       p->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, p->width, p->height);
+#ifndef _WIN32
+      if (p->background != BACKGROUND_NONE && p->wtype >= 151 && p->wtype <= 153)
+        {
+          /* For terminal output only: fill the background with white or black */
+          cairo_t *cr;
+          cr = cairo_create(p->surface);
+          if (p->background == BACKGROUND_LIGHT)
+            cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 1.0);
+          else
+            cairo_set_source_rgba(cr, 0.0, 0.0, 0.0, 1.0);
+          cairo_paint(cr);
+          cairo_destroy(cr);
+        }
+#endif
     }
   if (p->wtype == 142)
     {
@@ -2558,7 +2582,38 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->empty = 1;
       p->current_page_written = 1;
       p->page_counter = 0;
+#ifndef _WIN32
+      {
+        const char *background = gks_getenv("GKS_BACKGROUND");
+        p->background = -1;
+        if (background != NULL)
+          {
+            if (strcmp(background, "light") == 0)
+              p->background = BACKGROUND_LIGHT;
+            else if (strcmp(background, "dark") == 0)
+              p->background = BACKGROUND_DARK;
+            else if (strcmp(background, "none") == 0)
+              p->background = BACKGROUND_NONE;
+          }
+        /* Auto-detect suited background in terminal mode if not set by user */
+        if (p->background == -1 && p->wtype >= 151 && p->wtype <= 153)
+          {
+            p->background = is_dark_term() ? BACKGROUND_DARK : BACKGROUND_LIGHT;
+          }
+        /* Swap default foreground and background color in dark mode */
+        /* TODO: Put this into a separate colortheme function? */
+        if (p->background == BACKGROUND_DARK)
+          {
+            double r0, g0, b0;
+            double r1, g1, b1;
+            gks_inq_rgb(0, &r0, &g0, &b0);
+            gks_inq_rgb(1, &r1, &g1, &b1);
+            gks_set_rgb(0, r1, g1, b1);
+            gks_set_rgb(1, r0, g0, b0);
+          }
+      }
       p->scroll = gks_getenv("GKS_SCROLL_ITERM") != NULL;
+#endif
 
       p->transparency = 1.0;
       p->linewidth = p->nominal_size;
@@ -2610,7 +2665,18 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       lock();
       cairo_save(p->cr);
       cairo_reset_clip(p->cr);
-      cairo_set_operator(p->cr, CAIRO_OPERATOR_CLEAR);
+#ifndef _WIN32
+      /* For terminal output only: fill the background with white */
+      if (p->background != BACKGROUND_NONE && p->wtype >= 151 && p->wtype <= 153)
+        {
+          if (p->background == BACKGROUND_LIGHT)
+            cairo_set_source_rgba(p->cr, 1.0, 1.0, 1.0, 1.0);
+          else
+            cairo_set_source_rgba(p->cr, 0.0, 0.0, 0.0, 1.0);
+        }
+      else
+#endif
+        cairo_set_operator(p->cr, CAIRO_OPERATOR_CLEAR);
       cairo_paint(p->cr);
       cairo_restore(p->cr);
       p->empty = 1;

@@ -28,7 +28,9 @@ HIDDEN int have_iterm(void);
 HIDDEN int have_kitty(void);
 HIDDEN enum kitty_image_protocol_support_t have_kitty_image_protocol(void);
 HIDDEN enum tmux_state_t have_tmux(void);
+HIDDEN int is_dark_term(void);
 HIDDEN int term_size(int *rows, int *cols, int *width, int *height);
+HIDDEN int term_background_color(int *r, int *g, int *b);
 
 #undef HIDDEN
 

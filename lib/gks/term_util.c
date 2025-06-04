@@ -276,6 +276,20 @@ enum tmux_state_t have_tmux(void)
   return in_tmux;
 }
 
+int is_dark_term(void)
+{
+  int r, g, b;
+
+  if (!term_background_color(&r, &g, &b))
+    {
+      /* If term background color couldn't be read, assume it's light */
+      return 0;
+    }
+
+  /* Formula taken from <https://www.w3.org/TR/AERT/#color-contrast> */
+  return 0.299 * r + 0.587 * g + 0.114 * b < 128;
+}
+
 int term_size(int *rows, int *cols, int *width, int *height)
 {
   char *resp;
@@ -304,5 +318,38 @@ int term_size(int *rows, int *cols, int *width, int *height)
     }
 
   return read_term_size;
+}
+
+int term_background_color(int *r, int *g, int *b)
+{
+  char *resp;
+  int read_background_color = 0;
+  int r_, g_, b_;
+
+  if (have_kitty())
+    {
+      /* kitty will respond with `21;background=rgb:rr/gg/bb` */
+      resp = send_control_sequence(']', "21;background=?", NULL);
+      if (resp != NULL && sscanf(resp, "21;background=rgb:%2x/%2x/%2x", &r_, &g_, &b_) == 3) read_background_color = 1;
+    }
+  else
+    {
+      /*
+       * xterm compatible terminals should respond with `11;rgb:rrrr/gggg/bbbb`
+       * Only the first two values for each color channel need to be read.
+       */
+      resp = send_control_sequence(']', "11;?", NULL);
+      if (resp != NULL && sscanf(resp, "11;rgb:%2x%*x/%2x%*x/%2x%*x", &r_, &g_, &b_) == 3) read_background_color = 1;
+    }
+  free(resp);
+
+  if (read_background_color)
+    {
+      if (r != NULL) *r = r_;
+      if (g != NULL) *g = g_;
+      if (b != NULL) *b = b_;
+    }
+
+  return read_background_color;
 }
 #endif

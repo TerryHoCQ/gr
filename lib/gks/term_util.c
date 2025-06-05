@@ -230,17 +230,19 @@ enum kitty_image_protocol_support_t have_kitty_image_protocol(void)
 enum tmux_state_t have_tmux(void)
 {
   static enum tmux_state_t in_tmux = -1;
-  const char *term_env_var = NULL;
+  const char *tmux_env_var = NULL, *term_env_var = NULL;
 
   if (in_tmux != -1) return in_tmux;
 
   in_tmux = NO_TMUX;
 
+  tmux_env_var = gks_getenv("TMUX");
   term_env_var = gks_getenv("TERM");
-  if (term_env_var != NULL && (strncmp(term_env_var, "screen", 6) == 0 || strncmp(term_env_var, "tmux", 4) == 0))
+  if (tmux_env_var != NULL ||
+      (term_env_var != NULL && (strncmp(term_env_var, "screen", 6) == 0 || strncmp(term_env_var, "tmux", 4) == 0)))
     {
       /* Check if the tmux session is running locally, otherwise the server cannot be queried */
-      if (gks_getenv("TMUX") != NULL)
+      if (tmux_env_var != NULL)
         {
           FILE *fp;
           char client_termname[80];

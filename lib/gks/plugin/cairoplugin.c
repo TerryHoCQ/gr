@@ -1844,6 +1844,18 @@ static void write_page(void)
       b64_string = (char *)gks_malloc(b64_size);
       gks_base64(string, size, b64_string, b64_size);
 
+      if (!p->scroll)
+        {
+          /*
+           * If scrolling is disabled and it is not the first page then move the cursor up and clear the screen below it
+           * to overwrite the previous graphics
+           */
+          if (p->page_counter > 1)
+            {
+              fprintf(stdout, "\033[%dF", HEIGHT_IN_CELLS); /* Move up `HEIGHT_IN_CELLS` lines */
+            }
+          fputs("\033[J", stdout); /* Clear the screen below the cursor */
+        }
       if (p->wtype == 153)
         {
           /*
@@ -1884,18 +1896,7 @@ static void write_page(void)
             {
               fprintf(stdout, "\n"); /* only `\n` creates new lines on the screen */
             }
-          fprintf(stdout, "\033[%dA", HEIGHT_IN_CELLS); /* Move up `HEIGHT_IN_CELLS` lines */
-        }
-      else if (p->wtype == 151 && !p->scroll)
-        {
-          if (p->page_counter == 1)
-            {
-              fputs("\033[H\033[J", stdout);
-            }
-          else
-            {
-              fputs("\033[H", stdout);
-            }
+          fprintf(stdout, "\033[%dF", HEIGHT_IN_CELLS); /* Move up `HEIGHT_IN_CELLS` lines */
         }
       if (p->have_tmux) send_tmux_escape_sequence_start();
       if (p->wtype == 151)
@@ -1942,18 +1943,22 @@ static void write_page(void)
               fputs("\\", stdout);
             }
         }
-      if (p->have_tmux)
+      if (p->have_tmux) send_tmux_escape_sequence_end();
+      if (p->wtype != 153)
         {
-          send_tmux_escape_sequence_end();
-          /*
-           * tmux does not recognize the drawn image and reserves no space for it
-           * -> place the cursor at the end of the drawn image
-           */
-          if (p->wtype != 153) fprintf(stdout, "\033[%dB", HEIGHT_IN_CELLS); /* Move down `HEIGHT_IN_CELLS` lines */
-        }
-      else if (p->wtype == 151 && !p->scroll)
-        {
-          fprintf(stdout, "\033[%dH\n", HEIGHT_IN_CELLS);
+          if (p->have_tmux)
+            {
+              /*
+               * tmux does not recognize the drawn image and reserves no space for it
+               * -> place the cursor at the end of the drawn image
+               */
+              fprintf(stdout, "\033[%dE", HEIGHT_IN_CELLS); /* Move down `HEIGHT_IN_CELLS` lines */
+            }
+          else
+            {
+              /* Without tmux, the cursor is right of the drawn image, so end the line with a newline */
+              fputs("\n", stdout);
+            }
         }
       fflush(stdout);
 

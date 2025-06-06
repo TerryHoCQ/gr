@@ -1,5 +1,4 @@
 #ifdef __unix__
-/* Needed for popen function */
 #define _POSIX_C_SOURCE 200112L
 #endif
 
@@ -10,9 +9,9 @@
 #include <math.h>
 
 #ifndef _WIN32
-#include <termios.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
+#include "term_util.h"
 #else
 #include <io.h>
 #endif
@@ -62,15 +61,6 @@
   xn = gkss->a[tnr] * (xw);                \
   yn = gkss->c[tnr] * (yw)
 
-#ifndef _WIN32
-enum tmux_state_t
-{
-  NO_TMUX = 0,
-  SINGLE_TMUX_SESSION,
-  NESTED_TMUX_SESSION
-};
-#endif
-
 struct wstypes_t
 {
   const char *name;
@@ -78,13 +68,14 @@ struct wstypes_t
 };
 
 static struct wstypes_t wstypes[] = {
-    {"win", 41},       {"ps", 62},     {"eps", 62},       {"nul", 100},      {"pdf", 102},      {"mov", 120},
-    {"gif", 130},      {"apng", 131},  {"cairopng", 140}, {"cairox11", 141}, {"cairojpg", 144}, {"cairobmp", 145},
-    {"cairotif", 146}, {"six", 150},   {"iterm", 151},    {"kitty", 152},    {"mp4", 160},      {"webm", 161},
-    {"ogg", 162},      {"x11", 211},   {"pgf", 314},      {"bmp", 145},      {"jpeg", 144},     {"jpg", 144},
-    {"png", 140},      {"tiff", 146},  {"tif", 146},      {"gtk", 142},      {"wx", 380},       {"qt", 381},
-    {"svg", 382},      {"wmf", 390},   {"quartz", 400},   {"socket", 410},   {"sock", 410},     {"gksqt", 411},
-    {"qtcairo", 412},  {"qtagg", 413}, {"zmq", 415},      {"gl", 420},       {"opengl", 420},   {"ppm", 170}};
+    {"win", 41},       {"ps", 62},       {"eps", 62},       {"nul", 100},      {"pdf", 102},        {"mov", 120},
+    {"gif", 130},      {"apng", 131},    {"cairopng", 140}, {"cairox11", 141}, {"cairojpg", 144},   {"cairobmp", 145},
+    {"cairotif", 146}, {"six", 150},     {"iterm", 151},    {"kitty", 152},    {"kitty-utf8", 153}, {"mp4", 160},
+    {"webm", 161},     {"ogg", 162},     {"x11", 211},      {"pgf", 314},      {"bmp", 145},        {"jpeg", 144},
+    {"jpg", 144},      {"png", 140},     {"tiff", 146},     {"tif", 146},      {"gtk", 142},        {"wx", 380},
+    {"qt", 381},       {"svg", 382},     {"wmf", 390},      {"quartz", 400},   {"socket", 410},     {"sock", 410},
+    {"gksqt", 411},    {"qtcairo", 412}, {"qtagg", 413},    {"zmq", 415},      {"gl", 420},         {"opengl", 420},
+    {"ppm", 170}};
 
 static int num_wstypes = sizeof(wstypes) / sizeof(wstypes[0]);
 
@@ -1613,157 +1604,6 @@ static int have_gksqt(void)
   return result != -1;
 }
 
-#ifndef _WIN32
-
-static struct termios saved_term;
-
-static void makeraw(void)
-{
-  struct termios term;
-
-  term = saved_term;
-
-  term.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
-  term.c_oflag &= ~OPOST;
-  term.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
-  term.c_cflag &= ~(CSIZE | PARENB);
-  term.c_cflag |= CS8;
-  term.c_cc[VMIN] = 0;
-  term.c_cc[VTIME] = 2; /* 200ms */
-
-  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &term) < 0)
-    {
-      perror("tcsetattr");
-    }
-}
-
-static enum tmux_state_t have_tmux(void)
-{
-  const char *term_env_var = gks_getenv("TERM");
-  if (term_env_var == NULL)
-    {
-      return NO_TMUX;
-    }
-
-  if (strncmp(term_env_var, "screen", 6) == 0 || strncmp(term_env_var, "tmux", 4) == 0)
-    {
-      /* Check if the tmux session is running locally, otherwise the server cannot be queried */
-      if (gks_getenv("TMUX") != NULL)
-        {
-          FILE *fp;
-          char client_termname[80];
-
-          /* Inside tmux we can query the tmux server for the outer terminal name */
-          fp = popen("tmux display -p '#{client_termname}'", "r");
-          if (fp == NULL)
-            {
-              /* Reading failed, assume a single tmux session */
-              return SINGLE_TMUX_SESSION;
-            }
-          /* Read the output a line at a time - output it. */
-          if (fgets(client_termname, sizeof(client_termname), fp) == NULL)
-            {
-              /* Reading failed, assume a single tmux session */
-              return SINGLE_TMUX_SESSION;
-            }
-          pclose(fp);
-          return (strncmp(client_termname, "screen", 6) == 0 || strncmp(client_termname, "tmux", 4) == 0)
-                     ? NESTED_TMUX_SESSION
-                     : SINGLE_TMUX_SESSION;
-        }
-      return SINGLE_TMUX_SESSION;
-    }
-
-  return NO_TMUX;
-}
-
-static int have_iterm(void)
-{
-  char *req;
-  int cc, len = 0;
-  char s[81];
-
-  switch (have_tmux())
-    {
-    case NESTED_TMUX_SESSION:
-      req = "\033Ptmux;\033\033Ptmux;\033\033\033\033]1337;ReportCellSize\a\033\033\\\033\\";
-      break;
-    case SINGLE_TMUX_SESSION:
-      req = "\033Ptmux;\033\033]1337;ReportCellSize\a\033\\";
-      break;
-    default:
-      req = "\033]1337;ReportCellSize\a";
-      break;
-    }
-
-  if (isatty(STDIN_FILENO))
-    {
-      tcgetattr(STDIN_FILENO, &saved_term);
-      makeraw();
-
-      write(STDOUT_FILENO, req, strlen(req));
-      fflush(stdout);
-
-      while ((cc = read(STDIN_FILENO, s + len, 1)) == 1 && len < 80)
-        {
-          if (s[len++] == '\\') break;
-        }
-      s[len] = '\0';
-
-      tcsetattr(STDIN_FILENO, TCSAFLUSH, &saved_term);
-
-      return strstr(s, "1337;ReportCellSize=") != NULL ? 1 : 0;
-    }
-
-  return 0;
-}
-
-static int have_kitty(void)
-{
-  char *req;
-  int cc, len = 0;
-  char s[81];
-
-  switch (have_tmux())
-    {
-    case NESTED_TMUX_SESSION:
-      req = "\033Ptmux;\033\033Ptmux;\033\033\033\033P+q544e\033\033\033\033\\\033\033\\\033\\";
-      break;
-    case SINGLE_TMUX_SESSION:
-      req = "\033Ptmux;\033\033P+q544e\033\033\\\033\\";
-      break;
-    default:
-      /*
-       * Query the termcap name of the terminal emulator, will return `xterm-kitty` for kitty
-       * More details on <https://github.com/kovidgoyal/kitty/issues/957#issuecomment-420328980>
-       */
-      req = "\033P+q544e\033\\";
-      break;
-    }
-
-  if (isatty(STDIN_FILENO))
-    {
-      tcgetattr(STDIN_FILENO, &saved_term);
-      makeraw();
-
-      write(STDOUT_FILENO, req, strlen(req));
-      fflush(stdout);
-
-      while ((cc = read(STDIN_FILENO, s + len, 1)) == 1 && len < 80)
-        {
-          if (s[len++] == '\\') break;
-        }
-      s[len] = '\0';
-
-      tcsetattr(STDIN_FILENO, TCSAFLUSH, &saved_term);
-
-      /* `787465726d2d6b69747479` is the hex-encoded string `xterm-kitty` */
-      return strcmp(s, "\033P1+r544e=787465726d2d6b69747479\033\\") == 0;
-    }
-
-  return 0;
-}
-#endif
 
 static int get_default_ws_type(void)
 {
@@ -1787,8 +1627,8 @@ static int get_default_ws_type(void)
         {
           if (have_iterm())
             default_wstype = 151;
-          else if (have_kitty())
-            default_wstype = 152;
+          else if (have_kitty_image_protocol())
+            default_wstype = have_kitty_image_protocol() == KITTY_IMAGE_PROTOCOL_WITH_UNICODE_PLACEHOLDERS ? 153 : 152;
 #ifdef __APPLE__
           else if (access("/dev/console", R_OK) == 0)
             default_wstype = have_gksqt() ? 411 : 400;

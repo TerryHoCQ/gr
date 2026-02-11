@@ -438,7 +438,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
           else
             {
               std::cerr << "Unable to open test commands file" << std::endl;
-              QApplication::quit();
+              exit(1);
             }
         }
     }

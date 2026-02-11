@@ -1424,8 +1424,8 @@ if((Qt6Widgets_FOUND
     include(GenPreviewImages)
     include(ImportIconImages)
 
-    add_executable(
-      grplot WIN32 MACOSX_BUNDLE
+    add_library(
+      grplotGUI SHARED
       "${CMAKE_CURRENT_BINARY_DIR}/grplot.qrc"
       "${CMAKE_CURRENT_BINARY_DIR}/grplot_icon.qrc"
       lib/grm/grplot/CollapsibleSection.cxx
@@ -1441,8 +1441,8 @@ if((Qt6Widgets_FOUND
       lib/grm/grplot/gredit/SelectionListWidget.cxx
       lib/grm/grplot/gredit/TableWidget.cxx
       lib/grm/grplot/gredit/TreeWidget.cxx
-      lib/grm/grplot/GRPlot.cxx
       lib/grm/grplot/GRPlotDockWidget.cxx
+      lib/grm/grplot/GRPlotGUI.cxx
       lib/grm/grplot/GRPlotMainWindow.cxx
       lib/grm/grplot/GRPlotWidget.cxx
       lib/grm/grplot/qtterm/ArgsWrapper.cxx
@@ -1450,10 +1450,11 @@ if((Qt6Widgets_FOUND
       lib/grm/grplot/Threadpool.cxx
       lib/grm/grplot/Util.cxx
     )
-    add_dependencies(grplot grplot_preview_images)
+    add_dependencies(grplotGUI grplot_preview_images)
+    add_dependencies(grplotGUI grplot_icon_images)
     if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
       target_link_libraries(
-        grplot
+        grplotGUI
         PRIVATE GR::qt6gr
                 Qt6::Widgets
                 Qt6::Core
@@ -1462,10 +1463,10 @@ if((Qt6Widgets_FOUND
                 gr_shared
                 gks_shared
       )
-      set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt6_LIBRARY_DIR}")
+      set(grplotGUI_INSTALL_RPATH "${INSTALL_RPATH};${Qt6_LIBRARY_DIR}")
     else()
       target_link_libraries(
-        grplot
+        grplotGUI
         PRIVATE GR::qt5gr
                 Qt5::Widgets
                 Qt5::Core
@@ -1474,43 +1475,35 @@ if((Qt6Widgets_FOUND
                 gr_shared
                 gks_shared
       )
-      set(grplot_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
+      set(grplotGUI_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
     endif()
     if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC"))
       if(NOT EMSCRIPTEN)
-        target_link_libraries(grplot PRIVATE pthread)
+        target_link_libraries(grplotGUI PRIVATE pthread)
       endif()
     endif()
-    target_compile_definitions(grplot PRIVATE GRDIR="${GR_DIRECTORY}")
+    target_compile_definitions(grplotGUI PRIVATE GRDIR="${GR_DIRECTORY}")
     if(NOT TARGET XercesC::XercesC)
-      target_compile_definitions(grplot PRIVATE NO_XERCES_C)
+      target_compile_definitions(grplotGUI PRIVATE NO_XERCES_C)
     endif()
     set_target_properties(
-      grplot PROPERTIES CXX_STANDARD 17 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH
-                                                                                    "${grplot_INSTALL_RPATH}"
+      grplotGUI PROPERTIES CXX_STANDARD 17 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH
+                                                                                       "${grplotGUI_INSTALL_RPATH}"
     )
     if(WIN32)
       if(MINGW)
-        target_link_options(grplot PRIVATE -mconsole)
+        target_link_options(grplotGUI PRIVATE -mconsole)
       else()
-        target_link_options(grplot PRIVATE /SUBSYSTEM:CONSOLE)
+        target_link_options(grplotGUI PRIVATE /SUBSYSTEM:CONSOLE)
       endif()
-    elseif(APPLE)
-      add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/grplot
-        COMMAND ${CMAKE_COMMAND} -E create_symlink ../Applications/grplot.app/Contents/MacOS/grplot
-                ${CMAKE_CURRENT_BINARY_DIR}/grplot
-      )
-      add_custom_target(grplot_symlink DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/grplot)
-      add_dependencies(grplot grplot_symlink)
     endif()
     if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC"))
       if(NOT EMSCRIPTEN)
-        target_compile_options(grplot PRIVATE -pthread)
+        target_compile_options(grplotGUI PRIVATE -pthread)
       endif()
     endif()
     if(GR_MANUAL_MOC_AND_RCC)
-      set_target_properties(grplot PROPERTIES AUTOMOC OFF AUTORCC OFF)
+      set_target_properties(grplotGUI PROPERTIES AUTOMOC OFF AUTORCC OFF)
       if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
         set(MOC_INCLUDE_FLAGS ${QT6_MOC_INCLUDE_FLAGS})
       else()
@@ -1667,7 +1660,7 @@ if((Qt6Widgets_FOUND
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/Threadpool.hxx
       )
       target_sources(
-        grplot
+        grplotGUI
         PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_GRPlotDockWidget.cxx
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_GRPlotMainWindow.cxx
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_GRPlotWidget.cxx
@@ -1689,9 +1682,9 @@ if((Qt6Widgets_FOUND
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_Threadpool.cxx
       )
     else()
-      set_target_properties(grplot PROPERTIES AUTOMOC ON AUTORCC ON)
+      set_target_properties(grplotGUI PROPERTIES AUTOMOC ON AUTORCC ON)
       target_sources(
-        grplot
+        grplotGUI
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/GRPlotDockWidget.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/GRPlotMainWindow.hxx
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/GRPlotWidget.hxx
@@ -1713,19 +1706,84 @@ if((Qt6Widgets_FOUND
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/Threadpool.hxx
       )
     endif()
-    if(APPLE)
-      set_target_properties(grplot PROPERTIES MACOSX_BUNDLE_GUI_IDENTIFIER "de.fz-juelich.grplot")
-    endif()
     if(WIN32)
-      target_compile_definitions(grplot PRIVATE GR_STATIC_LIB)
+      target_compile_definitions(grplotGUI PRIVATE BUILDING_DLL)
     endif()
-    target_compile_options(grplot PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+    target_compile_options(grplotGUI PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  endif()
+  string(APPEND GR_REPORT "- grplotGUI: Yes\n")
+else()
+  string(APPEND GR_REPORT "- grplotGUI: No (Qt6 and Qt5 not found)\n")
+endif()
+
+if(NOT EMSCRIPTEN AND (NOT MINGW OR NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "i686"))
+  add_library(grplotConsole SHARED lib/grm/grplot/GRPlotConsole.cxx lib/grm/grplot/Util.cxx)
+  target_link_libraries(grplotConsole grm_shared gr_shared gks_shared)
+  set(grplotConsole_INSTALL_RPATH "${INSTALL_RPATH}")
+
+  target_compile_definitions(grplotConsole PRIVATE GRDIR="${GR_DIRECTORY}")
+  if(NOT TARGET XercesC::XercesC)
+    target_compile_definitions(grplotConsole PRIVATE NO_XERCES_C)
+  endif()
+  set_target_properties(
+    grplotConsole
+    PROPERTIES CXX_STANDARD 17 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH
+                                                                           "${grplotConsole_INSTALL_RPATH}"
+  )
+  if(WIN32)
+    if(MINGW)
+      target_link_options(grplotConsole PRIVATE -mconsole)
+    else()
+      target_link_options(grplotConsole PRIVATE /SUBSYSTEM:CONSOLE)
+    endif()
+  endif()
+  if(WIN32)
+    target_compile_definitions(grplotConsole PRIVATE BUILDING_DLL)
+  endif()
+  target_compile_options(grplotConsole PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  string(APPEND GR_REPORT "- grplotConsole: Yes\n")
+endif()
+
+if(NOT EMSCRIPTEN)
+  if((NOT MINGW OR NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "i686"))
+    add_executable(grplot WIN32 MACOSX_BUNDLE lib/grm/grplot/GRPlot.cxx lib/grm/grplot/Util.cxx)
+    if(grplotGUI)
+      add_dependencies(grplot grplotGUI)
+    endif()
+    if(grplotConsole)
+      add_dependencies(grplot grplotConsole)
+    endif()
+    if(UNIX)
+      target_link_libraries(grplot ${GKS_LINK_MODE} dl)
+    endif()
+
+    if(WIN32)
+      if(MINGW)
+        target_link_options(grplot PRIVATE -mconsole)
+      else()
+        target_link_options(grplot PRIVATE /SUBSYSTEM:CONSOLE)
+      endif()
+    elseif(APPLE)
+      set_target_properties(grplot PROPERTIES MACOSX_BUNDLE_GUI_IDENTIFIER "de.fz-juelich.grplot")
+      add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/grplot
+        COMMAND ${CMAKE_COMMAND} -E create_symlink ../Applications/grplot.app/Contents/MacOS/grplot
+                ${CMAKE_CURRENT_BINARY_DIR}/grplot
+      )
+      add_custom_target(grplot_symlink DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/grplot)
+      add_dependencies(grplot grplot_symlink)
+    endif()
+
+    set(grplot_INSTALL_RPATH "${INSTALL_RPATH}")
+    target_compile_definitions(grplot PRIVATE GRDIR="${GR_DIRECTORY}")
+    set_target_properties(
+      grplot PROPERTIES CXX_STANDARD 17 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH
+                                                                                    "${grplot_INSTALL_RPATH}"
+    )
   else()
     add_executable(grplot lib/grm/grplot/GRPlot.cxx)
   endif()
   string(APPEND GR_REPORT "- grplot: Yes\n")
-else()
-  string(APPEND GR_REPORT "- grplot: No (Qt6 and Qt5 not found)\n")
 endif()
 
 string(APPEND GR_REPORT "\nGRM integrations:\n")
@@ -2060,6 +2118,24 @@ if(GR_INSTALL)
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
   endif()
+  if(TARGET grplotGUI)
+    install(
+      TARGETS grplotGUI
+      EXPORT GRTargets
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+  endif()
+  if(TARGET grplotConsole)
+    install(
+      TARGETS grplotConsole
+      EXPORT GRTargets
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+  endif()
   install(
     EXPORT GRTargets
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/GR"
@@ -2152,6 +2228,20 @@ if(GR_INSTALL)
   if(TARGET grplotWidget)
     install(
       TARGETS grplotWidget
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+      BUNDLE DESTINATION Applications
+    )
+  endif()
+  if(TARGET grplotGUI)
+    install(
+      TARGETS grplotGUI
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+      BUNDLE DESTINATION Applications
+    )
+  endif()
+  if(TARGET grplotConsole)
+    install(
+      TARGETS grplotConsole
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
       BUNDLE DESTINATION Applications
     )

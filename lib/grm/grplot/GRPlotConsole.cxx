@@ -1,19 +1,73 @@
 #include "grm/import.h"
 #include "GRPlotConsole.hxx"
 #include "Util.hxx"
+#ifdef _WIN32
+#include <filesystem>
+#else
+#include <sys/wait.h>
+#endif
 
 int run(int argc, char **argv, bool pass, bool listen_mode, bool test_mode, bool help_mode, int width, int height,
         int listen_port, const std::string &test_commands_file_path)
 {
   if (help_mode)
     {
-      std::string line;
-      std::ifstream file(std::string(GRDIR) + "/share/doc/grplot/grplot.man.md");
+      auto manual_filepath = util::getEnvVar(W("GRDIR"), W(GRDIR)) + W("/share/doc/grplot/grplot.man.md");
+#ifndef _WIN32
+      auto print_manual = [&manual_filepath](int fd) {
+        std::ifstream file{manual_filepath};
+        std::string line;
 
+        while (getline(file, line))
+          {
+            write(fd, line.c_str(), line.length());
+            write(fd, "\n", 1);
+          }
+      };
+
+      bool showed_help_with_pager = [&print_manual]() {
+        if (!isatty(STDOUT_FILENO)) return false; // stdout is not connected to a terminal (probably to a pipe)
+        int pipe_fds[2];
+        if (pipe(pipe_fds) == -1) return false;
+
+        pid_t pid = fork();
+        if (pid == -1) return false;
+
+        if (pid == 0) // child process
+          {
+            // close unused write end
+            close(pipe_fds[1]);
+            // redirect stdin, so reads from stdin will read from the pipe's read end
+            dup2(pipe_fds[0], STDIN_FILENO);
+            // close unused read end, since stdin can be used now
+            close(pipe_fds[0]);
+            auto pager_cmd = util::getEnvVar("PAGER", "less");
+            execlp(pager_cmd.c_str(), pager_cmd.c_str(), nullptr);
+            // `execlp` completely replaces the current process, so if `exit` is reached, `execlp` failed
+            exit(1);
+          }
+        else // parent process
+          {
+            // close unused read end
+            close(pipe_fds[0]);
+            print_manual(pipe_fds[1]);
+            // signal EOF
+            close(pipe_fds[1]);
+            // wait for pager / child process to exit
+            wait(NULL);
+          }
+        return true;
+      }();
+      if (!showed_help_with_pager) print_manual(STDOUT_FILENO);
+#else
+      std::ifstream file{std::filesystem::path(manual_filepath)};
+      std::string line;
       while (getline(file, line))
         {
           std::cout << line << std::endl;
         }
+#endif
+
       return 1;
     }
 

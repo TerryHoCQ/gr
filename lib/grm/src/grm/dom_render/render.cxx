@@ -75,6 +75,7 @@ static bool first_call = true;
 static bool highlighted_attr_exist = false;
 static const char *grm_tmp_dir = nullptr;
 static bool enable_editor = false;
+static int plot_id = 0;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ utility functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -1853,6 +1854,11 @@ int *GRM::Render::getPreviousScatterMarkerType()
 int *GRM::Render::getPreviousLineMarkerType()
 {
   return previous_line_marker_type;
+}
+
+int *GRM::Render::getPlotID()
+{
+  return &plot_id;
 }
 
 bool GRM::Render::getViewport(const std::shared_ptr<GRM::Element> &element, double *xmin, double *xmax, double *ymin,

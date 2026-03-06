@@ -35,7 +35,7 @@ std::shared_ptr<GRM::Element> GRM::Creator::createPlot(int plot_id, const std::s
 {
   std::shared_ptr<GRM::Element> plot = (ext_element == nullptr) ? createElement("plot") : ext_element;
 
-  plot->setAttribute("_plot_id", "plot" + std::to_string(plot_id));
+  plot->setAttribute("plot_id", "plot" + std::to_string(plot_id));
   plot->setAttribute("plot_group", true);
 
   return plot;

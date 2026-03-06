@@ -73,7 +73,7 @@ public:
 
   virtual std::shared_ptr<Node> cloneNode();
 
-  virtual std::shared_ptr<Node> cloneNode(bool deep);
+  virtual std::shared_ptr<Node> cloneNode(bool deep, bool clear_bbox = false);
 
   virtual bool isEqualNode(const std::shared_ptr<const Node> &other_node) const;
 

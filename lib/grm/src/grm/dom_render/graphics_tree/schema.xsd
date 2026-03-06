@@ -169,6 +169,7 @@
             <xs:attribute name="max_y_length" type="xs:integer"/>
             <xs:attribute name="only_square_aspect_ratio" type="xs:integer"/>
             <xs:attribute name="plot_group" type="xs:integer"/>
+            <xs:attribute name="plot_id" type="xs:string" use="required"/>
             <xs:attribute name="polar_with_pan" type="xs:integer"/>
             <xs:attribute name="r_lim_max" type="xs:double"/>
             <xs:attribute name="r_lim_min" type="xs:double"/>
@@ -1591,6 +1592,7 @@
 
     <!-- definition of series attributes -->
     <xs:attributeGroup name="series">
+        <xs:attribute name="move_to_plot" type="xs:string"/>
         <xs:attribute name="ref_x_axis_location" type="strint"/>
         <xs:attribute name="ref_y_axis_location" type="strint"/>
     </xs:attributeGroup>

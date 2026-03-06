@@ -4,6 +4,8 @@
 #include "import_int.hxx"
 #include "util_int.h"
 #include "utilcpp_int.hxx"
+#include "grm/dom_render/graphics_tree/util.hxx"
+
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -22,6 +24,10 @@
  * called from `grm_finalize`.
  */
 static Vdr *reader = nullptr;
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ join_plots ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+static std::list<int> join_plot_numbers;
 
 /* ========================= functions ============================================================================== */
 
@@ -187,6 +193,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       std::vector<std::string> labels;
       std::vector<const char *> labels_c;
       std::vector<char *> tmp;
+      unsigned int kinds_length = 0;
+      char **kinds;
       PlotRange ranges = {INFINITY, INFINITY, INFINITY, INFINITY, INFINITY, INFINITY};
       auto start = plot_idx[plot_i];
       auto end = plot_idx[plot_i + 1];
@@ -210,7 +218,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           return 0;
         }
 
-      grm_args_values(plot[plot_i], "kind", "s", &kind);
+      grm_args_first_value(plot[plot_i], "kind", "nS", &kinds, &kinds_length);
+      kind = kinds[0]; // since all kinds are of the same group its okay to just use the first kind here
       if (plot_num == 1) grm_args_push(args, "kind", "s", kind);
       if (!strEqualsAny(kind, "barplot", "histogram", "line", "scatter", "stairs", "stem"))
         {
@@ -234,12 +243,6 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                        special_axis_series, input_flags))
         {
           return 0;
-        }
-
-      if (input_flags.default_kind_used)
-        {
-          grm_args_values(plot[plot_i], "kind", "s", &kind);
-          if (plot_num == 1) grm_args_push(args, "kind", "s", kind);
         }
 
       // convert grm_special_axis_series_t entries into int vector
@@ -275,6 +278,20 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           fprintf(stderr, "The number of columns (%zu) doesn't fit the number of labels (%zu)\n",
                   cols + x_data.size() + error_data.size(), labels.size());
         }
+      if (kinds_length > 0 && !error_data.empty())
+        {
+          for (int i = 1; i < kinds_length; i++)
+            {
+              if (strcmp(kinds[i], kind) != 0)
+                {
+                  fprintf(stderr,
+                          "Different kinds are only possible if no error data is given. Use kind %s for all series.\n",
+                          kind);
+                  grm_args_push(plot[plot_i], "kind", "s", kind);
+                  kinds = const_cast<char **>(&kind);
+                }
+            }
+        }
 
       series.resize(cols);
 
@@ -291,12 +308,14 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
           fprintf(stderr, "Too much data for %s plot - use heatmap instead\n", kind);
           kind = "heatmap";
           grm_args_push(plot[plot_i], "kind", "s", kind);
+          kinds = const_cast<char **>(&kind);
         }
       if (!strEqualsAny(kind, "isosurface", "quiver", "volume") && depth >= 1)
         {
           fprintf(stderr, "Too much data for %s plot - use volume instead\n", kind);
           kind = "volume";
           grm_args_push(plot[plot_i], "kind", "s", kind);
+          kinds = const_cast<char **>(&kind);
         }
 
       if (!strEqualsAny(kind, "contour", "contourf", "heatmap", "imshow", "marginal_heatmap", "surface", "wireframe"))
@@ -594,6 +613,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                   series[col] = grm_args_new();
                   setSeriesLocation(series, col, bottom_series, left_series, right_series, top_series, twin_x_series,
                                     twin_y_series);
+                  grm_args_push(series[col], "series_kind", "s",
+                                col < kinds_length ? kinds[col] : kinds[kinds_length - 1]);
                 }
             }
           else
@@ -607,6 +628,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                   series[col] = grm_args_new();
                   setSeriesLocation(series, col, bottom_series, left_series, right_series, top_series, twin_x_series,
                                     twin_y_series);
+                  grm_args_push(series[col], "series_kind", "s",
+                                col < kinds_length ? kinds[col] : kinds[kinds_length - 1]);
                   grm_args_push(series[col], "x", "nD", rows, x.data());
                   grm_args_push(series[col], "y", "nD", rows,
                                 file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)].data());
@@ -819,7 +842,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                 }
               else if (strEqualsAny(kind, "barplot"))
                 {
-                  if (strcmp(kind, "barplot") == 0) nbins = (int)rows;
+                  nbins = (int)rows;
                   if (nbins <= rows)
                     {
                       if (error_data.empty())
@@ -908,6 +931,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
               series[col] = grm_args_new();
               setSeriesLocation(series, col, bottom_series, left_series, right_series, top_series, twin_x_series,
                                 twin_y_series);
+              grm_args_push(series[col], "series_kind", "s", col < kinds_length ? kinds[col] : kinds[kinds_length - 1]);
             }
 
           // find min and max value of all x-data and make sure the all data points are inside that range
@@ -966,9 +990,9 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                   // special case for barplot cause the x-values and bar_width gets calculated via
                   // x_range_min and max; without the following code block all series will always have the same x and
                   // same width
-                  if (strEqualsAny(kind, "barplot"))
+                  for (col = 0; col < x_data.size(); ++col)
                     {
-                      for (col = 0; col < x_data.size(); ++col)
+                      if (strcmp(col < kinds_length ? kinds[col] : kinds[kinds_length - 1], "barplot") == 0)
                         {
                           xmin = *std::min_element(std::begin(file_data[depth][x_data[col] - 1]),
                                                    std::end(file_data[depth][x_data[col] - 1]));
@@ -1029,16 +1053,19 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                           std::begin(file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)]),
                           std::end(file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)])));
                 }
-              if (strEqualsAny(kind, "barplot", "stem")) ymin = grm_min(ymin, 0);
+              int cnt = 0;
               for (col = 0; col < cols; ++col)
                 {
                   if (std::find(x_data.begin(), x_data.end(), col + 1) != x_data.end()) continue;
                   if (std::find(error_data.begin(), error_data.end(), col + 1) != error_data.end()) continue;
+                  if (strEqualsAny(cnt < kinds_length ? kinds[cnt] : kinds[kinds_length - 1], "barplot", "stem"))
+                    ymin = grm_min(ymin, 0);
                   for (row = 0; row < rows; ++row)
                     {
                       file_data[depth][col][row] = ranges.ymin + (ranges.ymax - ranges.ymin) / (ymax - ymin) *
                                                                      ((double)file_data[depth][col][row] - ymin);
                     }
+                  cnt += 1;
                 }
               grm_args_push(plot[plot_i], "y_line_pos", "d",
                             ranges.ymin + (ranges.ymax - ranges.ymin) / (ymax - ymin) * (0.0 - ymin));
@@ -1060,7 +1087,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                                 file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)].data());
                   if (grm_args_values(plot[plot_i], "line_spec", "s", &spec))
                     grm_args_push(series[col], "line_spec", "s", spec);
-                  if (strEqualsAny(kind, "barplot") && series_num > 1)
+                  if (strEqualsAny(col < kinds_length ? kinds[col] : kinds[kinds_length - 1], "barplot") &&
+                      series_num > 1)
                     {
                       const char *style;
                       if (!grm_args_values(plot[plot_i], "style", "s", &style) || strcmp(style, "default") == 0)
@@ -1101,7 +1129,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                       grm_args_push(series[y_cnt], "z", "nD", rows, file_data[depth][col].data());
                       if (grm_args_values(plot[plot_i], "line_spec", "s", &spec))
                         grm_args_push(series[y_cnt], "line_spec", "s", spec);
-                      if (strEqualsAny(kind, "barplot") && series_num > 1)
+                      if (strEqualsAny(y_cnt < kinds_length ? kinds[y_cnt] : kinds[kinds_length - 1], "barplot") &&
+                          series_num > 1)
                         {
                           const char *style;
                           if (!grm_args_values(plot[plot_i], "style", "s", &style) || strcmp(style, "default") == 0)
@@ -1109,7 +1138,9 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                         }
                       y_cnt += 1;
                     }
-                  else if (!input_flags.equal_up_and_down_error && strEqualsAny(kind, "barplot") && error != nullptr &&
+                  else if (!input_flags.equal_up_and_down_error &&
+                           strEqualsAny(err_cnt < kinds_length ? kinds[err_cnt] : kinds[kinds_length - 1], "barplot") &&
+                           error != nullptr &&
                            std::find(filtered_error_columns.begin(), filtered_error_columns.end(), col + 1) ==
                                filtered_error_columns.end())
                     {
@@ -1531,6 +1562,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
               series[col / 2] = grm_args_new();
               grm_args_push(series[col / 2], "theta", "nD", rows, file_data[depth][col].data());
               grm_args_push(series[col / 2], "r", "nD", rows, file_data[depth][col + 1].data());
+              grm_args_push(series[col / 2], "series_kind", "s",
+                            col / 2 < kinds_length ? kinds[col / 2] : kinds[kinds_length - 1]);
               if (!labels.empty() && col / 2 < labels.size() && !labels[col / 2].empty())
                 grm_args_push(series[col / 2], "label", "s", labels[col / 2].c_str());
             }
@@ -1665,6 +1698,15 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
         grm_args_push(plot[plot_i], "use_grplot_changes", "i", 1);
     }
   grm_args_push(args, "subplots", "nA", plot_num, plot.data());
+  if (!join_plot_numbers.empty())
+    {
+      std::vector<int> join_plot_numbers_vec;
+      for (const auto &plot_number : join_plot_numbers)
+        {
+          if (plot_number <= plot.size()) join_plot_numbers_vec.push_back(plot_number);
+        }
+      grm_args_push(args, "join_plots", "nI", join_plot_numbers_vec.size(), join_plot_numbers_vec.data());
+    }
   grm_merge(args);
 
   if (handle != nullptr)
@@ -1763,7 +1805,9 @@ int grm_context_data_from_file(const std::shared_ptr<GRM::Context> &context, con
 int convertInputstreamIntoArgs(grm_args_t *args, grm_file_args_t *file_args, int argc, char **argv, PlotRange *ranges,
                                grm_special_axis_series_t *special_axis_series, InputFlags &input_flags)
 {
-  std::string token, delim = ":", kind = "line", optional_file;
+  std::string token, delim = ":", optional_file;
+  std::vector<std::string> kinds;
+  std::vector<const char *> kinds_c;
 
   for (int i = 1; i < argc; i++)
     {
@@ -1797,10 +1841,26 @@ int convertInputstreamIntoArgs(grm_args_t *args, grm_file_args_t *file_args, int
         {
           file_args->file_error_columns = token.substr(14, token.length() - 1);
         }
+      else if (startsWith(token, "join_plots:"))
+        {
+          auto tmp = token.substr(11, token.length() - 1);
+          parseColumns(&join_plot_numbers, tmp.c_str());
+        }
       else
         {
-          auto tmp_kind = singleTokenConverter(token, args, ranges, special_axis_series, input_flags);
-          if (isValidKind(tmp_kind)) kind = tmp_kind;
+          auto tmp_kinds = singleTokenConverter(token, args, ranges, special_axis_series, input_flags);
+          if (tmp_kinds.size() > 0 && isValidKind(tmp_kinds[0]))
+            {
+              kinds = tmp_kinds;
+              input_flags.default_kind_used = false;
+            }
+          if (!kinds.empty())
+            {
+              for (int col = 0; col < kinds.size(); col++)
+                {
+                  kinds_c.push_back(kinds[col].c_str());
+                }
+            }
         }
     }
 
@@ -1817,16 +1877,11 @@ int convertInputstreamIntoArgs(grm_args_t *args, grm_file_args_t *file_args, int
           return 0;
         }
     }
-  if (!isValidKind(kind))
+  if (kinds.empty())
     {
-      fprintf(stderr, "Invalid plot type (%s) - fallback to line plot\n", kind.c_str());
-      input_flags.default_kind_used = true;
-      kind = "line";
+      kinds_c.push_back("line");
+      fprintf(stderr, "No valid plot kind given- fallback to line plot\n");
     }
-  if (kind == "hist")
-    kind = "histogram";
-  else if (kind == "plot3")
-    kind = "line3";
-  grm_args_push(args, "kind", "s", kind.c_str());
+  grm_args_push(args, "kind", "nS", kinds_c.size(), kinds_c.data());
   return 1;
 }

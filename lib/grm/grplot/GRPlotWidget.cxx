@@ -153,6 +153,8 @@ static std::list<HighlightMask> mask_highlights;
 static std::list<HighlightMask> referred_elements_highlights_cache;
 static std::list<HighlightMask> mask_highlights_cache;
 static uint32_t color = 0xFF0202F0;
+static bool move_to_plot = false;
+static std::string plot_id = "";
 
 void getMousePos(QMouseEvent *event, int *x, int *y)
 {
@@ -233,6 +235,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "location",
       "marginal_heatmap_kind",
       "marker_type",
+      "move_to_plot",
       "norm",
       "orientation",
       "plot_type",
@@ -797,11 +800,208 @@ GRPlotWidget::~GRPlotWidget()
   grm_finalize();
 }
 
+static void dilatationForImagePart(void *arg)
+{
+  constexpr uint32_t no_color = 0xFFFFFFFF;
+  constexpr int box_size = 11, inner_box_size = 5;
+  auto attr = static_cast<struct ThreadAttr *>(arg);
+
+  for (unsigned int j = attr->y_start; j < attr->y_end; j++)
+    {
+      for (unsigned int i = attr->x_start; i < attr->x_end; i++)
+        {
+          auto found_pixel_distance_from_center = -1;
+          for (int box_offset_y = 0; box_offset_y <= box_size / 2; box_offset_y++)
+            {
+              int pixel_y_0 = j + box_offset_y - attr->y_diff;
+              int pixel_y_1 = j - box_offset_y - attr->y_diff;
+              if (pixel_y_0 < 0 || pixel_y_0 >= attr->height) pixel_y_0 = -1;
+              if (pixel_y_1 < 0 || pixel_y_1 >= attr->height) pixel_y_1 = -1;
+              if (pixel_y_0 == -1 && pixel_y_1 == -1) continue;
+              for (int box_offset_x = 0; box_offset_x <= box_size / 2; box_offset_x++)
+                {
+                  int pixel_x_0 = i + box_offset_x - attr->x_diff;
+                  int pixel_x_1 = i - box_offset_x - attr->x_diff;
+                  if (pixel_x_0 >= 0 && pixel_x_0 < attr->width)
+                    {
+                      if ((pixel_y_0 != -1 && attr->pixels[pixel_y_0 * attr->width + pixel_x_0] != no_color) ||
+                          (pixel_y_1 != -1 && attr->pixels[pixel_y_1 * attr->width + pixel_x_0] != no_color))
+                        {
+                          found_pixel_distance_from_center = std::min<int>(box_offset_x, box_offset_y);
+                          break;
+                        }
+                    }
+                  if (pixel_x_1 >= 0 && pixel_x_1 < attr->width)
+                    {
+                      if ((pixel_y_0 != -1 && attr->pixels[pixel_y_0 * attr->width + pixel_x_1] != no_color) ||
+                          (pixel_y_1 != -1 && attr->pixels[pixel_y_1 * attr->width + pixel_x_1] != no_color))
+                        {
+                          found_pixel_distance_from_center = std::min<int>(box_offset_x, box_offset_y);
+                          break;
+                        }
+                    }
+                }
+              if (found_pixel_distance_from_center != -1) break;
+            }
+          if (found_pixel_distance_from_center >= 0)
+            {
+              (*attr->image)[j * attr->new_width + i] = color;
+              (found_pixel_distance_from_center <= inner_box_size / 2)
+                  ? color
+                  : attr->smoothed_colors[found_pixel_distance_from_center - inner_box_size / 2 - 1];
+            }
+        }
+    }
+}
+
+static int systemProcessorCount(void)
+{
+#ifdef _WIN32
+#ifndef _SC_NPROCESSORS_ONLN
+  SYSTEM_INFO info;
+  GetSystemInfo(&info);
+#define sysconf(a) info.dwNumberOfProcessors
+#define _SC_NPROCESSORS_ONLN
+#endif
+#endif
+  return static_cast<int>(sysconf(_SC_NPROCESSORS_ONLN));
+}
+
+static std::vector<uint32_t> dilatationForImage(unsigned int &x, unsigned int &y, unsigned int &width,
+                                                unsigned int &height, const unsigned int *pixels)
+{
+  constexpr uint32_t no_color = 0xFFFFFFFF;
+  constexpr int box_size = 11, inner_box_size = 5;
+  constexpr int smoothed_colors_count = std::max(box_size / 2 - inner_box_size / 2, 0);
+  std::vector<uint32_t> image;
+  std::array<uint32_t, smoothed_colors_count> smoothed_colors;
+  auto no_color_rgba = reinterpret_cast<const uint8_t *>(&no_color);
+  auto color_rgba = reinterpret_cast<const uint8_t *>(&color);
+  ThreadAttr *jobs;
+  int x_start = 0, y_start = 0, x_end, y_end;
+  int thread_num;
+#ifndef NO_THREADS
+  ThreadpoolT *thread_pool;
+#endif
+
+  for (int i = 0; i < smoothed_colors_count; i++)
+    {
+      auto smoothed_colors_rgba = reinterpret_cast<uint8_t *>(&smoothed_colors[i]);
+      for (int j = 0; j < 4; j++)
+        {
+          smoothed_colors_rgba[j] =
+              (no_color_rgba[j] * (i + 1) + color_rgba[j] * (smoothed_colors_count - i - 1)) / smoothed_colors_count;
+        }
+    }
+
+  auto active_figure = grm_get_document_root()->querySelectors("figure[active=\"1\"]");
+  auto figure_size_x = static_cast<int>(active_figure->getAttribute("size_x"));
+  auto figure_size_y = static_cast<int>(active_figure->getAttribute("size_y"));
+
+  // Reserve some more space for the dilatation at the image boundary
+  auto new_x = std::max<int>(0, x - box_size / 2);
+  auto new_y = std::max<int>(0, y - box_size / 2);
+  unsigned int new_width = std::min<int>(x + width + box_size / 2, figure_size_x * 2) - new_x;
+  unsigned int new_height = std::min<int>(y + height + box_size / 2, figure_size_y * 2) - new_y;
+
+  image.resize(new_width * new_height, 0x00FFFFFF);
+
+  /* creates the threadpool */
+#ifndef NO_THREADS
+  thread_pool = static_cast<ThreadpoolT *>(calloc(1, sizeof(*thread_pool)));
+  if (thread_pool == 0)
+    {
+      fprintf(stderr, "Can't allocate memory\n");
+      return image;
+    }
+  thread_num = (systemProcessorCount() - 1) < 256 ? systemProcessorCount() - 1 : 256;
+  threadpoolCreate(thread_pool, thread_num, dilatationForImagePart);
+#endif
+
+  int thread_size = ceil((new_width + new_height) / (2.0 * thread_num));
+  int x_size = ceil(new_width / (1.0 * thread_size)), y_size = ceil(new_height / (1.0 * thread_size));
+  jobs = static_cast<ThreadAttr *>(malloc(x_size * y_size * sizeof(ThreadAttr)));
+
+  for (int i = 0; i < x_size; i++)
+    {
+      x_end = static_cast<int>(std::min((i + 1) * thread_size, static_cast<int>(new_width)));
+      for (int j = 0; j < y_size; j++)
+        {
+          /* transfer data for each thread */
+          y_end = static_cast<int>(std::min((j + 1) * thread_size, static_cast<int>(new_height)));
+          jobs[i + j * x_size].x_start = x_start;
+          jobs[i + j * x_size].y_start = y_start;
+          jobs[i + j * x_size].x_end = x_end;
+          jobs[i + j * x_size].y_end = y_end;
+          jobs[i + j * x_size].x_diff = x - new_x;
+          jobs[i + j * x_size].y_diff = y - new_y;
+          jobs[i + j * x_size].width = width;
+          jobs[i + j * x_size].height = height;
+          jobs[i + j * x_size].new_width = new_width;
+          jobs[i + j * x_size].image = &image;
+          jobs[i + j * x_size].pixels = pixels;
+          jobs[i + j * x_size].smoothed_colors = smoothed_colors;
+
+#ifndef NO_THREADS
+          threadpoolAddWork(thread_pool, jobs + i + j * x_size);
+#endif
+          y_start = y_end;
+        }
+      x_start = x_end;
+      y_start = 0;
+    }
+#ifndef NO_THREADS
+  threadpoolDestroy(thread_pool);
+#endif
+
+  x = new_x;
+  y = new_y;
+  width = new_width;
+  height = new_height;
+
+  return image;
+}
+
+static void processPartialDrawing(int id, unsigned int x, unsigned int y, unsigned int width, unsigned int height,
+                                  unsigned int *pixels)
+{
+  auto processed_image = dilatationForImage(x, y, width, height, pixels);
+  std::vector<unsigned char> image;
+  for (unsigned int j = 0; j < height; j++)
+    {
+      for (unsigned int i = 0; i < width; i++)
+        {
+          const auto pixel = reinterpret_cast<uint8_t *>(processed_image.data() + j * width + i);
+          image.push_back(pixel[0]);
+          image.push_back(pixel[1]);
+          image.push_back(pixel[2]);
+          image.push_back(pixel[3]);
+        }
+    }
+  std::free(pixels);
+  bool contains_id = false;
+  for (const auto &mask : mask_highlights)
+    {
+      if (mask.id == id)
+        {
+          contains_id = true;
+          break;
+        }
+    }
+
+  auto mask = HighlightMask(id, x, y, width, height, image);
+  if (!contains_id) mask_highlights.emplace_back(mask);
+  if (color == 0xFF0202F0)
+    mask_highlights_cache.emplace_back(mask);
+  else
+    referred_elements_highlights_cache.emplace_back(mask);
+}
+
 void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, std::string cur_elem_name,
                                             QWidget **line_edit)
 {
   QStringList size_unit_list, colormap_list, font_list, font_precision_list, line_type_list, location_list,
-      x_axis_location_list, y_axis_location_list, marker_type_list, text_align_horizontal_list,
+      x_axis_location_list, y_axis_location_list, marker_type_list, move_to_plot_list, text_align_horizontal_list,
       text_align_vertical_list, algorithm_volume_list, color_model_list, context_attr_list, fill_style_list,
       fill_int_style_list, transformation_list;
   auto size_unit_vec = GRM::getSizeUnits();
@@ -856,8 +1056,16 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
   auto context_attr_vec = table_widget->getContextNames();
   context_attr_list.reserve(static_cast<int>(context_attr_vec.size()));
   for (auto &i : context_attr_vec) context_attr_list.push_back(i.c_str());
+  std::vector<std::string> move_to_plot_vec;
+  for (const auto &elem : grm_get_document_root()->querySelectorsAll("plot"))
+    {
+      move_to_plot_vec.push_back(static_cast<std::string>(elem->getAttribute("plot_id")));
+    }
+  move_to_plot_vec.push_back("new_plot"); // to move a series into a new plot
+  move_to_plot_list.reserve(static_cast<int>(move_to_plot_vec.size()));
+  for (auto &i : move_to_plot_vec) move_to_plot_list.push_back(i.c_str());
 
-  static std::map<std::string, QStringList> attribute_to_list{
+  std::map<std::string, QStringList> attribute_to_list{
       {"axis_type", axis_type_list},
       {"error_bar_style", error_bar_style_list},
       {"element_type", element_type_list},
@@ -872,6 +1080,7 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       {"label_orientation", label_orientation_list},
       {"line_type", line_type_list},
       {"marker_type", marker_type_list},
+      {"move_to_plot", move_to_plot_list},
       {"text_align_vertical", text_align_vertical_list},
       {"text_align_horizontal", text_align_horizontal_list},
       {"orientation", orientation_list},
@@ -999,6 +1208,10 @@ void GRPlotWidget::attributeComboBoxHandler(const std::string &cur_attr_name, st
       auto *completer = new QCompleter(list, this);
       completer->setCaseSensitivity(Qt::CaseInsensitive);
       static_cast<QComboBox *>(*line_edit)->setCompleter(completer);
+
+      if (cur_attr_name == "move_to_plot")
+        QObject::connect(static_cast<QComboBox *>(*line_edit), SIGNAL(highlighted(int)), this,
+                         SLOT(highlightMoveToPlotSlot(int)));
     }
   else if (cur_attr_name == "algorithm" && cur_elem_name == "series_volume")
     {
@@ -1860,8 +2073,15 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
                   viewport[1] /= aspect_r;
                 }
 
-              gr_setbackground(viewport[0], viewport[1], std::max(0.0, height - viewport[3]),
-                               std::max(0.0, height - viewport[3]) + viewport[3] - viewport[2]);
+              if (!move_to_plot)
+                {
+                  gr_setbackground(viewport[0], viewport[1], std::max(0.0, height - viewport[3]),
+                                   std::max(0.0, height - viewport[3]) + viewport[3] - viewport[2]);
+                }
+              else
+                {
+                  gr_clearbackground();
+                }
             }
         }
       active_plot_changed = false;
@@ -1894,8 +2114,15 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
               viewport[1] /= aspect_r;
             }
 
-          gr_setbackground(viewport[0], viewport[1], std::max(0.0, height - viewport[3]),
-                           std::max(0.0, height - viewport[3]) + viewport[3] - viewport[2]);
+          if (!move_to_plot)
+            {
+              gr_setbackground(viewport[0], viewport[1], std::max(0.0, height - viewport[3]),
+                               std::max(0.0, height - viewport[3]) + viewport[3] - viewport[2]);
+            }
+          else
+            {
+              gr_clearbackground();
+            }
 
           auto render = grm_get_render();
           bool auto_update;
@@ -2389,6 +2616,24 @@ void GRPlotWidget::disableGridSlot()
       axis_elem->setAttribute("draw_grid", !draw_grid);
     }
 
+  redraw();
+}
+
+void GRPlotWidget::highlightMoveToPlotSlot(int index)
+{
+  std::vector<std::string> move_to_plot_vec;
+  for (const auto &elem : grm_get_document_root()->querySelectorsAll("plot"))
+    {
+      move_to_plot_vec.push_back(static_cast<std::string>(elem->getAttribute("plot_id")));
+    }
+  move_to_plot_vec.push_back("new_plot"); // to move a series into a new plot
+  move_to_plot_vec.push_back("");
+
+  auto new_plot_id = move_to_plot_vec[index];
+  if (new_plot_id != "new_plot" && new_plot_id != "")
+    plot_id = new_plot_id;
+  else
+    plot_id = "";
   redraw();
 }
 
@@ -3679,7 +3924,6 @@ void GRPlotWidget::useGR3Slot()
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
-
   if (figure_elem == nullptr) return;
   const auto series_elements = figure_elem->querySelectorsAll("series_surface");
   for (const auto &series_elem : series_elements)
@@ -4094,6 +4338,7 @@ void GRPlotWidget::colorIndexPopUp(const std::string &attribute_name, int curren
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
+  if (figure_elem == nullptr) return;
   const auto plot_elems = figure_elem->querySelectorsAll("plot");
   std::shared_ptr<GRM::Element> plot_elem;
 
@@ -4278,6 +4523,7 @@ void GRPlotWidget::keepAspectRatioSlot()
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
+  if (figure_elem == nullptr) return;
   const auto plot_elems = figure_elem->querySelectorsAll("plot");
   std::shared_ptr<GRM::Element> plot_elem;
 
@@ -4304,6 +4550,7 @@ void GRPlotWidget::onlySquareAspectRatioSlot()
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
+  if (figure_elem == nullptr) return;
   const auto plot_elems = figure_elem->querySelectorsAll("plot");
   std::shared_ptr<GRM::Element> plot_elem;
 
@@ -4330,6 +4577,7 @@ void GRPlotWidget::verticalOrientationSlot()
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
+  if (figure_elem == nullptr) return;
   const auto central_region = figure_elem->querySelectors("central_region");
 
   central_region->setAttribute("orientation", "vertical");
@@ -4345,6 +4593,7 @@ void GRPlotWidget::horizontalOrientationSlot()
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
+  if (figure_elem == nullptr) return;
   const auto central_region = figure_elem->querySelectors("central_region");
 
   central_region->setAttribute("orientation", "horizontal");
@@ -4684,203 +4933,6 @@ void GRPlotWidget::extractBoundingBoxesFromGRM(QPainter &painter)
     }
 }
 
-static void dilatationForImagePart(void *arg)
-{
-  constexpr uint32_t no_color = 0xFFFFFFFF;
-  constexpr int box_size = 11, inner_box_size = 5;
-  auto attr = static_cast<struct ThreadAttr *>(arg);
-
-  for (unsigned int j = attr->y_start; j < attr->y_end; j++)
-    {
-      for (unsigned int i = attr->x_start; i < attr->x_end; i++)
-        {
-          auto found_pixel_distance_from_center = -1;
-          for (int box_offset_y = 0; box_offset_y <= box_size / 2; box_offset_y++)
-            {
-              int pixel_y_0 = j + box_offset_y - attr->y_diff;
-              int pixel_y_1 = j - box_offset_y - attr->y_diff;
-              if (pixel_y_0 < 0 || pixel_y_0 >= attr->height) pixel_y_0 = -1;
-              if (pixel_y_1 < 0 || pixel_y_1 >= attr->height) pixel_y_1 = -1;
-              if (pixel_y_0 == -1 && pixel_y_1 == -1) continue;
-              for (int box_offset_x = 0; box_offset_x <= box_size / 2; box_offset_x++)
-                {
-                  int pixel_x_0 = i + box_offset_x - attr->x_diff;
-                  int pixel_x_1 = i - box_offset_x - attr->x_diff;
-                  if (pixel_x_0 >= 0 && pixel_x_0 < attr->width)
-                    {
-                      if ((pixel_y_0 != -1 && attr->pixels[pixel_y_0 * attr->width + pixel_x_0] != no_color) ||
-                          (pixel_y_1 != -1 && attr->pixels[pixel_y_1 * attr->width + pixel_x_0] != no_color))
-                        {
-                          found_pixel_distance_from_center = std::min<int>(box_offset_x, box_offset_y);
-                          break;
-                        }
-                    }
-                  if (pixel_x_1 >= 0 && pixel_x_1 < attr->width)
-                    {
-                      if ((pixel_y_0 != -1 && attr->pixels[pixel_y_0 * attr->width + pixel_x_1] != no_color) ||
-                          (pixel_y_1 != -1 && attr->pixels[pixel_y_1 * attr->width + pixel_x_1] != no_color))
-                        {
-                          found_pixel_distance_from_center = std::min<int>(box_offset_x, box_offset_y);
-                          break;
-                        }
-                    }
-                }
-              if (found_pixel_distance_from_center != -1) break;
-            }
-          if (found_pixel_distance_from_center >= 0)
-            {
-              (*attr->image)[j * attr->new_width + i] = color;
-              (found_pixel_distance_from_center <= inner_box_size / 2)
-                  ? color
-                  : attr->smoothed_colors[found_pixel_distance_from_center - inner_box_size / 2 - 1];
-            }
-        }
-    }
-}
-
-static int systemProcessorCount(void)
-{
-#ifdef _WIN32
-#ifndef _SC_NPROCESSORS_ONLN
-  SYSTEM_INFO info;
-  GetSystemInfo(&info);
-#define sysconf(a) info.dwNumberOfProcessors
-#define _SC_NPROCESSORS_ONLN
-#endif
-#endif
-  return static_cast<int>(sysconf(_SC_NPROCESSORS_ONLN));
-}
-
-static std::vector<uint32_t> dilatationForImage(unsigned int &x, unsigned int &y, unsigned int &width,
-                                                unsigned int &height, const unsigned int *pixels)
-{
-  constexpr uint32_t no_color = 0xFFFFFFFF;
-  constexpr int box_size = 11, inner_box_size = 5;
-  constexpr int smoothed_colors_count = std::max(box_size / 2 - inner_box_size / 2, 0);
-  std::vector<uint32_t> image;
-  std::array<uint32_t, smoothed_colors_count> smoothed_colors;
-  auto no_color_rgba = reinterpret_cast<const uint8_t *>(&no_color);
-  auto color_rgba = reinterpret_cast<const uint8_t *>(&color);
-  ThreadAttr *jobs;
-  int x_start = 0, y_start = 0, x_end, y_end;
-  int thread_num;
-#ifndef NO_THREADS
-  ThreadpoolT *thread_pool;
-#endif
-
-  for (int i = 0; i < smoothed_colors_count; i++)
-    {
-      auto smoothed_colors_rgba = reinterpret_cast<uint8_t *>(&smoothed_colors[i]);
-      for (int j = 0; j < 4; j++)
-        {
-          smoothed_colors_rgba[j] =
-              (no_color_rgba[j] * (i + 1) + color_rgba[j] * (smoothed_colors_count - i - 1)) / smoothed_colors_count;
-        }
-    }
-
-  auto active_figure = grm_get_document_root()->querySelectors("figure[active=\"1\"]");
-  auto figure_size_x = static_cast<int>(active_figure->getAttribute("size_x"));
-  auto figure_size_y = static_cast<int>(active_figure->getAttribute("size_y"));
-
-  // Reserve some more space for the dilatation at the image boundary
-  auto new_x = std::max<int>(0, x - box_size / 2);
-  auto new_y = std::max<int>(0, y - box_size / 2);
-  unsigned int new_width = std::min<int>(x + width + box_size / 2, figure_size_x * 2) - new_x;
-  unsigned int new_height = std::min<int>(y + height + box_size / 2, figure_size_y * 2) - new_y;
-
-  image.resize(new_width * new_height, 0x00FFFFFF);
-
-  /* creates the threadpool */
-#ifndef NO_THREADS
-  thread_pool = static_cast<ThreadpoolT *>(calloc(1, sizeof(*thread_pool)));
-  if (thread_pool == 0)
-    {
-      fprintf(stderr, "Can't allocate memory\n");
-      return image;
-    }
-  thread_num = (systemProcessorCount() - 1) < 256 ? systemProcessorCount() - 1 : 256;
-  threadpoolCreate(thread_pool, thread_num, dilatationForImagePart);
-#endif
-
-  int thread_size = ceil((new_width + new_height) / (2.0 * thread_num));
-  int x_size = ceil(new_width / (1.0 * thread_size)), y_size = ceil(new_height / (1.0 * thread_size));
-  jobs = static_cast<ThreadAttr *>(malloc(x_size * y_size * sizeof(ThreadAttr)));
-
-  for (int i = 0; i < x_size; i++)
-    {
-      x_end = static_cast<int>(std::min((i + 1) * thread_size, static_cast<int>(new_width)));
-      for (int j = 0; j < y_size; j++)
-        {
-          /* transfer data for each thread */
-          y_end = static_cast<int>(std::min((j + 1) * thread_size, static_cast<int>(new_height)));
-          jobs[i + j * x_size].x_start = x_start;
-          jobs[i + j * x_size].y_start = y_start;
-          jobs[i + j * x_size].x_end = x_end;
-          jobs[i + j * x_size].y_end = y_end;
-          jobs[i + j * x_size].x_diff = x - new_x;
-          jobs[i + j * x_size].y_diff = y - new_y;
-          jobs[i + j * x_size].width = width;
-          jobs[i + j * x_size].height = height;
-          jobs[i + j * x_size].new_width = new_width;
-          jobs[i + j * x_size].image = &image;
-          jobs[i + j * x_size].pixels = pixels;
-          jobs[i + j * x_size].smoothed_colors = smoothed_colors;
-
-#ifndef NO_THREADS
-          threadpoolAddWork(thread_pool, jobs + i + j * x_size);
-#endif
-          y_start = y_end;
-        }
-      x_start = x_end;
-      y_start = 0;
-    }
-#ifndef NO_THREADS
-  threadpoolDestroy(thread_pool);
-#endif
-
-  x = new_x;
-  y = new_y;
-  width = new_width;
-  height = new_height;
-
-  return image;
-}
-
-static void processPartialDrawing(int id, unsigned int x, unsigned int y, unsigned int width, unsigned int height,
-                                  unsigned int *pixels)
-{
-  auto processed_image = dilatationForImage(x, y, width, height, pixels);
-  std::vector<unsigned char> image;
-  for (unsigned int j = 0; j < height; j++)
-    {
-      for (unsigned int i = 0; i < width; i++)
-        {
-          const auto pixel = reinterpret_cast<uint8_t *>(processed_image.data() + j * width + i);
-          image.push_back(pixel[0]);
-          image.push_back(pixel[1]);
-          image.push_back(pixel[2]);
-          image.push_back(pixel[3]);
-        }
-    }
-  std::free(pixels);
-  bool contains_id = false;
-  for (const auto &mask : mask_highlights)
-    {
-      if (mask.id == id)
-        {
-          contains_id = true;
-          break;
-        }
-    }
-
-  auto mask = HighlightMask(id, x, y, width, height, image);
-  if (!contains_id) mask_highlights.emplace_back(mask);
-  if (color == 0xFF0202F0)
-    mask_highlights_cache.emplace_back(mask);
-  else
-    referred_elements_highlights_cache.emplace_back(mask);
-}
-
 void GRPlotWidget::highlightCurrentSelection(QPainter &painter)
 {
   if (enable_editor)
@@ -5121,6 +5173,41 @@ void GRPlotWidget::highlightCurrentSelection(QPainter &painter)
                 }
               mask_highlights.clear();
             }
+          color = 0xFF0202F0;
+        }
+      // special case for hovering over elements of move_to_plot combobox to see which plot has that id
+      if (plot_id != "")
+        {
+          auto global_root = grm_get_document_root();
+          auto render = grm_get_render();
+          auto plot = global_root->querySelectors("plot[plot_id=\"" + plot_id + "\"]");
+          auto id = static_cast<int>(plot->getAttribute("_bbox_id"));
+
+          color = 0xFFF3E03B;
+          bool contains_id = false;
+          for (const auto &mask : referred_elements_highlights_cache)
+            {
+              if (mask.id == id)
+                {
+                  contains_id = true;
+                  mask_highlights.emplace_back(mask);
+                  break;
+                }
+            }
+          if (!contains_id) render->renderMaskHighlight(plot, processPartialDrawing);
+
+          for (const auto &mask : mask_highlights)
+            {
+              auto elem = global_root->querySelectors("[_bbox_id=\"" + std::to_string(mask.id) + "\"]");
+
+              painter.setOpacity(0.4);
+              auto rect = QRect(mask.x / this->devicePixelRatioF(), mask.y / this->devicePixelRatioF(),
+                                mask.width / this->devicePixelRatioF(), mask.height / this->devicePixelRatioF());
+              auto image = QImage(mask.image.data(), mask.width, mask.height, QImage::Format_ARGB32);
+              painter.drawImage(rect, image);
+              painter.setOpacity(1.0);
+            }
+          mask_highlights.clear();
           color = 0xFF0202F0;
         }
 
@@ -5711,6 +5798,7 @@ void GRPlotWidget::addTextSlot()
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
+  if (figure_elem == nullptr) return;
   auto overlay = figure_elem->querySelectors("overlay");
 
   if (overlay == nullptr)
@@ -5744,6 +5832,7 @@ void GRPlotWidget::addImageSlot()
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
+  if (figure_elem == nullptr) return;
   auto overlay = figure_elem->querySelectors("overlay");
   auto context = render->getContext();
 
@@ -5815,6 +5904,7 @@ void GRPlotWidget::colorIndexSlot()
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
+  if (figure_elem == nullptr) return;
   const auto plot_elems = figure_elem->querySelectorsAll("plot");
   std::shared_ptr<GRM::Element> plot_elem;
 
@@ -6253,7 +6343,9 @@ void GRPlotWidget::editElementAccepted(bool highlight_location)
   hide_selection_list_widget_act->trigger();
   hide_preview_text_act->trigger();
   if (highlight_location) hide_edit_element_act->trigger();
-  redraw();
+  plot_id = "";
+  redraw(move_to_plot);
+  if (move_to_plot) move_to_plot = false;
 }
 
 void GRPlotWidget::editElementRejected()
@@ -7319,6 +7411,7 @@ void GRPlotWidget::overlayElementEdit()
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
+  if (figure_elem == nullptr) return;
   auto overlay = figure_elem->querySelectors("overlay");
   auto tmp = overlay->querySelectorsAll("overlay_element");
   auto overlay_element = tmp[tmp.size() - 1];
@@ -7399,4 +7492,9 @@ void GRPlotWidget::addTreeSelection(int id)
 {
   tree_selections.clear();
   this->tree_selections.emplace(id);
+}
+
+void GRPlotWidget::setMoveToPlot(bool status)
+{
+  move_to_plot = status;
 }

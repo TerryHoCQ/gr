@@ -79,6 +79,7 @@ public:
   void setUpPreviewTextWidget(const std::string &text, int scientific_format, int text_color, int font_precision,
                               int font, int width, int height);
   void addTreeSelection(int id);
+  void setMoveToPlot(bool status);
 
   inline bool isDarkMode()
   {
@@ -322,6 +323,7 @@ private slots:
   void colorIndexSlot();
   void possibleElementsMenuSlot();
   void disableGridSlot();
+  void highlightMoveToPlotSlot(int index);
 
 private:
   struct MouseState

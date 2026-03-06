@@ -71,6 +71,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
       "line_color_ind",
       "line_spec",
       "line_width",
+      "move_to_plot",
       "rgb",
       "style",
       "text_align_horizontal",
@@ -81,104 +82,100 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
       "y_labels",
   };
   std::vector<std::string> series_contour{
-      "levels", "px", "py", "pz", "x", "y", "z", "z_max", "z_min",
+      "levels", "move_to_plot", "px", "py", "pz", "x", "y", "z", "z_max", "z_min",
   };
   std::vector<std::string> series_contourf = series_contour;
   std::vector<std::string> series_heatmap{
-      "x", "y", "z", "z_range_max", "z_range_min",
+      "move_to_plot", "x", "y", "z", "z_range_max", "z_range_min",
   };
   std::vector<std::string> series_hexbin{
+      "move_to_plot",
       "num_bins",
       "x",
       "y",
   };
   std::vector<std::string> series_histogram{
       "bins",           "fill_color_ind", "fill_color_rgb", "fill_int_style", "fill_style",
-      "line_color_ind", "line_color_rgb", "line_spec",      "weights",
+      "line_color_ind", "line_color_rgb", "line_spec",      "move_to_plot",   "weights",
   };
   std::vector<std::string> series_imshow{
-      "data", "x", "y", "z", "z_dims",
+      "data", "move_to_plot", "x", "y", "z", "z_dims",
   };
   std::vector<std::string> series_isosurface{
-      "ambient", "color_rgb", "diffuse", "isovalue", "specular", "specular_power", "z", "z_dims",
+      "ambient", "color_rgb", "diffuse", "isovalue", "move_to_plot", "specular", "specular_power", "z", "z_dims",
   };
   std::vector<std::string> series_line{
-      "line_color_ind", "line_spec", "line_type", "line_width", "x", "y",
+      "line_color_ind", "line_spec", "line_type", "line_width", "move_to_plot", "x", "y",
   };
   std::vector<std::string> series_nonuniform_heatmap = series_heatmap;
   std::vector<std::string> series_nonuniform_polar_heatmap{
-      "r", "r_range_max", "r_range_min", "theta", "theta_range_max", "theta_range_min",
-      "z", "z_range_max", "z_range_min",
+      "move_to_plot",    "r", "r_range_max", "r_range_min", "theta", "theta_range_max",
+      "theta_range_min", "z", "z_range_max", "z_range_min",
   };
   std::vector<std::string> series_pie{
+      "move_to_plot",
       "color_ind_values",
       "x",
   };
   std::vector<std::string> series_line3{
+      "move_to_plot",
       "x",
       "y",
       "z",
   };
   std::vector<std::string> series_polar_heatmap = series_nonuniform_polar_heatmap;
   std::vector<std::string> series_polar_histogram{
-      "bin_counts",      "bin_edges",       "bin_width",   "bin_widths",   "counts",
-      "draw_edges",      "keep_radii_axes", "num_bins",    "norm",         "r_max",
-      "r_min",           "r_range_max",     "r_range_min", "theta",        "theta_range_max",
-      "theta_range_min", "stairs",          "tick",        "transparency",
+      "bin_counts",      "bin_edges",       "bin_width",    "bin_widths",  "counts",
+      "draw_edges",      "keep_radii_axes", "move_to_plot", "num_bins",    "norm",
+      "r_max",           "r_min",           "r_range_max",  "r_range_min", "theta",
+      "theta_range_max", "theta_range_min", "stairs",       "tick",        "transparency",
 
   };
   std::vector<std::string> series_polar_line{
-      "clip_negative",   "line_color_ind",  "line_spec", "line_type",   "marker_color_ind", "marker_type",
-      "r_max",           "r_min",           "r",         "r_range_max", "r_range_min",      "theta",
-      "theta_range_max", "theta_range_min",
+      "clip_negative", "line_color_ind", "line_spec", "line_type",       "marker_color_ind",
+      "marker_type",   "move_to_plot",   "r_max",     "r_min",           "r",
+      "r_range_max",   "r_range_min",    "theta",     "theta_range_max", "theta_range_min",
   };
   std::vector<std::string> series_polar_scatter{
-      "clip_negative",   "line_color_ind",  "line_spec", "line_type",   "marker_color_ind", "marker_type",
-      "r_max",           "r_min",           "r",         "r_range_max", "r_range_min",      "theta",
-      "theta_range_max", "theta_range_min",
+      "clip_negative", "line_color_ind", "line_spec", "line_type",       "marker_color_ind",
+      "marker_type",   "move_to_plot",   "r_max",     "r_min",           "r",
+      "r_range_max",   "r_range_min",    "theta",     "theta_range_max", "theta_range_min",
   };
   std::vector<std::string> series_quiver{
-      "colored", "u", "v", "x", "y",
+      "colored", "move_to_plot", "u", "v", "x", "y",
   };
   std::vector<std::string> series_scatter{
-      "c", "marker_color_ind", "x", "y", "z",
+      "c", "marker_color_ind", "move_to_plot", "x", "y", "z",
   };
   std::vector<std::string> series_scatter3{
-      "c",
-      "x",
-      "y",
-      "z",
+      "c", "move_to_plot", "x", "y", "z",
   };
   std::vector<std::string> series_shade{
-      "transformation", "x", "x_bins", "y", "y_bins",
+      "move_to_plot", "transformation", "x", "x_bins", "y", "y_bins",
   };
   std::vector<std::string> series_stairs{
-      "line_color_ind", "line_spec", "step_where", "x", "y", "z",
+      "line_color_ind", "line_spec", "move_to_plot", "step_where", "x", "y", "z",
   };
   std::vector<std::string> series_stem{
-      "line_color_ind", "line_spec", "x", "y", "y_range_min",
+      "line_color_ind", "line_spec", "move_to_plot", "x", "y", "y_range_min",
   };
   std::vector<std::string> series_surface{
-      "use_gr3",
-      "x",
-      "y",
-      "z",
+      "move_to_plot", "use_gr3", "x", "y", "z",
   };
   std::vector<std::string> series_tricontour{
-      "levels",
-      "x",
-      "y",
-      "z",
+      "levels", "move_to_plot", "x", "y", "z",
   };
   std::vector<std::string> series_trisurface{
+      "move_to_plot",
       "x",
       "y",
       "z",
   };
   std::vector<std::string> series_volume{
-      "d_max", "d_min", "x", "y", "z", "z_dims",
+      "d_max", "d_min", "move_to_plot", "x", "y", "z", "z_dims",
   };
   std::vector<std::string> series_wireframe{
+      "move_to_plot",
       "x",
       "y",
       "z",
@@ -971,6 +968,178 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                           coordinate_system->setAttribute("_update_required", true);
                           coordinate_system->setAttribute("_delete_children", int(DelValues::RECREATE_OWN_CHILDREN));
                         }
+                    }
+                  if (attr == "move_to_plot")
+                    {
+                      auto plot_id = static_cast<std::string>(element->getAttribute("move_to_plot"));
+                      std::shared_ptr<GRM::Element> current_plot = element, new_plot;
+                      getPlotParent(current_plot);
+                      auto current_plot_type = static_cast<std::string>(
+                          current_plot->querySelectors("coordinate_system")->getAttribute("plot_type"));
+                      std::string new_plot_type;
+
+                      if (plot_id != "new_plot")
+                        {
+                          new_plot = global_root->querySelectors("plot[plot_id=\"" + plot_id + "\"]");
+                          new_plot_type = static_cast<std::string>(
+                              new_plot->querySelectors("coordinate_system")->getAttribute("plot_type"));
+
+                          if (current_plot_type != new_plot_type)
+                            {
+                              fprintf(stderr,
+                                      "This series can't be moved to this plot. The plot_type must be the same.\n");
+                            }
+                          else
+                            {
+                              bool has_series_left = false;
+                              auto new_central_region = new_plot->querySelectors("central_region");
+                              element->parentElement()->removeChild(element);
+                              new_central_region->appendChild(element);
+                              current_plot->setAttribute("_active_through_update", 1);
+
+                              for (const auto &child : current_plot->querySelectors("central_region")->children())
+                                {
+                                  if (startsWith(child->localName(), "series_"))
+                                    {
+                                      has_series_left = true;
+                                      break;
+                                    }
+                                }
+                              if (!has_series_left)
+                                {
+                                  auto layout_grid_element = current_plot->parentElement();
+                                  auto stop_row = static_cast<int>(layout_grid_element->getAttribute("_stop_row"));
+                                  auto stop_col = static_cast<int>(layout_grid_element->getAttribute("_stop_col"));
+                                  auto layout = layout_grid_element->parentElement();
+                                  auto num_row = static_cast<int>(layout->getAttribute("num_row"));
+                                  auto num_col = static_cast<int>(layout->getAttribute("num_col"));
+
+                                  layout->removeChild(layout_grid_element);
+
+                                  // apply layout changes
+                                  if (stop_row == num_row)
+                                    {
+                                      if (!layout->querySelectors("layout_grid_element[_stop_row=\"" +
+                                                                  std::to_string(stop_row) + "\"]"))
+                                        {
+                                          layout->setAttribute("num_row", num_row - 1);
+                                        }
+                                    }
+                                  if (stop_col == num_col)
+                                    {
+                                      if (!layout->querySelectors("layout_grid_element[_stop_col=\"" +
+                                                                  std::to_string(stop_col) + "\"]"))
+                                        {
+                                          layout->setAttribute("num_col", num_col - 1);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                      else
+                        {
+                          auto layout = global_root->querySelectors("layout_grid");
+                          auto layout_element_copy = current_plot->parentElement()->cloneNode(true, true);
+                          layout->appendChild(layout_element_copy);
+
+                          auto new_plot_id = grm_get_render()->getPlotID();
+                          new_plot =
+                              layout->querySelectorsAll("layout_grid_element")[*new_plot_id]->querySelectors("plot");
+                          auto new_layout_grid_element = layout->querySelectorsAll("layout_grid_element")[*new_plot_id];
+                          new_plot->setAttribute("plot_id", "plot" + std::to_string(*new_plot_id));
+                          *new_plot_id += 1;
+
+                          for (const auto &elem : new_plot->querySelectors("central_region")->children())
+                            {
+                              if (!startsWith(elem->localName(), "series_")) continue;
+                              new_plot->querySelectors("central_region")->removeChild(elem);
+                            }
+                          new_plot->querySelectors("central_region")->appendChild(element);
+
+                          if (*new_plot_id > 1)
+                            {
+                              auto num_row = static_cast<int>(layout->getAttribute("num_row"));
+                              auto num_col = static_cast<int>(layout->getAttribute("num_col"));
+                              int divisor = 1;
+                              for (int i = 2; i <= *new_plot_id; i++)
+                                {
+                                  if (*new_plot_id % i == 0)
+                                    {
+                                      divisor = i;
+                                      break;
+                                    }
+                                }
+                              if (*new_plot_id >= 4) divisor = 2;
+                              if (*new_plot_id >= 9) divisor = 3;
+                              if (*new_plot_id >= 16) divisor = 4;
+
+                              auto new_row = (*new_plot_id - 1) % divisor;
+                              auto new_col = (*new_plot_id - 1) / divisor;
+                              int prev_row_layout_elem_span = 0, prev_col_layout_elem_span = 0;
+                              if (new_row > 1)
+                                {
+                                  auto prev_row_layout_elem = layout->querySelectors("layout_grid_element[position=\"" +
+                                                                                     std::to_string(new_row - 1) + " " +
+                                                                                     std::to_string(new_col) + "\"]");
+                                  prev_row_layout_elem_span =
+                                      static_cast<int>(prev_row_layout_elem->getAttribute("row_span"));
+                                }
+                              if (new_col > 1)
+                                {
+                                  auto prev_col_layout_elem = layout->querySelectors(
+                                      "layout_grid_element[position=\"" + std::to_string(new_row) + " " +
+                                      std::to_string(new_col - 1) + "\"]");
+                                  prev_col_layout_elem_span =
+                                      static_cast<int>(prev_col_layout_elem->getAttribute("col_span"));
+                                }
+                              if (prev_row_layout_elem_span > 1) new_row += prev_row_layout_elem_span;
+                              if (prev_col_layout_elem_span > 1) new_col += prev_col_layout_elem_span;
+
+                              auto row_start = new_row;
+                              auto row_stop = row_start + 1;
+                              auto col_start = new_col;
+                              auto col_stop = col_start + 1;
+
+                              new_layout_grid_element->setAttribute("_stop_row", row_stop);
+                              new_layout_grid_element->setAttribute("_start_row", row_start);
+                              new_layout_grid_element->setAttribute("_stop_col", col_stop);
+                              new_layout_grid_element->setAttribute("_start_col", col_start);
+                              new_layout_grid_element->setAttribute("position", std::to_string(row_start) + " " +
+                                                                                    std::to_string(col_start));
+                              layout->setAttribute("num_row", grm_max(row_stop, num_row));
+                              layout->setAttribute("num_col", grm_max(col_stop, num_col));
+
+                              // special case if there are 3 plots and a 4rth gets added since plot nr3 must be moved
+                              // aswell
+                              if (num_row == 3 && num_col == 1)
+                                {
+                                  auto other_layout_grid_element =
+                                      layout->querySelectors("layout_grid_element[position=\"2 0\"]");
+                                  other_layout_grid_element->setAttribute("_stop_row", 1);
+                                  other_layout_grid_element->setAttribute("_start_row", 0);
+                                  other_layout_grid_element->setAttribute("_stop_col", col_stop);
+                                  other_layout_grid_element->setAttribute("_start_col", col_start);
+                                  other_layout_grid_element->setAttribute("position", "0 " + std::to_string(col_start));
+                                  layout->setAttribute("num_row", 2);
+                                }
+                              else if (num_col == 3 && num_row == 1)
+                                {
+                                  auto other_layout_grid_element =
+                                      layout->querySelectors("layout_grid_element[position=\"0 2\"]");
+                                  other_layout_grid_element->setAttribute("_stop_col", 1);
+                                  other_layout_grid_element->setAttribute("_start_col", 0);
+                                  other_layout_grid_element->setAttribute("_stop_row", row_stop);
+                                  other_layout_grid_element->setAttribute("_start_row", row_start);
+                                  other_layout_grid_element->setAttribute("position", std::to_string(row_start) + " 0");
+                                  layout->setAttribute("num_col", 2);
+                                }
+                            }
+                        }
+                      for (const auto &elem : global_root->querySelectorsAll("plot"))
+                        {
+                          elem->setAttribute("_active_through_update", 1);
+                        }
+                      element->removeAttribute("move_to_plot");
                     }
                 }
               if (attr == "ref_y_axis_location" || attr == "ref_x_axis_location")

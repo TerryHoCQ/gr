@@ -149,7 +149,6 @@
             <xs:attribute name="_original_y_max" type="xs:double"/>
             <xs:attribute name="_original_y_min" type="xs:double"/>
             <xs:attribute name="_overwrite_kind_dependent_defaults" type="xs:integer"/>
-            <xs:attribute name="_plot_id" type="xs:string" use="required"/>
             <xs:attribute name="_r_lim_max" type="xs:double"/>
             <xs:attribute name="_r_lim_min" type="xs:double"/>
             <xs:attribute name="_right_window_xform_a" type="xs:double"/>

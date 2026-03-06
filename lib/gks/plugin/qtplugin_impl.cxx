@@ -809,7 +809,11 @@ public:
     height_ = height;
   }
 
-  void clearBackground() { background_.reset(); }
+  void clearBackground()
+  {
+    background_.reset();
+    mask_image_->fill(Qt::white);
+  }
 
   void drawBackground()
   {

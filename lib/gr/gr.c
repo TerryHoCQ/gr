@@ -2094,7 +2094,7 @@ void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, 
       x[scol] = x_orig[scol];
       for (color_x_ind = scol + 1; color_x_ind < ncol; color_x_ind++)
         {
-          x[color_x_ind] = 0.5 * (x_orig[color_x_ind] + x_orig[color_x_ind - 1]);
+          x[color_x_ind] = x_log(0.5 * (x_lin(x_orig[color_x_ind]) + x_lin(x_orig[color_x_ind - 1])));
         }
       x[ncol] = x_orig[ncol - 1];
     }
@@ -2118,7 +2118,7 @@ void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, 
       y[srow] = y_orig[srow];
       for (color_y_ind = srow + 1; color_y_ind < nrow; color_y_ind++)
         {
-          y[color_y_ind] = 0.5 * (y_orig[color_y_ind] + y_orig[color_y_ind - 1]);
+          y[color_y_ind] = y_log(0.5 * (y_lin(y_orig[color_y_ind]) + y_lin(y_orig[color_y_ind - 1])));
         }
       y[nrow] = y_orig[nrow - 1];
     }

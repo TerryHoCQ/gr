@@ -683,7 +683,7 @@ static void seg_xform_rel(double *x, double *y) {}
   if (buffer)
     {
       double scale = [self.window backingScaleFactor];
-      c = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
+      c = (CGContextRef)[[NSGraphicsContext currentContext] CGContext];
 
       NSSize boundsSizeBefore = self.bounds.size;
 
@@ -739,7 +739,7 @@ static void seg_xform_rel(double *x, double *y) {}
 
 - (void)setDisplayList:(id)display_list
 {
-  int len = [display_list length];
+  NSUInteger len = [display_list length];
   if (len + sizeof(int) > size)
     {
       while (len + sizeof(int) > size) size += MEMORY_INCREMENT;
@@ -872,7 +872,7 @@ static void seg_xform_rel(double *x, double *y) {}
 #else
   [savePanel beginSheetModalForWindow:[self window]
                     completionHandler:^(NSInteger result) {
-                      [self savePanelDidEnd:savePanel returnCode:result contextInfo:saveFormatPopUp];
+                      [self savePanelDidEnd:savePanel returnCode:(int)result contextInfo:saveFormatPopUp];
                     }];
 #endif
 }
@@ -883,7 +883,7 @@ static void seg_xform_rel(double *x, double *y) {}
   NSData *data;
   NSBitmapImageRep *bitmap;
 
-  if (NSFileHandlingPanelOKButton == returnCode && [[theSheet URL] isFileURL])
+  if (NSModalResponseOK == returnCode && [[theSheet URL] isFileURL])
     {
       filename = [[[theSheet URL] path] stringByDeletingPathExtension];
       if ([[formatPopUp titleOfSelectedItem] isEqualToString:@"PDF"])
@@ -902,10 +902,8 @@ static void seg_xform_rel(double *x, double *y) {}
 
           filename = [filename stringByAppendingPathExtension:@"tiff"];
 
-          [self lockFocus];
           bitmap = [self bitmapImageRepForCachingDisplayInRect:[self bounds]];
           [self cacheDisplayInRect:[self bounds] toBitmapImageRep:bitmap];
-          [self unlockFocus];
 
           [[bitmap TIFFRepresentationUsingCompression:compression factor:1.0] writeToFile:filename atomically:YES];
 
@@ -915,10 +913,8 @@ static void seg_xform_rel(double *x, double *y) {}
         {
           filename = [filename stringByAppendingPathExtension:@"png"];
 
-          [self lockFocus];
           bitmap = [self bitmapImageRepForCachingDisplayInRect:[self bounds]];
           [self cacheDisplayInRect:[self bounds] toBitmapImageRep:bitmap];
-          [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
 
@@ -938,10 +934,8 @@ static void seg_xform_rel(double *x, double *y) {}
         {
           filename = [filename stringByAppendingPathExtension:@"jpg"];
 
-          [self lockFocus];
           bitmap = [self bitmapImageRepForCachingDisplayInRect:[self bounds]];
           [self cacheDisplayInRect:[self bounds] toBitmapImageRep:bitmap];
-          [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
 
@@ -971,10 +965,8 @@ static void seg_xform_rel(double *x, double *y) {}
         {
           filename = [filename stringByAppendingPathExtension:@"jp2"];
 
-          [self lockFocus];
           bitmap = [self bitmapImageRepForCachingDisplayInRect:[self bounds]];
           [self cacheDisplayInRect:[self bounds] toBitmapImageRep:bitmap];
-          [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
 
@@ -1004,10 +996,8 @@ static void seg_xform_rel(double *x, double *y) {}
         {
           filename = [filename stringByAppendingPathExtension:@"gif"];
 
-          [self lockFocus];
           bitmap = [self bitmapImageRepForCachingDisplayInRect:[self bounds]];
           [self cacheDisplayInRect:[self bounds] toBitmapImageRep:bitmap];
-          [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
 
@@ -1027,10 +1017,8 @@ static void seg_xform_rel(double *x, double *y) {}
         {
           filename = [filename stringByAppendingPathExtension:@"bmp"];
 
-          [self lockFocus];
           bitmap = [self bitmapImageRepForCachingDisplayInRect:[self bounds]];
           [self cacheDisplayInRect:[self bounds] toBitmapImageRep:bitmap];
-          [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
 
@@ -1050,10 +1038,8 @@ static void seg_xform_rel(double *x, double *y) {}
         {
           filename = [filename stringByAppendingPathExtension:@"pic"];
 
-          [self lockFocus];
           bitmap = [self bitmapImageRepForCachingDisplayInRect:[self bounds]];
           [self cacheDisplayInRect:[self bounds] toBitmapImageRep:bitmap];
-          [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
 
@@ -1992,9 +1978,8 @@ static void to_DC(int n, double *x, double *y)
 {
   double x, y;
   int i, j, k, len;
-  CGPoint polygon[6];
   unsigned int rgba;
-  CGFloat *border_color, color[4];
+  CGFloat color[4];
 
   begin_context(context);
 
@@ -2006,7 +1991,7 @@ static void to_DC(int n, double *x, double *y)
   CGContextSetFillColorSpace(context, colorSpace);
 
   CGContextSetLineWidth(context, gkss->bwidth * p->nominal_size);
-  border_color = CGColorGetComponents(p->rgb[gkss->bcoli]);
+  const CGFloat *border_color = CGColorGetComponents(p->rgb[gkss->bcoli]);
 
   if (n > num_points)
     {
@@ -2177,7 +2162,7 @@ static void to_DC(int n, double *x, double *y)
       colia = (int *)pixels;
     }
 
-  bitmap = CGBitmapContextCreate(colia, width, height, 8, 4 * width, cs, kCGImageAlphaPremultipliedLast);
+  bitmap = CGBitmapContextCreate(colia, width, height, 8, 4 * width, cs, (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
   CGContextScaleCTM(context, 1 / scale, 1 / scale);
   image = CGBitmapContextCreateImage(bitmap);
   CGContextDrawImage(context, CGRectMake(x, y, width, height), image);
@@ -2199,7 +2184,7 @@ static void to_DC(int n, double *x, double *y)
 
   begin_context(context);
   cs = CGColorSpaceCreateDeviceRGB();
-  bmp = CGBitmapContextCreate(bitmap, width, height, 8, 4 * width, cs, kCGImageAlphaPremultipliedLast);
+  bmp = CGBitmapContextCreate(bitmap, width, height, 8, 4 * width, cs, (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
   image = CGBitmapContextCreateImage(bmp);
   CGContextDrawImage(context, CGRectMake(x, y, width, height), image);
   CGImageRelease(image);
@@ -2214,7 +2199,7 @@ static void to_DC(int n, double *x, double *y)
   if (family == 30)
     { // ZapfDingbatsITC
       int i;
-      int nchars = strlen(text);
+      size_t nchars = strlen(text);
       string = [NSString string];
       for (i = 0; i < nchars; i++)
         {
@@ -2233,7 +2218,7 @@ static void to_DC(int n, double *x, double *y)
           /* if string creation failed, replace all invalid bytes with question marks */
           int i;
           const char *utf8_str = text;
-          char *text_without_invalid_bytes = gks_malloc(strlen(text) + 1);
+          char *text_without_invalid_bytes = gks_malloc((int)strlen(text) + 1);
           for (i = 0; utf8_str[i] != 0; i++)
             {
               if ((utf8_str[i] & 0x80) == 0x00)
@@ -2279,7 +2264,7 @@ static void to_DC(int n, double *x, double *y)
           /* if string creation failed again, replace all non-ASCII bytes with question marks */
           int i;
           const char *utf8_str = text;
-          char *text_without_nonascii_bytes = gks_malloc(strlen(text) + 1);
+          char *text_without_nonascii_bytes = gks_malloc((int)strlen(text) + 1);
           for (i = 0; utf8_str[i] != 0; i++)
             {
               if ((utf8_str[i] & 0x80) == 0x00)
@@ -2304,11 +2289,11 @@ static void to_DC(int n, double *x, double *y)
 
 - (void)text:(double)px:(double)py:(char *)text
 {
-  int tx_font, tx_prec, tx_color, nchars;
+  int tx_font, tx_prec, tx_color;
   double xn, yn, xstart, ystart, xrel, yrel, ax, ay;
   NSString *fontName;
 
-  nchars = strlen(text);
+  size_t nchars = strlen(text);
 
   tx_font = gkss->asf[6] ? gkss->txfont : predef_font[gkss->tindex - 1];
   tx_prec = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
@@ -2402,7 +2387,7 @@ static void to_DC(int n, double *x, double *y)
 #endif
   else
     {
-      gks_emul_text(px, py, nchars, text, line_routine, fill_routine);
+      gks_emul_text(px, py, (int)nchars, text, line_routine, fill_routine);
     }
 
   end_context(context);

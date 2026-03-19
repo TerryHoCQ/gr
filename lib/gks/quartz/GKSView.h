@@ -40,7 +40,6 @@ typedef struct
 - (void)gks_set_shadow;
 
 - (void)polyline:(int)n:(double *)px:(double *)py;
-- (void)draw_marker:(double)xn:(double)yn:(int)mtype:(double)mscale:(int)mcolor:(CGContextRef)context;
 - (void)polymarker:(int)n:(double *)px:(double *)py;
 - (void)fillarea:(int)n:(double *)px:(double *)py;
 - (void)cellarray:(double)

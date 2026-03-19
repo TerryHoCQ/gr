@@ -1242,11 +1242,11 @@ if(APPLE)
           lib/gks/quartz/Info.plist
           lib/gks/quartz/MacOSXBundleInfo.plist.in
           lib/gks/quartz/main.m
-          lib/gks/quartz/English.lproj/InfoPlist.strings
-          lib/gks/quartz/English.lproj/ExtendSavePanel.nib/designable.nib
-          lib/gks/quartz/English.lproj/ExtendSavePanel.nib/keyedobjects.nib
-          lib/gks/quartz/English.lproj/MainMenu.nib/designable.nib
-          lib/gks/quartz/English.lproj/MainMenu.nib/keyedobjects.nib
+          lib/gks/quartz/en.lproj/InfoPlist.strings
+          lib/gks/quartz/Base.lproj/ExtendSavePanel.nib/designable.nib
+          lib/gks/quartz/Base.lproj/ExtendSavePanel.nib/keyedobjects.nib
+          lib/gks/quartz/Base.lproj/MainMenu.nib/designable.nib
+          lib/gks/quartz/Base.lproj/MainMenu.nib/keyedobjects.nib
           lib/gks/quartz/GKSTerm.xcodeproj/project.pbxproj
           lib/gks/quartz/GKSTerm.xcodeproj/project.xcworkspace
           lib/gks/quartz/GKSTerm.xcodeproj/project.xcworkspace/contents.xcworkspacedata
@@ -1280,9 +1280,9 @@ if(APPLE)
       add_custom_command(
         TARGET GKSTerm
         POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/quartz/English.lproj
-                ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm.app/Contents/Resources/English.lproj
-        BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm.app/Contents/Resources/English.lproj
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/quartz/Base.lproj
+                ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm.app/Contents/Resources/Base.lproj
+        BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm.app/Contents/Resources/Base.lproj
       )
       target_sources(GKSTerm PRIVATE lib/gks/quartz/GKSTerm.icns)
       set_source_files_properties(lib/gks/quartz/GKSTerm.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources/)

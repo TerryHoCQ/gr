@@ -1626,7 +1626,7 @@ static int get_default_ws_type(void)
       else
 #endif
         {
-          if (have_iterm())
+          if (have_iterm_image_protocol())
             default_wstype = 151;
           else if (have_kitty_image_protocol())
             default_wstype = have_kitty_image_protocol() == KITTY_IMAGE_PROTOCOL_WITH_UNICODE_PLACEHOLDERS ? 153 : 152;

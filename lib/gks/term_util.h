@@ -62,6 +62,7 @@ HIDDEN void makeraw(void);
 HIDDEN char *send_control_sequence(char group, const char *parameters, const char *terminator);
 HIDDEN int have_iterm(void);
 HIDDEN int have_kitty(void);
+HIDDEN int have_iterm_image_protocol(void);
 HIDDEN enum kitty_image_protocol_support_t have_kitty_image_protocol(void);
 HIDDEN enum tmux_state_t have_tmux(void);
 HIDDEN int is_dark_term(void);

@@ -219,6 +219,24 @@ int have_kitty(void)
   return is_kitty;
 }
 
+int have_iterm_image_protocol(void)
+{
+  char *resp;
+  char *capabilities;
+  static int iterm_image_protocol_support = -1;
+
+  if (iterm_image_protocol_support != -1) return iterm_image_protocol_support;
+
+  resp = send_control_sequence(']', "1337;Capabilities", NULL);
+  iterm_image_protocol_support = 0;
+  if (resp == NULL) return 0;
+  capabilities = strchr(resp, '=') + 1;
+  if (capabilities == NULL) return 0;
+  iterm_image_protocol_support = strchr(capabilities, 'F') != NULL;
+
+  return iterm_image_protocol_support;
+}
+
 enum kitty_image_protocol_support_t have_kitty_image_protocol(void)
 {
   char *resp;

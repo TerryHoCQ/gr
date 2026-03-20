@@ -105,7 +105,6 @@ DLLEXPORT void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *i_arr, 
 
 #define MAX_TNR 9
 
-#define HEIGHT_IN_CELLS 24
 #define CHUNK_SIZE 4096
 
 #define STR(x) #x
@@ -173,7 +172,7 @@ typedef struct ws_state_list_t
   enum background_t background;
   enum tmux_state_t have_tmux;
   unsigned int image_id_prefix;
-  int scroll;
+  struct inline_options_t inline_options;
 #endif
   double mw, mh;
   int w, h, dpi;
@@ -1833,7 +1832,7 @@ static void write_page(void)
       unsigned char *string;
       char *b64_string;
       int term_height_in_cells, term_width_in_cells, term_height_in_pixels, term_width_in_pixels;
-      int image_width_in_cells;
+      int image_height_in_cells = p->inline_options.height, image_width_in_cells;
       if (!term_size(&term_height_in_cells, &term_width_in_cells, &term_height_in_pixels, &term_width_in_pixels))
         {
           fprintf(stderr, "GKS: Failed to query terminal size.\n");
@@ -1842,8 +1841,23 @@ static void write_page(void)
       {
         double cell_height = (double)term_height_in_pixels / term_height_in_cells;
         double cell_width = (double)term_width_in_pixels / term_width_in_cells;
-        double rendered_image_height = cell_height * HEIGHT_IN_CELLS;
-        double rendered_image_width = p->width * (rendered_image_height / p->height);
+        double rendered_image_height = cell_height * image_height_in_cells;
+        double rendered_image_width = 0;
+        if (p->inline_options.width > 0)
+          {
+            rendered_image_width = cell_width * p->inline_options.width;
+            if (rendered_image_width / rendered_image_height < (double)p->width / p->height)
+              {
+                rendered_image_height = rendered_image_width / p->width * p->height;
+                image_height_in_cells = ceil(rendered_image_height / cell_height);
+                rendered_image_height = image_height_in_cells * cell_height;
+              }
+            else
+              {
+                rendered_image_width = 0;
+              }
+          }
+        if (rendered_image_width == 0) rendered_image_width = rendered_image_height * p->width / p->height;
         image_width_in_cells = ceil(rendered_image_width / cell_width);
       }
 
@@ -1868,7 +1882,7 @@ static void write_page(void)
       b64_string = (char *)gks_malloc(b64_size);
       gks_base64(string, size, b64_string, b64_size);
 
-      if (!p->scroll)
+      if (!p->inline_options.scroll)
         {
           /*
            * If scrolling is disabled and it is not the first page then move the cursor up and clear the screen below it
@@ -1876,7 +1890,7 @@ static void write_page(void)
            */
           if (p->page_counter > 1)
             {
-              fprintf(stdout, "\033[%dF", HEIGHT_IN_CELLS); /* Move up `HEIGHT_IN_CELLS` lines */
+              fprintf(stdout, "\033[%dF", image_height_in_cells); /* Move up `image_height_in_cells` lines */
             }
           fputs("\033[J", stdout); /* Clear the screen below the cursor */
         }
@@ -1898,7 +1912,7 @@ static void write_page(void)
                 }
             }
           line_buffer[(image_width_in_cells - 1) * kitty_utf8_image_placeholder_len] = '\0';
-          for (i = 0; i < HEIGHT_IN_CELLS; ++i)
+          for (i = 0; i < image_height_in_cells; ++i)
             {
               fprintf(stdout, "\033[38;2;%u;%u;%um%s%s%s%s", p->image_id_prefix & 0xff,
                       ((p->page_counter - 1) >> 8) & 0xff, (p->page_counter - 1) & 0xff, kitty_utf8_image_placeholder,
@@ -1916,11 +1930,11 @@ static void write_page(void)
            * -> place the cursor at the end of the drawing area and jump back to make a space reservation.
            */
           int i;
-          for (i = 0; i < HEIGHT_IN_CELLS; ++i)
+          for (i = 0; i < image_height_in_cells; ++i)
             {
               fprintf(stdout, "\n"); /* only `\n` creates new lines on the screen */
             }
-          fprintf(stdout, "\033[%dF", HEIGHT_IN_CELLS); /* Move up `HEIGHT_IN_CELLS` lines */
+          fprintf(stdout, "\033[%dF", image_height_in_cells); /* Move up `image_height_in_cells` lines */
         }
       if (p->have_tmux) send_tmux_escape_sequence_start();
       if (p->wtype == 151)
@@ -1928,7 +1942,7 @@ static void write_page(void)
           /* For a description of the iTerm image protocol, see <https://iterm2.com/documentation-images.html>. */
           long sent_bytes;
           send_tmux_escaped_escape();
-          fprintf(stdout, "]1337;MultipartFile=inline=1;height=%u;preserveAspectRatio=0\a", HEIGHT_IN_CELLS);
+          fprintf(stdout, "]1337;MultipartFile=inline=1;height=%u;preserveAspectRatio=1\a", image_height_in_cells);
           for (sent_bytes = 0; sent_bytes < b64_size; sent_bytes += CHUNK_SIZE)
             {
               send_tmux_escaped_escape();
@@ -1945,7 +1959,7 @@ static void write_page(void)
           for (sent_bytes = 0; sent_bytes < b64_size; sent_bytes += CHUNK_SIZE)
             {
               send_tmux_escaped_escape();
-              fprintf(stdout, "_Gf=100,a=T,q=2,r=%u,m=%u;%.*s", HEIGHT_IN_CELLS,
+              fprintf(stdout, "_Gf=100,a=T,q=2,r=%u,m=%u;%.*s", image_height_in_cells,
                       (sent_bytes < b64_size - CHUNK_SIZE) ? 1 : 0, min((int)(b64_size - sent_bytes), CHUNK_SIZE),
                       b64_string + sent_bytes);
               send_tmux_escaped_escape();
@@ -1959,8 +1973,8 @@ static void write_page(void)
           for (sent_bytes = 0; sent_bytes < b64_size; sent_bytes += CHUNK_SIZE)
             {
               send_tmux_escaped_escape();
-              fprintf(stdout, "_Gf=100,a=T,q=2,r=%u,c=%u,i=%u,U=1,m=%u;%.*s", HEIGHT_IN_CELLS, image_width_in_cells,
-                      p->image_id_prefix << 16 | ((p->page_counter - 1) & 0xffff),
+              fprintf(stdout, "_Gf=100,a=T,q=2,r=%u,c=%u,i=%u,U=1,m=%u;%.*s", image_height_in_cells,
+                      image_width_in_cells, p->image_id_prefix << 16 | ((p->page_counter - 1) & 0xffff),
                       (sent_bytes < b64_size - CHUNK_SIZE) ? 1 : 0, min((int)(b64_size - sent_bytes), CHUNK_SIZE),
                       b64_string + sent_bytes);
               send_tmux_escaped_escape();
@@ -1976,7 +1990,7 @@ static void write_page(void)
                * tmux does not recognize the drawn image and reserves no space for it
                * -> place the cursor at the end of the drawn image
                */
-              fprintf(stdout, "\033[%dE", HEIGHT_IN_CELLS); /* Move down `HEIGHT_IN_CELLS` lines */
+              fprintf(stdout, "\033[%dE", image_height_in_cells); /* Move down `image_height_in_cells` lines */
             }
           else
             {
@@ -2461,6 +2475,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       if (p->wtype >= 151 && p->wtype <= 153)
         {
           p->have_tmux = have_tmux();
+          p->inline_options = parse_inline_env_var();
           if (p->wtype == 153)
             {
               unsigned int seed = time(NULL);
@@ -2583,36 +2598,42 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->current_page_written = 1;
       p->page_counter = 0;
 #ifndef _WIN32
-      {
-        const char *background = gks_getenv("GKS_BACKGROUND");
-        p->background = -1;
-        if (background != NULL)
-          {
-            if (strcmp(background, "light") == 0)
-              p->background = BACKGROUND_LIGHT;
-            else if (strcmp(background, "dark") == 0)
-              p->background = BACKGROUND_DARK;
-            else if (strcmp(background, "none") == 0)
-              p->background = BACKGROUND_NONE;
-          }
-        /* Auto-detect suited background in terminal mode if not set by user */
-        if (p->background == -1 && p->wtype >= 151 && p->wtype <= 153)
-          {
+      p->background = -1;
+      if (p->wtype >= 151 && p->wtype <= 153)
+        {
+          if (p->inline_options.background == INLINE_BACKGROUND_DARK)
+            p->background = BACKGROUND_DARK;
+          else if (p->inline_options.background == INLINE_BACKGROUND_LIGHT)
+            p->background = BACKGROUND_DARK;
+          else if (p->inline_options.background == INLINE_BACKGROUND_NONE)
+            p->background = BACKGROUND_NONE;
+          else
             p->background = is_dark_term() ? BACKGROUND_DARK : BACKGROUND_LIGHT;
-          }
-        /* Swap default foreground and background color in dark mode */
-        /* TODO: Put this into a separate colortheme function? */
-        if (p->background == BACKGROUND_DARK)
-          {
-            double r0, g0, b0;
-            double r1, g1, b1;
-            gks_inq_rgb(0, &r0, &g0, &b0);
-            gks_inq_rgb(1, &r1, &g1, &b1);
-            gks_set_rgb(0, r1, g1, b1);
-            gks_set_rgb(1, r0, g0, b0);
-          }
-      }
-      p->scroll = gks_getenv("GKS_SCROLL_ITERM") != NULL;
+        }
+      else
+        {
+          const char *background = gks_getenv("GKS_BACKGROUND");
+          if (background != NULL)
+            {
+              if (strcmp(background, "light") == 0)
+                p->background = BACKGROUND_LIGHT;
+              else if (strcmp(background, "dark") == 0)
+                p->background = BACKGROUND_DARK;
+              else if (strcmp(background, "none") == 0)
+                p->background = BACKGROUND_NONE;
+            }
+        }
+      /* Swap default foreground and background color in dark mode */
+      /* TODO: Put this into a separate colortheme function? */
+      if (p->background == BACKGROUND_DARK)
+        {
+          double r0, g0, b0;
+          double r1, g1, b1;
+          gks_inq_rgb(0, &r0, &g0, &b0);
+          gks_inq_rgb(1, &r1, &g1, &b1);
+          gks_set_rgb(0, r1, g1, b1);
+          gks_set_rgb(1, r0, g0, b0);
+        }
 #endif
 
       p->transparency = 1.0;

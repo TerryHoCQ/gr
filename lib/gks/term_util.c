@@ -1,6 +1,6 @@
 #ifdef __unix__
-/* Needed for popen function */
-#define _POSIX_C_SOURCE 200112L
+/* Needed for popen and strdup functions */
+#define _POSIX_C_SOURCE 200809L
 #endif
 
 #include <stdio.h>
@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 
+#define DEFAULT_HEIGHT_IN_CELLS 24
 #define OSC_MAX_RESP_LEN 80
 #define ST_TERMINATOR "\033\\"
 /* 1x1 minimal png encoded in base64 */
@@ -22,6 +23,22 @@
   "D/AP+gvaeTAAAAC0lEQVQImWNgAAIAAAUAAWJVMogAAAAASUVORK5CYII="
 
 static struct termios saved_term;
+
+static int is_off(const char *s)
+{
+  const char *off_values[] = {"off", "false", "deactivated", "disabled", "0", NULL};
+  const char **off_value_ptr;
+
+  for (off_value_ptr = off_values; *off_value_ptr != NULL; ++off_value_ptr)
+    {
+      if (strcmp(*off_value_ptr, s) == 0)
+        {
+          return 1;
+        }
+    }
+
+  return 0;
+}
 
 void makeraw(void)
 {
@@ -290,6 +307,154 @@ int is_dark_term(void)
 
   /* Formula taken from <https://www.w3.org/TR/AERT/#color-contrast> */
   return 0.299 * r + 0.587 * g + 0.114 * b < 128;
+}
+
+struct inline_options_t parse_inline_env_var(void)
+{
+  static struct inline_options_t options = {-1, -1, INLINE_BACKEND_AUTO, -1, 0, DEFAULT_HEIGHT_IN_CELLS};
+  char *options_string, *option;
+
+  if (options.active != -1) return options;
+
+  options_string = getenv("GKS_INLINE");
+  if (options_string == NULL || *options_string == '\0')
+    {
+      options.active = 0;
+      return options;
+    }
+
+  options_string = strdup(options_string);
+  if (options_string == NULL)
+    {
+      options.active = 0;
+      return options;
+    }
+  options.active = -1;
+  option = strtok(options_string, ",");
+  while (option != NULL)
+    {
+      char *key_value_delim_ptr = strpbrk(option, ":=");
+      const char *key = option;
+      const char *value;
+      if (key_value_delim_ptr != NULL)
+        {
+          *key_value_delim_ptr = '\0';
+          value = key_value_delim_ptr + 1;
+        }
+      else
+        {
+          value = "";
+          /* Support options like `noscroll` instead of `scroll=off` */
+          if (strlen(key) > 2 && strncmp(key, "no", 2) == 0)
+            {
+              key += 2;
+              value = "off";
+            }
+        }
+      /* A single `off`, `false`, `deactivated`, `disabled` or `0` deactivates inline display */
+      if (*value == '\0' && is_off(key))
+        {
+          options.active = 0;
+        }
+      else if (strcmp(key, "scroll") == 0)
+        {
+          if (is_off(value))
+            {
+              options.scroll = INLINE_NO_SCROLL;
+            }
+          /*
+           * TODO: Add support for `region` and `clear`
+           * else if (strcmp(value, "region") == 0)
+           *   {
+           *     options.scroll = INLINE_SCROLL_REGION;
+           *   }
+           * else if (strcmp(value, "clear") == 0)
+           *   {
+           *     options.scroll = INLINE_CLEAR;
+           *   }
+           */
+          else
+            {
+              options.scroll = INLINE_SCROLL;
+            }
+        }
+      else if (strcmp(key, "backend") == 0)
+        {
+          if (strcmp(value, "auto") == 0)
+            {
+              options.backend = INLINE_BACKEND_AUTO;
+            }
+          else if (strcmp(value, "iterm") == 0)
+            {
+              options.backend = INLINE_BACKEND_ITERM;
+            }
+          else if (strcmp(value, "kitty") == 0)
+            {
+              options.backend = INLINE_BACKEND_KITTY;
+            }
+          else if (strcmp(value, "kitty-unicode") == 0)
+            {
+              options.backend = INLINE_BACKEND_KITTY_WITH_UNICODE_PLACEHOLDERS;
+            }
+        }
+      else if (strcmp(key, "background") == 0)
+        {
+          if (strcmp(value, "auto") == 0)
+            {
+              options.background = INLINE_BACKGROUND_AUTO;
+            }
+          else if (strcmp(value, "light") == 0)
+            {
+              options.background = INLINE_BACKGROUND_LIGHT;
+            }
+          else if (strcmp(value, "dark") == 0)
+            {
+              options.background = INLINE_BACKGROUND_DARK;
+            }
+          else if (strcmp(value, "none") == 0)
+            {
+              options.background = INLINE_BACKGROUND_NONE;
+            }
+        }
+      else if (strcmp(key, "size") == 0)
+        {
+          if (sscanf(value, "%ux%u", &options.width, &options.height) != 2)
+            {
+              options.width = 0;
+              /* If the following `sscanf` fails, `options.height` is still set to `DEFAULT_HEIGHT_IN_CELLS` */
+              sscanf(value, "%u", &options.height);
+            }
+        }
+      option = strtok(NULL, ",");
+    }
+  if (options.active == -1)
+    {
+      options.active = 1;
+    }
+  /* Add compatibility with the older `GKS_SCROLL_ITERM` env variable */
+  if (options.scroll == -1)
+    {
+      options.scroll = gks_getenv_bool("GKS_SCROLL_ITERM") ? INLINE_SCROLL : INLINE_NO_SCROLL;
+    }
+  /* Add compatibility with the `GKS_BACKGROUND` env variable */
+  if (options.background == -1)
+    {
+      const char *background = gks_getenv("GKS_BACKGROUND");
+      if (background != NULL)
+        {
+          if (strcmp(background, "light") == 0)
+            options.background = INLINE_BACKGROUND_LIGHT;
+          else if (strcmp(background, "dark") == 0)
+            options.background = INLINE_BACKGROUND_DARK;
+          else if (strcmp(background, "none") == 0)
+            options.background = INLINE_BACKGROUND_NONE;
+        }
+      if (options.background == -1) options.background = INLINE_BACKGROUND_AUTO;
+    }
+
+  free(options_string);
+
+  return options;
 }
 
 int term_size(int *rows, int *cols, int *width, int *height)

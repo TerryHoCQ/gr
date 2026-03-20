@@ -1615,12 +1615,13 @@ static int get_default_ws_type(void)
       default_wstype = 100;
 #else
 #ifndef _WIN32
+      struct inline_options_t inline_options = parse_inline_env_var();
 #ifdef __APPLE__
-      if (gks_getenv("TERM_PROGRAM") != NULL || gks_getenv("TERMINAL_EMULATOR") != NULL)
+      if (!inline_options.active && (gks_getenv("TERM_PROGRAM") != NULL || gks_getenv("TERMINAL_EMULATOR") != NULL))
         default_wstype = have_gksqt() ? 411 : 400;
       else
 #else
-      if (gks_getenv("DISPLAY") != NULL)
+      if (!inline_options.active && gks_getenv("DISPLAY") != NULL)
         default_wstype = have_gksqt() ? 411 : 211;
       else
 #endif
@@ -2007,6 +2008,22 @@ const char *gks_getenv(const char *env)
 #else
   return getenv(env);
 #endif
+}
+
+int gks_getenv_bool(const char *env)
+{
+  const char *env_value = gks_getenv(env);
+  const char *true_values[] = {"1", "on", "ON", "true", "TRUE", "yes", "YES", NULL};
+  const char **true_value_ptr;
+
+  if (env_value == NULL) return 0;
+
+  for (true_value_ptr = true_values; *true_value_ptr != NULL; ++true_value_ptr)
+    {
+      if (strcmp(env_value, *true_value_ptr) == 0) return 1;
+    }
+
+  return 0;
 }
 
 void gks_input2utf8(const char *input_str, char *utf8_str, int input_encoding)

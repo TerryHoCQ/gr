@@ -304,6 +304,7 @@ void gks_util_inq_text_extent(double px, double py, char *chars, int nchars, dou
 int gks_get_ws_type(void);
 int gks_base64(unsigned char *src, size_t srclength, char *target, size_t targsize);
 DLLEXPORT const char *gks_getenv(const char *env);
+DLLEXPORT int gks_getenv_bool(const char *env);
 void gks_iso2utf(unsigned char c, char *utf, size_t *len);
 void gks_symbol2utf(unsigned char c, char *utf, size_t *len);
 void gks_input2utf8(const char *input_str, char *utf8_str, int input_encoding);

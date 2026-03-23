@@ -28,6 +28,16 @@ extern "C" {
 #endif
 #endif
 
+/*
+ * `W` can be used to convert a C string literal to a `wchar_t` string literal on Windows, but not on other platforms
+ * For `std::string`, see `w` in `utilcpp_int.hxx`
+ */
+#ifdef _WIN32
+#define W(x) (L"" x)
+#else
+#define W(x) (x)
+#endif
+
 #define isStringDelimiter(char_ptr, str) ((*(char_ptr) == '"') && (((char_ptr) == (str)) || *((char_ptr)-1) != '\\'))
 
 #ifndef arraySize

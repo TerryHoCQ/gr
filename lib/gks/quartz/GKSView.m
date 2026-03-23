@@ -1,3 +1,4 @@
+// clang-format off
 
 #include "gks.h"
 #include "gkscore.h"
@@ -1062,13 +1063,13 @@ static void seg_xform_rel(double *x, double *y) {}
     }
 }
 
-- (void)set_fill_color:(int)color:(CGContextRef)context
+- (void)set_fill_color:(int)color :(CGContextRef)context
 {
   update_color(color);
   CGContextSetFillColorWithColor(context, p->rgb[color]);
 }
 
-- (void)set_stroke_color:(int)color:(CGContextRef)context
+- (void)set_stroke_color:(int)color :(CGContextRef)context
 {
   update_color(color);
   CGContextSetStrokeColorWithColor(context, p->rgb[color]);
@@ -1210,7 +1211,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
   if (linetype == 0) CGContextClosePath(context);
 }
 
-- (void)polyline:(int)n:(double *)px:(double *)py
+- (void)polyline :(int)n :(double *)px :(double *)py
 {
   int ln_type, ln_color, i;
   double ln_width;
@@ -1261,13 +1262,13 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
   end_context(context);
 }
 
-- (void)draw_marker:(double)
-                 xn:(double)yn
-                   :(int)mtype
-                   :(double)mscale
-                   :(int)mcolor
-                   :(CGContextRef)context
-                   :(const CGFloat *)color
+- (void)draw_marker :(double)xn
+                    :(double)yn
+                    :(int)mtype
+                    :(double)mscale
+                    :(int)mcolor
+                    :(CGContextRef)context
+                    :(const CGFloat *)color
 {
   double x, y;
   int i;
@@ -1421,7 +1422,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
   while (op != 0);
 }
 
-- (void)polymarker:(int)n:(double *)px:(double *)py
+- (void)polymarker :(int)n :(double *)px :(double *)py
 {
   int mk_type, mk_color;
   double mk_size;
@@ -1570,7 +1571,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
   CGPathRelease(shape);
 }
 
-- (void)fillarea:(int)n:(double *)px:(double *)py
+- (void)fillarea :(int)n :(double *)px :(double *)py
 {
   int fl_inter, fl_style, fl_color, i = 0;
   double x, y;
@@ -1648,7 +1649,7 @@ static void to_DC(int n, double *x, double *y)
     }
 }
 
-- (void)draw_path:(int)n:(double *)px:(double *)py:(int)nc:(int *)codes
+- (void)draw_path :(int)n :(double *)px :(double *)py :(int)nc :(int *)codes
 {
   int i, j;
   double x[3], y[3], w, h, a1, a2;
@@ -1822,7 +1823,7 @@ static void to_DC(int n, double *x, double *y)
 }
 
 
-- (void)draw_lines:(int)n:(double *)px:(double *)py:(int *)attributes
+- (void)draw_lines :(int)n :(double *)px :(double *)py :(int *)attributes
 {
   int i, j = 0, rgba;
   double x, y, xim1, yim1, xi, yi;
@@ -1871,7 +1872,7 @@ static void to_DC(int n, double *x, double *y)
 }
 
 
-- (void)draw_markers:(int)n:(double *)px:(double *)py:(int *)attributes
+- (void)draw_markers :(int)n :(double *)px :(double *)py :(int *)attributes
 {
   int mk_type, mk_color = 0;
   double x, y, mk_size;
@@ -1914,7 +1915,7 @@ static void to_DC(int n, double *x, double *y)
 }
 
 
-- (void)draw_triangles:(int)n:(double *)px:(double *)py:(int)ntri:(int *)tri
+- (void)draw_triangles :(int)n :(double *)px :(double *)py :(int)ntri :(int *)tri
 {
   double x, y;
   int i, j, k, rgba;
@@ -1974,7 +1975,7 @@ static void to_DC(int n, double *x, double *y)
 }
 
 
-- (void)fill_polygons:(int)n:(double *)px:(double *)py:(int)nply:(int *)ply
+- (void)fill_polygons :(int)n :(double *)px :(double *)py :(int)nply :(int *)ply
 {
   double x, y;
   int i, j, k, len;
@@ -2039,7 +2040,7 @@ static void to_DC(int n, double *x, double *y)
 }
 
 
-- (void)gdp:(int)n:(double *)px:(double *)py:(int)primid:(int)nc:(int *)codes
+- (void)gdp: (int)n :(double *)px :(double *)py :(int)primid :(int)nc :(int *)codes
 {
   switch (primid)
     {
@@ -2065,15 +2066,15 @@ static void to_DC(int n, double *x, double *y)
 }
 
 
-- (void)cellarray:(double)
-             xmin:(double)xmax
-                 :(double)ymin
-                 :(double)ymax
-                 :(int)dx
-                 :(int)dy
-                 :(int)dimx
-                 :(int *)colia
-                 :(int)true_color
+- (void)cellarray :(double)xmin
+                  :(double)xmax
+                  :(double)ymin
+                  :(double)ymax
+                  :(int)dx
+                  :(int)dy
+                  :(int)dimx
+                  :(int *)colia
+                  :(int)true_color
 {
   double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
@@ -2176,7 +2177,7 @@ static void to_DC(int n, double *x, double *y)
   end_context(context);
 }
 
-- (void)drawimage:(int)x:(int)y:(int)width:(int)height:(int *)bitmap
+- (void)drawimage :(int)x :(int)y :(int)width :(int)height :(int *)bitmap
 {
   CGColorSpaceRef cs;
   CGContextRef bmp;
@@ -2287,7 +2288,7 @@ static void to_DC(int n, double *x, double *y)
 }
 
 
-- (void)text:(double)px:(double)py:(char *)text
+- (void)text :(double)px :(double)py :(char *)text
 {
   int tx_font, tx_prec, tx_color;
   double xn, yn, xstart, ystart, xrel, yrel, ax, ay;

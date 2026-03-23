@@ -1,3 +1,5 @@
+// clang-format off
+
 #import <Cocoa/Cocoa.h>
 #import <AppKit/AppKit.h>
 
@@ -39,22 +41,22 @@ typedef struct
 
 - (void)gks_set_shadow;
 
-- (void)polyline:(int)n:(double *)px:(double *)py;
-- (void)polymarker:(int)n:(double *)px:(double *)py;
-- (void)fillarea:(int)n:(double *)px:(double *)py;
-- (void)cellarray:(double)
-             xmin:(double)xmax
-                 :(double)ymin
-                 :(double)ymax
-                 :(int)dx
-                 :(int)dy
-                 :(int)dimx
-                 :(int *)colia
-                 :(int)true_color;
-- (void)text:(double)px:(double)py:(char *)text;
-- (_FontInfo)set_font:(int)font;
-- (NSString *)stringForText:(const char *)text withFontFamilyID:(int)family;
+- (void)polyline :(int)n :(double *)px :(double *)py;
+- (void)polymarker :(int)n :(double *)px :(double *)py;
+- (void)fillarea :(int)n :(double *)px :(double *)py;
+- (void)cellarray :(double)xmin
+                  :(double)xmax
+                  :(double)ymin
+                  :(double)ymax
+                  :(int)dx
+                  :(int)dy
+                  :(int)dimx
+                  :(int *)colia
+                  :(int)true_color;
+- (void)text :(double)px :(double)py :(char *)text;
+- (_FontInfo)set_font :(int)font;
+- (NSString *)stringForText :(const char *)text withFontFamilyID:(int)family;
 
-- (IBAction)keep_on_display:(id)sender;
-- (IBAction)rotate:(id)sender;
+- (IBAction)keep_on_display :(id)sender;
+- (IBAction)rotate :(id)sender;
 @end

@@ -101,10 +101,8 @@ $(PREFIX)/lib/libcairo.a: $(PREFIX)/src/cairo-$(VERSION)/Makefile
 	$(MAKE) -C $(PREFIX)/src/cairo-$(VERSION) -j4 && \
 	$(MAKE) -C $(PREFIX)/src/cairo-$(VERSION) install
 	# Fix broken libcairo static library issues on some systems (e.g. Darwin)
-	mkdir -p $(PREFIX)/build/cairo-$(VERSION)
-	cd $(PREFIX)/build/cairo-$(VERSION) && $(AR) x $(PREFIX)/lib/libcairo.a
-	cd $(PREFIX)/build/cairo-$(VERSION) && $(AR) crv libcairo.a *.o
-	mv $(PREFIX)/build/cairo-$(VERSION)/libcairo.a $(PREFIX)/lib/libcairo.a
+	$(RM) -f $(PREFIX)/lib/libcairo.a
+	$(AR) crv $(PREFIX)/lib/libcairo.a $(PREFIX)/src/cairo-$(VERSION)/src/*.o
 
 install: $(PREFIX)/lib/libcairo.a
 

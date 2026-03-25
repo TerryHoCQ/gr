@@ -4,6 +4,7 @@
 #ifndef NO_THREADS
 #include <assert.h>
 #include <cmath>
+#include <cstdlib>
 
 #include "Threadpool.hxx"
 

@@ -236,6 +236,7 @@ protected:
   void leaveEvent(QEvent *event) override;
   void paint(QPaintDevice *paint_device);
   static Qt::KeyboardModifiers queryKeyboardModifiers();
+  void changeIconBarVisibility(bool visibility);
 
 signals:
   void pixmapRedrawn();

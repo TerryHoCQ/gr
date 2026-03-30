@@ -1451,6 +1451,12 @@ void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element> &eleme
                                    ? plot_parent->parentElement()
                                    : plot_parent;
 
+      // special case cause a single plot inside a layout_grid_element would differ from a single plot without layout
+      // this happened with the joining of plots
+      if (plot_parent->parentElement()->localName() == "layout_grid_element" &&
+          active_figure->querySelectorsAll("layout_grid_element").size() <= 1)
+        figure_vp_element = plot_parent;
+
       auto default_diag_factor =
           ((DEFAULT_ASPECT_RATIO_FOR_SCALING) *
            (start_aspect_ratio_ws <= 1 ? start_aspect_ratio_ws : (1.0 / start_aspect_ratio_ws))) /

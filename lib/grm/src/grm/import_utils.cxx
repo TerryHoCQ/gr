@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <map>
 #include <sstream>
+#include <vector>
 
 #include "utilcpp_int.hxx"
 #include "import_utils_int.hxx"
@@ -37,7 +38,7 @@ static std::map<std::string, const char *> key_to_types{
     {"isovalue", "d"},
     {"keep_aspect_ratio", "i"},
     {"keep_radii_axes", "i"},
-    {"kind", "s"},
+    {"kind", "nS"},
     {"legend", "nS"},
     {"legend_line", "i"},
     {"levels", "i"},
@@ -311,12 +312,48 @@ int parseParameterND(std::string *input, const std::string *key, std::vector<dou
   return 1;
 }
 
-std::string singleTokenConverter(std::string token, grm_args_t *args, PlotRange *ranges,
-                                 grm_special_axis_series_t *special_axis_series, InputFlags &input_flags,
-                                 int line_count)
+static std::string normalizeLine(const std::string &str)
+{
+  std::string s, item;
+  std::istringstream ss(str);
+
+  s = "";
+  while (ss >> item)
+    {
+      if (item[0] == '#') break;
+      if (!s.empty()) s += '\t';
+      s += item;
+    }
+  return s;
+}
+
+static bool kindOfSameGroup(std::string new_kind, std::vector<std::string> kinds)
+{
+  std::vector<std::string> line_group = {"line", "scatter"};
+  std::vector<std::string> barplot_group = {"barplot", "stem", "stairs"};
+  std::vector<std::string> polar_line_group = {"polar_line", "polar_scatter"};
+
+  // the other kind groups doesn't support series in grplot so they can be ignored for now
+  if (kinds[kinds.size() - 1] == new_kind) return true;
+  if (std::find(line_group.begin(), line_group.end(), new_kind) != line_group.end() &&
+      std::find(line_group.begin(), line_group.end(), kinds[kinds.size() - 1]) != line_group.end())
+    return true;
+  if (std::find(barplot_group.begin(), barplot_group.end(), new_kind) != barplot_group.end() &&
+      std::find(barplot_group.begin(), barplot_group.end(), kinds[kinds.size() - 1]) != barplot_group.end())
+    return true;
+  if (std::find(polar_line_group.begin(), polar_line_group.end(), new_kind) != polar_line_group.end() &&
+      std::find(polar_line_group.begin(), polar_line_group.end(), kinds[kinds.size() - 1]) != polar_line_group.end())
+    return true;
+  return false;
+}
+
+std::vector<std::string> singleTokenConverter(std::string token, grm_args_t *args, PlotRange *ranges,
+                                              grm_special_axis_series_t *special_axis_series, InputFlags &input_flags,
+                                              int line_count)
 {
   size_t found_key_size;
-  std::string delim = ":", found_key, kind = "";
+  std::string delim = ":", found_key;
+  std::vector<std::string> kinds;
   size_t pos = token.find(delim);
 
   if (startsWith(token, "bottom:"))
@@ -358,20 +395,53 @@ std::string singleTokenConverter(std::string token, grm_args_t *args, PlotRange 
           /* special case for kind, for following exception */
           if (strcmp(found_key.c_str(), "kind") == 0)
             {
-              kind = token.substr(found_key_size + 1, token.length() - 1);
-              if (isValidKind(kind))
+              auto kind_string = token.substr(found_key_size + 1, token.length() - 1);
+              std::string kind_token;
+              std::istringstream kind_ss(normalizeLine(kind_string));
+
+              for (size_t col = 0; std::getline(kind_ss, kind_token, ','); col++)
                 {
-                  char *tmp;
-                  if (!grm_args_values(args, "kind", "s", &tmp) || input_flags.default_kind_used)
-                    grm_args_push(args, "kind", "s", kind.c_str());
+                  if (kind_token == "hist")
+                    kind_token = "histogram";
+                  else if (kind_token == "plot3")
+                    kind_token = "line3";
+                  if (std::find(kind_types.begin(), kind_types.end(), kind_token) != kind_types.end())
+                    {
+                      // only allow different kinds of the same group for know since it result in less changes
+                      if (kinds.empty() || kindOfSameGroup(kind_token, kinds))
+                        {
+                          kinds.push_back(kind_token);
+                        }
+                      else
+                        {
+                          fprintf(stderr,
+                                  "Kind %s can't be combined with the previous types in the current GRPlot state\n",
+                                  kind_token.c_str());
+                        }
+                    }
+                  else if (kind_token.size() == 0)
+                    {
+                      if (kinds.size() > 0)
+                        {
+                          kinds.push_back(kinds[kinds.size() - 1]);
+                        }
+                      else
+                        {
+                          fprintf(stderr, "If multiple kinds should be used start with a valid kind\n");
+                        }
+                    }
+                  else
+                    {
+                      fprintf(stderr, "Invalid plot kind (%s) -- ignore this value\n", kind_token.c_str());
+                    }
                 }
-              return kind;
+              return kinds;
             }
 
           if (value.length() == 0)
             {
               fprintf(stderr, "Parameter %s will be ignored. No data given\n", search->first.c_str());
-              return kind;
+              return kinds;
             }
 
           /* parameter is a container */
@@ -683,5 +753,5 @@ std::string singleTokenConverter(std::string token, grm_args_t *args, PlotRange 
             fprintf(stderr, "Unknown key:value pair in parameters (%s)\n", token.c_str());
         }
     }
-  return kind;
+  return kinds;
 }

@@ -3638,8 +3638,8 @@ void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &element
   {
     const char *plot;
     const char *series;
-  } * current_range_keys, range_keys[] = {{"x_lim", "x_range"}, {"y_lim", "y_range"}, {"z_lim", "z_range"},
-                                          {"c_lim", "c_range"}, {"r_lim", "r_range"}, {"theta_lim", "theta_range"}};
+  } *current_range_keys, range_keys[] = {{"x_lim", "x_range"}, {"y_lim", "y_range"}, {"z_lim", "z_range"},
+                                         {"c_lim", "c_range"}, {"r_lim", "r_range"}, {"theta_lim", "theta_range"}};
 
   logger((stderr, "Storing coordinate ranges\n"));
 
@@ -3704,11 +3704,16 @@ void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &element
                 location_names = {"x", "twin_x", "top", "bottom"};
               else if (*current_component_name == "y" && plot_type == "2d")
                 location_names = {"y", "twin_y", "right", "left"};
+              else if (*current_component_name == "c")
+                location_names = {"c"};
+              else if (*current_component_name == "z")
+                location_names = {"z"};
 
               for (const auto location : location_names)
                 {
                   double min_component = DBL_MAX, max_component = -DBL_MAX, step = -DBL_MAX;
-                  if (static_cast<std::string>(fmt).find(*current_component_name) != std::string::npos)
+                  if (strEqualsAny(*current_component_name, "c", "z") ||
+                      static_cast<std::string>(fmt).find(*current_component_name) != std::string::npos)
                     {
                       std::shared_ptr<GRM::Element> series_parent =
                           (kind == "marginal_heatmap") ? element : central_region;
@@ -3920,6 +3925,7 @@ void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &element
                     {
                       if (strEqualsAny(kind, "imshow", "isosurface", "volume"))
                         {
+                          if (*current_component_name == "c" && strEqualsAny(kind, "volume", "isosurface")) continue;
                           min_component = (kind == "imshow" ? 0.0 : -1.0);
                           max_component = 1.0;
                         }

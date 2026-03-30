@@ -542,7 +542,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
   keep_window_act = new QAction(tr("&Keep Window"), this);
   connect(keep_window_act, &QAction::triggered, this, &GRPlotWidget::keepWindowSlot);
   keep_window_act->setCheckable(true);
-  keep_window_act->setChecked(true);
+  keep_window_act->setChecked(false);
   colormap_act = new QAction(tr(""), this);
   auto colormap = QPixmap(":/preview_images/colormaps/viridis.png");
   colormap_act->setIcon(colormap.scaled(20, 20));
@@ -2073,15 +2073,8 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
                   viewport[1] /= aspect_r;
                 }
 
-              if (!move_to_plot)
-                {
-                  gr_setbackground(viewport[0], viewport[1], std::max(0.0, height - viewport[3]),
-                                   std::max(0.0, height - viewport[3]) + viewport[3] - viewport[2]);
-                }
-              else
-                {
-                  gr_clearbackground();
-                }
+              gr_setbackground(viewport[0], viewport[1], std::max(0.0, height - viewport[3]),
+                               std::max(0.0, height - viewport[3]) + viewport[3] - viewport[2]);
             }
         }
       active_plot_changed = false;
@@ -2112,16 +2105,8 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
               viewport[0] /= aspect_r;
               viewport[1] /= aspect_r;
             }
-
-          if (!move_to_plot)
-            {
-              gr_setbackground(viewport[0], viewport[1], std::max(0.0, height - viewport[3]),
-                               std::max(0.0, height - viewport[3]) + viewport[3] - viewport[2]);
-            }
-          else
-            {
-              gr_clearbackground();
-            }
+          gr_setbackground(viewport[0], viewport[1], std::max(0.0, height - viewport[3]),
+                           std::max(0.0, height - viewport[3]) + viewport[3] - viewport[2]);
 
           auto render = grm_get_render();
           bool auto_update;
@@ -2133,7 +2118,6 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
             }
           render->setAutoUpdate(auto_update);
         }
-
       painter.end();
       redraw_pixmap = RedrawType::NONE;
 
@@ -4608,6 +4592,7 @@ void GRPlotWidget::legendSlot()
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
+  if (figure_elem == nullptr) return;
 
   if (const auto legend_elem = figure_elem->querySelectors("legend"))
     {
@@ -4641,6 +4626,7 @@ void GRPlotWidget::colorbarSlot()
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
+  if (figure_elem == nullptr) return;
 
   if (const auto colorbar = figure_elem->querySelectors("colorbar"))
     {
@@ -4675,6 +4661,7 @@ void GRPlotWidget::leftAxisSlot()
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
+  if (figure_elem == nullptr) return;
 
   if (const auto side_region = figure_elem->querySelectors("side_region[location=\"left\"]"))
     {
@@ -4716,6 +4703,7 @@ void GRPlotWidget::rightAxisSlot()
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
+  if (figure_elem == nullptr) return;
 
   if (const auto side_region = figure_elem->querySelectors("side_region[location=\"right\"]"))
     {
@@ -4757,6 +4745,7 @@ void GRPlotWidget::bottomAxisSlot()
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
+  if (figure_elem == nullptr) return;
 
   if (const auto side_region = figure_elem->querySelectors("side_region[location=\"bottom\"]"))
     {
@@ -4798,6 +4787,7 @@ void GRPlotWidget::topAxisSlot()
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
+  if (figure_elem == nullptr) return;
 
   if (const auto side_region = figure_elem->querySelectors("side_region[location=\"top\"]"))
     {
@@ -4839,6 +4829,7 @@ void GRPlotWidget::twinXAxisSlot()
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
+  if (figure_elem == nullptr) return;
 
   if (const auto coordinate_system = figure_elem->querySelectors("coordinate_system"))
     {
@@ -4874,6 +4865,7 @@ void GRPlotWidget::twinYAxisSlot()
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
   const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
                                                     : global_root->querySelectors("figure[active=1]");
+  if (figure_elem == nullptr) return;
 
   if (const auto coordinate_system = figure_elem->querySelectors("coordinate_system"))
     {
@@ -5277,26 +5269,29 @@ void GRPlotWidget::highlightCurrentSelection(QPainter &painter)
           GRM::getFigureSize(&width, &height, &mwidth, &mheight);
           auto aspect_r = mwidth / mheight;
 
-          if (!GRM::Render::getViewport(plot_elem, &vp_x_min, &vp_x_max, &vp_y_min, &vp_y_max))
-            throw NotFoundError(plot_elem->localName() + " doesn't have a viewport but it should.\n");
-          vp_x_min *= width;
-          vp_x_max *= width;
-          vp_y_min *= height;
-          vp_y_max *= height;
-
-          if (aspect_r > 1)
+          if (global_root->querySelectorsAll("layout_grid_element").size() > 1)
             {
-              vp_y_min *= aspect_r;
-              vp_y_max *= aspect_r;
-            }
-          else
-            {
-              vp_x_min /= aspect_r;
-              vp_x_max /= aspect_r;
-            }
+              if (!GRM::Render::getViewport(plot_elem, &vp_x_min, &vp_x_max, &vp_y_min, &vp_y_max))
+                throw NotFoundError(plot_elem->localName() + " doesn't have a viewport but it should.\n");
+              vp_x_min *= width;
+              vp_x_max *= width;
+              vp_y_min *= height;
+              vp_y_max *= height;
 
-          painter.drawRect(vp_x_min, std::max(0.0, height - vp_y_max), abs(vp_x_max - vp_x_min),
-                           abs(vp_y_max - vp_y_min));
+              if (aspect_r > 1)
+                {
+                  vp_y_min *= aspect_r;
+                  vp_y_max *= aspect_r;
+                }
+              else
+                {
+                  vp_x_min /= aspect_r;
+                  vp_x_max /= aspect_r;
+                }
+
+              painter.drawRect(vp_x_min, std::max(0.0, height - vp_y_max), abs(vp_x_max - vp_x_min),
+                               abs(vp_y_max - vp_y_min));
+            }
         }
     }
 }
@@ -5397,9 +5392,12 @@ void GRPlotWidget::enableEditorFunctions()
 {
   if (editor_action->text() == "&Enable Editorview")
     {
+      auto root = grm_get_document_root();
+      auto render = grm_get_render();
+
       enable_editor = true;
-      grm_get_render()->setEnableEditor(true);
-      grm_tmp_dir = grm_get_render()->initializeHistory();
+      render->setEnableEditor(true);
+      grm_tmp_dir = render->initializeHistory();
       if (enable_advanced_editor) add_element_action->setVisible(true);
       advanced_editor_act->setVisible(true);
       show_container_action->setVisible(true);
@@ -5415,6 +5413,17 @@ void GRPlotWidget::enableEditorFunctions()
       grm_input(args);
       grm_args_delete(args);
 
+      // to fix a strange behaviour on macos
+      for (const auto &plot_elems : root->querySelectorsAll("plot[_active=\"1\"]"))
+        {
+          plot_elems->removeAttribute("_active");
+        }
+      for (const auto &plot_elems : root->querySelectorsAll("plot[_active_through_update=\"1\"]"))
+        {
+          plot_elems->removeAttribute("_active_through_update");
+        }
+
+      changeIconBarVisibility(false);
       redraw(true);
     }
   else
@@ -5457,6 +5466,7 @@ void GRPlotWidget::enableEditorFunctions()
         }
       prev_selection.reset();
       current_selections.clear();
+      changeIconBarVisibility(true);
       redraw();
     }
 }
@@ -6343,8 +6353,27 @@ void GRPlotWidget::editElementAccepted(bool highlight_location)
   hide_preview_text_act->trigger();
   if (highlight_location) hide_edit_element_act->trigger();
   plot_id = "";
+
+  auto root = grm_get_document_root();
+  for (const auto &plot_elems : root->querySelectorsAll("plot[_active=\"1\"]"))
+    {
+      plot_elems->removeAttribute("_active");
+    }
+  for (const auto &plot_elems : root->querySelectorsAll("plot[_active_through_update=\"1\"]"))
+    {
+      plot_elems->removeAttribute("_active_through_update");
+    }
+
   redraw(move_to_plot);
-  if (move_to_plot) move_to_plot = false;
+  if (move_to_plot)
+    {
+      move_to_plot = false;
+      for (const auto &plot :
+           grm_get_render()->getActiveFigure()->querySelectorsAll("plot[_active_through_update=\"1\"]"))
+        {
+          plot->removeAttribute("_active_through_update");
+        }
+    }
 }
 
 void GRPlotWidget::editElementRejected()
@@ -6383,6 +6412,7 @@ void GRPlotWidget::adjustPlotTypeMenu(const std::shared_ptr<GRM::Element> &plot_
   if (plot_parent == nullptr) return;
   const auto central_region = plot_parent->querySelectors("central_region");
   if (central_region == nullptr) return;
+  if (enable_editor) return;
 
   // hide all menu elements
   if (tree_widget != nullptr) // dummy elem which only exist in default grplot case
@@ -7496,4 +7526,35 @@ void GRPlotWidget::addTreeSelection(int id)
 void GRPlotWidget::setMoveToPlot(bool status)
 {
   move_to_plot = status;
+}
+
+void GRPlotWidget::changeIconBarVisibility(bool visibility)
+{
+  if (visibility)
+    {
+      show_plot_type_sub_menu_act->trigger();
+      show_marginal_sub_menu_act->trigger();
+      show_log_sub_menu_act->trigger();
+      show_flip_sub_menu_act->trigger();
+      show_lim_sub_menu_act->trigger();
+      show_orientation_sub_menu_act->trigger();
+      show_aspect_ratio_sub_menu_act->trigger();
+      show_location_sub_menu_act->trigger();
+    }
+  else
+    {
+      hide_plot_type_sub_menu_act->trigger();
+      hide_marginal_sub_menu_act->trigger();
+      hide_log_sub_menu_act->trigger();
+      hide_flip_sub_menu_act->trigger();
+      hide_lim_sub_menu_act->trigger();
+      hide_orientation_sub_menu_act->trigger();
+      hide_aspect_ratio_sub_menu_act->trigger();
+      hide_location_sub_menu_act->trigger();
+    }
+  use_gr3_act->setVisible(visibility);
+  polar_with_pan_act->setVisible(visibility);
+  colormap_act->setVisible(visibility);
+  text_color_ind_act->setVisible(visibility);
+  disable_grid_act->setVisible(visibility);
 }

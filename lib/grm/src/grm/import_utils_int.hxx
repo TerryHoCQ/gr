@@ -88,8 +88,8 @@ void parseParameterDDD(std::string *input, const std::string *key, std::string *
 int parseParameterNI(std::string *input, const std::string *key, std::vector<int> *values);
 int parseParameterNS(std::string *input, const std::string *key, std::vector<std::string> *values);
 int parseParameterND(std::string *input, const std::string *key, std::vector<double> *values);
-std::string singleTokenConverter(std::string token, grm_args_t *args, PlotRange *ranges,
-                                 grm_special_axis_series_t *special_axis_series, InputFlags &input_flags,
-                                 int line_count = -1);
+std::vector<std::string> singleTokenConverter(std::string token, grm_args_t *args, PlotRange *ranges,
+                                              grm_special_axis_series_t *special_axis_series, InputFlags &input_flags,
+                                              int line_count = -1);
 
 #endif /* ifndef IMPORT_UTILS_INT_HXX_INCLUDED */

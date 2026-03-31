@@ -922,7 +922,7 @@ public:
     if (group_mask_)
       {
         group_mask_->resize(paint_device.width(), paint_device.height());
-        mask_painter_ = &group_mask_->painter();
+        if (!group_stack_.empty()) mask_painter_ = &group_mask_->painter();
       }
     partial_painters_.assign(paint_device);
   }
@@ -982,8 +982,8 @@ public:
             painter_.get().device()->width(), painter_.get().device()->height()
 #endif
                 ));
-        mask_painter_ = &group_mask_->painter();
       }
+    if (group_stack_.empty()) mask_painter_ = &group_mask_->painter();
     group_mask_->id(id);
     group_stack_.push(id);
   }
@@ -991,7 +991,9 @@ public:
   void endGroup()
   {
     group_stack_.pop();
-    group_mask_->id(group_stack_.empty() ? 0 : group_stack_.top());
+    // 0x00FFFFFF (RGB white) is no valid ID
+    group_mask_->id(group_stack_.empty() ? 0x00FFFFFF : group_stack_.top());
+    if (group_stack_.empty()) mask_painter_ = nullptr;
   }
 
   bool hasOpenGroup() const { return !group_stack_.empty(); }

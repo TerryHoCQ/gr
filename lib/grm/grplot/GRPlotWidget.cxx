@@ -2085,7 +2085,6 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
             }
         }
       active_plot_changed = false;
-      painter.fillRect(0, 0, width(), height(), QColor("white"));
       draw();
 
       active_figure = global_root->querySelectors("figure[active=\"1\"]");
@@ -5416,7 +5415,7 @@ void GRPlotWidget::enableEditorFunctions()
       grm_input(args);
       grm_args_delete(args);
 
-      redraw();
+      redraw(true);
     }
   else
     {

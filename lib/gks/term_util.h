@@ -8,9 +8,10 @@
 #define HIDDEN
 #endif
 
-enum kitty_image_protocol_support_t
+enum image_protocol_support_t
 {
-  NO_KITTY_IMAGE_PROTOCOL = 0,
+  NO_IMAGE_PROTOCOL = 0,
+  ITERM_IMAGE_PROTOCOL,
   KITTY_IMAGE_PROTOCOL,
   KITTY_IMAGE_PROTOCOL_WITH_UNICODE_PLACEHOLDERS
 };
@@ -38,6 +39,7 @@ enum inline_backend_t
   INLINE_BACKEND_AUTO = 0,
   INLINE_BACKEND_ITERM = 1,
   INLINE_BACKEND_KITTY = 2,
+  INLINE_BACKEND_KITTY_WITH_UNICODE_PLACEHOLDERS = 3,
 };
 
 enum inline_background_t
@@ -62,8 +64,9 @@ HIDDEN void makeraw(void);
 HIDDEN char *send_control_sequence(char group, const char *parameters, const char *terminator);
 HIDDEN int have_iterm(void);
 HIDDEN int have_kitty(void);
+HIDDEN enum image_protocol_support_t have_image_protocol(void);
 HIDDEN int have_iterm_image_protocol(void);
-HIDDEN enum kitty_image_protocol_support_t have_kitty_image_protocol(void);
+HIDDEN enum image_protocol_support_t have_kitty_image_protocol(void);
 HIDDEN enum tmux_state_t have_tmux(void);
 HIDDEN int is_dark_term(void);
 HIDDEN struct inline_options_t parse_inline_env_var(void);

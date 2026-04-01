@@ -219,6 +219,13 @@ int have_kitty(void)
   return is_kitty;
 }
 
+enum image_protocol_support_t have_image_protocol(void)
+{
+  enum image_protocol_support_t kitty_image_protocol_support = have_kitty_image_protocol();
+  if (kitty_image_protocol_support != NO_IMAGE_PROTOCOL) return kitty_image_protocol_support;
+  return have_iterm_image_protocol() ? ITERM_IMAGE_PROTOCOL : NO_IMAGE_PROTOCOL;
+}
+
 int have_iterm_image_protocol(void)
 {
   char *resp;
@@ -237,10 +244,10 @@ int have_iterm_image_protocol(void)
   return iterm_image_protocol_support;
 }
 
-enum kitty_image_protocol_support_t have_kitty_image_protocol(void)
+enum image_protocol_support_t have_kitty_image_protocol(void)
 {
   char *resp;
-  static enum kitty_image_protocol_support_t kitty_image_protocol_support = -1;
+  static enum image_protocol_support_t kitty_image_protocol_support = -1;
 
   if (kitty_image_protocol_support != -1) return kitty_image_protocol_support;
 
@@ -255,7 +262,7 @@ enum kitty_image_protocol_support_t have_kitty_image_protocol(void)
     {
       resp = send_control_sequence('_', "Gi=1719413160,f=100,a=q;" TEST_PNG_BASE64, NULL);
       kitty_image_protocol_support =
-          (resp != NULL && strcmp(resp, "Gi=1719413160;OK") == 0) ? KITTY_IMAGE_PROTOCOL : NO_KITTY_IMAGE_PROTOCOL;
+          (resp != NULL && strcmp(resp, "Gi=1719413160;OK") == 0) ? KITTY_IMAGE_PROTOCOL : NO_IMAGE_PROTOCOL;
       free(resp);
     }
 

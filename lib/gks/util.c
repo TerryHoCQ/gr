@@ -1626,20 +1626,48 @@ static int get_default_ws_type(void)
       else
 #endif
         {
-          if (have_iterm_image_protocol())
-            default_wstype = 151;
-          else if (have_kitty_image_protocol())
-            default_wstype = have_kitty_image_protocol() == KITTY_IMAGE_PROTOCOL_WITH_UNICODE_PLACEHOLDERS ? 153 : 152;
-#ifdef __APPLE__
-          else if (access("/dev/console", R_OK) == 0)
-            default_wstype = have_gksqt() ? 411 : 400;
-#endif
-          else
+          switch (inline_options.backend)
             {
-              default_wstype = 100;
-              gks_perror("cannot open display - headless operation mode active");
+            case INLINE_BACKEND_AUTO:
+              {
+                enum image_protocol_support_t image_protocol = have_image_protocol();
+                switch (image_protocol)
+                  {
+                  case NO_IMAGE_PROTOCOL:
+                    break;
+                  case ITERM_IMAGE_PROTOCOL:
+                    default_wstype = 151;
+                    break;
+                  case KITTY_IMAGE_PROTOCOL:
+                    default_wstype = 152;
+                    break;
+                  case KITTY_IMAGE_PROTOCOL_WITH_UNICODE_PLACEHOLDERS:
+                    default_wstype = 153;
+                    break;
+                  }
+              }
+              break;
+            case INLINE_BACKEND_ITERM:
+              default_wstype = 151;
+              break;
+            case INLINE_BACKEND_KITTY:
+              default_wstype = 152;
+              break;
+            case INLINE_BACKEND_KITTY_WITH_UNICODE_PLACEHOLDERS:
+              default_wstype = 153;
+              break;
             }
         }
+      if (default_wstype == 0)
+#ifdef __APPLE__
+        if (access("/dev/console", R_OK) == 0)
+          default_wstype = have_gksqt() ? 411 : 400;
+        else
+#endif
+          {
+            default_wstype = 100;
+            gks_perror("cannot open display - headless operation mode active");
+          }
 #else
       default_wstype = have_gksqt() ? 411 : 41;
 #endif

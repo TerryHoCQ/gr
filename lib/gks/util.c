@@ -1621,7 +1621,7 @@ static int get_default_ws_type(void)
         default_wstype = have_gksqt() ? 411 : 400;
       else
 #else
-      if (!inline_options.active && gks_getenv("DISPLAY") != NULL)
+      if (!inline_options.active && (gks_getenv("DISPLAY") != NULL || gks_getenv("WAYLAND_DISPLAY") != NULL))
         default_wstype = have_gksqt() ? 411 : 211;
       else
 #endif

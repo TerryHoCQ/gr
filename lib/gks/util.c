@@ -1617,11 +1617,11 @@ static int get_default_ws_type(void)
 #ifndef _WIN32
       struct inline_options_t inline_options = parse_inline_env_var();
 #ifdef __APPLE__
-      if (!inline_options.active && (gks_getenv("TERM_PROGRAM") != NULL || gks_getenv("TERMINAL_EMULATOR") != NULL))
+      if (!inline_options.active && (gks_isenv_nonempty("TERM_PROGRAM") || gks_isenv_nonempty("TERMINAL_EMULATOR")))
         default_wstype = have_gksqt() ? 411 : 400;
       else
 #else
-      if (!inline_options.active && (gks_getenv("DISPLAY") != NULL || gks_getenv("WAYLAND_DISPLAY") != NULL))
+      if (!inline_options.active && (gks_isenv_nonempty("DISPLAY") || gks_isenv_nonempty("WAYLAND_DISPLAY")))
         default_wstype = have_gksqt() ? 411 : 211;
       else
 #endif
@@ -2052,6 +2052,12 @@ int gks_getenv_bool(const char *env)
     }
 
   return 0;
+}
+
+int gks_isenv_nonempty(const char *env)
+{
+  const char *env_value = gks_getenv(env);
+  return env_value != NULL && env_value[0] != '\0';
 }
 
 void gks_input2utf8(const char *input_str, char *utf8_str, int input_encoding)

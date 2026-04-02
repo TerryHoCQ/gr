@@ -269,6 +269,13 @@ if(X11_FOUND)
   endif()
 endif()
 
+add_library(term_util OBJECT lib/gks/term_util.c)
+target_compile_options(term_util PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+target_include_directories(term_util PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks)
+set_target_properties(
+  term_util PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON POSITION_INDEPENDENT_CODE ON
+)
+
 set(GKS_SOURCES
     lib/gks/afm.c
     lib/gks/font.c
@@ -289,6 +296,7 @@ set(GKS_SOURCES
     lib/gks/io.c
     lib/gks/ps.c
     lib/gks/resample.c
+    $<TARGET_OBJECTS:term_util>
 )
 if(EMSCRIPTEN)
   list(APPEND GKS_SOURCES js/jsplugin.c)
@@ -734,7 +742,7 @@ endif()
 if(NOT EMSCRIPTEN)
   set(GR_REPORT "GKS plugins:\n")
 
-  add_library(cairoplugin SHARED lib/gks/plugin/cairoplugin.c)
+  add_library(cairoplugin SHARED $<TARGET_OBJECTS:term_util> lib/gks/plugin/cairoplugin.c)
   target_link_libraries(cairoplugin PUBLIC gks_static)
   if(Cairo_FOUND)
     target_link_libraries(cairoplugin PRIVATE Cairo::Cairo)

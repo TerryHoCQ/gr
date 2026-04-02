@@ -15,6 +15,8 @@
 #ifndef DLLEXPORT
 #define DLLEXPORT __declspec(dllexport)
 #endif
+#else
+#include "term_util.h"
 #endif
 
 #include <stdio.h>
@@ -103,7 +105,6 @@ DLLEXPORT void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *i_arr, 
 
 #define MAX_TNR 9
 
-#define HEIGHT_IN_CELLS 24
 #define CHUNK_SIZE 4096
 
 #define STR(x) #x
@@ -148,11 +149,11 @@ static gks_state_list_t *gkss;
 static double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
 
 #ifndef _WIN32
-enum tmux_state_t
+enum background_t
 {
-  NO_TMUX = 0,
-  SINGLE_TMUX_SESSION,
-  NESTED_TMUX_SESSION
+  BACKGROUND_NONE,
+  BACKGROUND_DARK,
+  BACKGROUND_LIGHT,
 };
 #endif
 
@@ -168,7 +169,10 @@ typedef struct ws_state_list_t
 {
   int conid, state, wtype;
 #ifndef _WIN32
+  enum background_t background;
   enum tmux_state_t have_tmux;
+  unsigned int image_id_prefix;
+  struct inline_options_t inline_options;
 #endif
   double mw, mh;
   int w, h, dpi;
@@ -198,7 +202,6 @@ typedef struct ws_state_list_t
 #endif
   int npoints, max_points;
   int empty, current_page_written, page_counter;
-  int scroll;
   double rect[MAX_TNR][2][2];
   unsigned char *patterns;
   int pattern_counter, use_symbols;
@@ -218,45 +221,86 @@ static int predef_ints[] = {0, 1, 3, 3, 3};
 static int predef_styli[] = {1, 1, 1, 2, 3};
 
 #ifndef _WIN32
-static enum tmux_state_t have_tmux(void)
+static const char *const kitty_utf8_image_placeholder = "\xf4\x8e\xbb\xae";
+static const char *const kitty_utf8_diacritics[] = {
+    "\xcc\x85",         "\xcc\x8d",         "\xcc\x8e",         "\xcc\x90",         "\xcc\x92",
+    "\xcc\xbd",         "\xcc\xbe",         "\xcc\xbf",         "\xcd\x86",         "\xcd\x8a",
+    "\xcd\x8b",         "\xcd\x8c",         "\xcd\x90",         "\xcd\x91",         "\xcd\x92",
+    "\xcd\x97",         "\xcd\x9b",         "\xcd\xa3",         "\xcd\xa4",         "\xcd\xa5",
+    "\xcd\xa6",         "\xcd\xa7",         "\xcd\xa8",         "\xcd\xa9",         "\xcd\xaa",
+    "\xcd\xab",         "\xcd\xac",         "\xcd\xad",         "\xcd\xae",         "\xcd\xaf",
+    "\xd2\x83",         "\xd2\x84",         "\xd2\x85",         "\xd2\x86",         "\xd2\x87",
+    "\xd6\x92",         "\xd6\x93",         "\xd6\x94",         "\xd6\x95",         "\xd6\x97",
+    "\xd6\x98",         "\xd6\x99",         "\xd6\x9c",         "\xd6\x9d",         "\xd6\x9e",
+    "\xd6\x9f",         "\xd6\xa0",         "\xd6\xa1",         "\xd6\xa8",         "\xd6\xa9",
+    "\xd6\xab",         "\xd6\xac",         "\xd6\xaf",         "\xd7\x84",         "\xd8\x90",
+    "\xd8\x91",         "\xd8\x92",         "\xd8\x93",         "\xd8\x94",         "\xd8\x95",
+    "\xd8\x96",         "\xd8\x97",         "\xd9\x97",         "\xd9\x98",         "\xd9\x99",
+    "\xd9\x9a",         "\xd9\x9b",         "\xd9\x9d",         "\xd9\x9e",         "\xdb\x96",
+    "\xdb\x97",         "\xdb\x98",         "\xdb\x99",         "\xdb\x9a",         "\xdb\x9b",
+    "\xdb\x9c",         "\xdb\x9f",         "\xdb\xa0",         "\xdb\xa1",         "\xdb\xa2",
+    "\xdb\xa4",         "\xdb\xa7",         "\xdb\xa8",         "\xdb\xab",         "\xdb\xac",
+    "\xdc\xb0",         "\xdc\xb2",         "\xdc\xb3",         "\xdc\xb5",         "\xdc\xb6",
+    "\xdc\xba",         "\xdc\xbd",         "\xdc\xbf",         "\xdd\x80",         "\xdd\x81",
+    "\xdd\x83",         "\xdd\x85",         "\xdd\x87",         "\xdd\x89",         "\xdd\x8a",
+    "\xdf\xab",         "\xdf\xac",         "\xdf\xad",         "\xdf\xae",         "\xdf\xaf",
+    "\xdf\xb0",         "\xdf\xb1",         "\xdf\xb3",         "\xe0\xa0\x96",     "\xe0\xa0\x97",
+    "\xe0\xa0\x98",     "\xe0\xa0\x99",     "\xe0\xa0\x9b",     "\xe0\xa0\x9c",     "\xe0\xa0\x9d",
+    "\xe0\xa0\x9e",     "\xe0\xa0\x9f",     "\xe0\xa0\xa0",     "\xe0\xa0\xa1",     "\xe0\xa0\xa2",
+    "\xe0\xa0\xa3",     "\xe0\xa0\xa5",     "\xe0\xa0\xa6",     "\xe0\xa0\xa7",     "\xe0\xa0\xa9",
+    "\xe0\xa0\xaa",     "\xe0\xa0\xab",     "\xe0\xa0\xac",     "\xe0\xa0\xad",     "\xe0\xa5\x91",
+    "\xe0\xa5\x93",     "\xe0\xa5\x94",     "\xe0\xbe\x82",     "\xe0\xbe\x83",     "\xe0\xbe\x86",
+    "\xe0\xbe\x87",     "\xe1\x8d\x9d",     "\xe1\x8d\x9e",     "\xe1\x8d\x9f",     "\xe1\x9f\x9d",
+    "\xe1\xa4\xba",     "\xe1\xa8\x97",     "\xe1\xa9\xb5",     "\xe1\xa9\xb6",     "\xe1\xa9\xb7",
+    "\xe1\xa9\xb8",     "\xe1\xa9\xb9",     "\xe1\xa9\xba",     "\xe1\xa9\xbb",     "\xe1\xa9\xbc",
+    "\xe1\xad\xab",     "\xe1\xad\xad",     "\xe1\xad\xae",     "\xe1\xad\xaf",     "\xe1\xad\xb0",
+    "\xe1\xad\xb1",     "\xe1\xad\xb2",     "\xe1\xad\xb3",     "\xe1\xb3\x90",     "\xe1\xb3\x91",
+    "\xe1\xb3\x92",     "\xe1\xb3\x9a",     "\xe1\xb3\x9b",     "\xe1\xb3\xa0",     "\xe1\xb7\x80",
+    "\xe1\xb7\x81",     "\xe1\xb7\x83",     "\xe1\xb7\x84",     "\xe1\xb7\x85",     "\xe1\xb7\x86",
+    "\xe1\xb7\x87",     "\xe1\xb7\x88",     "\xe1\xb7\x89",     "\xe1\xb7\x8b",     "\xe1\xb7\x8c",
+    "\xe1\xb7\x91",     "\xe1\xb7\x92",     "\xe1\xb7\x93",     "\xe1\xb7\x94",     "\xe1\xb7\x95",
+    "\xe1\xb7\x96",     "\xe1\xb7\x97",     "\xe1\xb7\x98",     "\xe1\xb7\x99",     "\xe1\xb7\x9a",
+    "\xe1\xb7\x9b",     "\xe1\xb7\x9c",     "\xe1\xb7\x9d",     "\xe1\xb7\x9e",     "\xe1\xb7\x9f",
+    "\xe1\xb7\xa0",     "\xe1\xb7\xa1",     "\xe1\xb7\xa2",     "\xe1\xb7\xa3",     "\xe1\xb7\xa4",
+    "\xe1\xb7\xa5",     "\xe1\xb7\xa6",     "\xe1\xb7\xbe",     "\xe2\x83\x90",     "\xe2\x83\x91",
+    "\xe2\x83\x94",     "\xe2\x83\x95",     "\xe2\x83\x96",     "\xe2\x83\x97",     "\xe2\x83\x9b",
+    "\xe2\x83\x9c",     "\xe2\x83\xa1",     "\xe2\x83\xa7",     "\xe2\x83\xa9",     "\xe2\x83\xb0",
+    "\xe2\xb3\xaf",     "\xe2\xb3\xb0",     "\xe2\xb3\xb1",     "\xe2\xb7\xa0",     "\xe2\xb7\xa1",
+    "\xe2\xb7\xa2",     "\xe2\xb7\xa3",     "\xe2\xb7\xa4",     "\xe2\xb7\xa5",     "\xe2\xb7\xa6",
+    "\xe2\xb7\xa7",     "\xe2\xb7\xa8",     "\xe2\xb7\xa9",     "\xe2\xb7\xaa",     "\xe2\xb7\xab",
+    "\xe2\xb7\xac",     "\xe2\xb7\xad",     "\xe2\xb7\xae",     "\xe2\xb7\xaf",     "\xe2\xb7\xb0",
+    "\xe2\xb7\xb1",     "\xe2\xb7\xb2",     "\xe2\xb7\xb3",     "\xe2\xb7\xb4",     "\xe2\xb7\xb5",
+    "\xe2\xb7\xb6",     "\xe2\xb7\xb7",     "\xe2\xb7\xb8",     "\xe2\xb7\xb9",     "\xe2\xb7\xba",
+    "\xe2\xb7\xbb",     "\xe2\xb7\xbc",     "\xe2\xb7\xbd",     "\xe2\xb7\xbe",     "\xe2\xb7\xbf",
+    "\xea\x99\xaf",     "\xea\x99\xbc",     "\xea\x99\xbd",     "\xea\x9b\xb0",     "\xea\x9b\xb1",
+    "\xea\xa3\xa0",     "\xea\xa3\xa1",     "\xea\xa3\xa2",     "\xea\xa3\xa3",     "\xea\xa3\xa4",
+    "\xea\xa3\xa5",     "\xea\xa3\xa6",     "\xea\xa3\xa7",     "\xea\xa3\xa8",     "\xea\xa3\xa9",
+    "\xea\xa3\xaa",     "\xea\xa3\xab",     "\xea\xa3\xac",     "\xea\xa3\xad",     "\xea\xa3\xae",
+    "\xea\xa3\xaf",     "\xea\xa3\xb0",     "\xea\xa3\xb1",     "\xea\xaa\xb0",     "\xea\xaa\xb2",
+    "\xea\xaa\xb3",     "\xea\xaa\xb7",     "\xea\xaa\xb8",     "\xea\xaa\xbe",     "\xea\xaa\xbf",
+    "\xea\xab\x81",     "\xef\xb8\xa0",     "\xef\xb8\xa1",     "\xef\xb8\xa2",     "\xef\xb8\xa3",
+    "\xef\xb8\xa4",     "\xef\xb8\xa5",     "\xef\xb8\xa6",     "\xf0\x90\xa8\x8f", "\xf0\x90\xa8\xb8",
+    "\xf0\x9d\x86\x85", "\xf0\x9d\x86\x86", "\xf0\x9d\x86\x87", "\xf0\x9d\x86\x88", "\xf0\x9d\x86\x89",
+    "\xf0\x9d\x86\xaa", "\xf0\x9d\x86\xab", "\xf0\x9d\x86\xac", "\xf0\x9d\x86\xad", "\xf0\x9d\x89\x82",
+    "\xf0\x9d\x89\x83", "\xf0\x9d\x89\x84",
+};
+
+/*
+ * Provide a portable `rand_r` implementation, since `rand_r` is deprecated in glibc and not available on FreeBSD.
+ * `rand_r` uses its own state and does not clash with other code calling `rand`.
+ * Use 32 bits instead of 31 bits as the original `rand_r` to avoid unecessary operations, since no `rand_r`
+ * compatibility is needed.
+ */
+static uint32_t rand_r32(uint32_t *seedp)
 {
-  const char *term_env_var = gks_getenv("TERM");
-  if (term_env_var == NULL)
-    {
-      return NO_TMUX;
-    }
-
-  if (strncmp(term_env_var, "screen", 6) == 0 || strncmp(term_env_var, "tmux", 4) == 0)
-    {
-      /* Check if the tmux session is running locally, otherwise the server cannot be queried */
-      if (gks_getenv("TMUX") != NULL)
-        {
-          FILE *fp;
-          char client_termname[80];
-
-          /* Inside tmux we can query the tmux server for the outer terminal name */
-          fp = popen("tmux display -p '#{client_termname}'", "r");
-          if (fp == NULL)
-            {
-              /* Reading failed, assume a single tmux session */
-              return SINGLE_TMUX_SESSION;
-            }
-          /* Read the output a line at a time - output it. */
-          if (fgets(client_termname, sizeof(client_termname), fp) == NULL)
-            {
-              /* Reading failed, assume a single tmux session */
-              pclose(fp);
-              return SINGLE_TMUX_SESSION;
-            }
-          pclose(fp);
-          return (strncmp(client_termname, "screen", 6) == 0 || strncmp(client_termname, "tmux", 4) == 0)
-                     ? NESTED_TMUX_SESSION
-                     : SINGLE_TMUX_SESSION;
-        }
-      return SINGLE_TMUX_SESSION;
-    }
-
-  return NO_TMUX;
+  uint32_t x = *seedp;
+  if (x == 0) x = 2463534242u; /* Provide a default nonzero seed */
+  /* xorshift32 algorithm */
+  x ^= x << 13;
+  x ^= x >> 17;
+  x ^= x << 5;
+  *seedp = x; /* Update the seed for the next call */
+  return x;
 }
 
 static void send_tmux_escape_sequence_start(void)
@@ -1090,9 +1134,23 @@ static void open_page(void)
 #endif
     }
   else if (p->wtype == 140 || p->wtype == 143 || p->wtype == 144 || p->wtype == 145 || p->wtype == 146 ||
-           p->wtype == 150 || p->wtype == 151 || p->wtype == 152)
+           p->wtype == 150 || p->wtype == 151 || p->wtype == 152 || p->wtype == 153)
     {
       p->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, p->width, p->height);
+#ifndef _WIN32
+      if (p->background != BACKGROUND_NONE && p->wtype >= 151 && p->wtype <= 153)
+        {
+          /* For terminal output only: fill the background with white or black */
+          cairo_t *cr;
+          cr = cairo_create(p->surface);
+          if (p->background == BACKGROUND_LIGHT)
+            cairo_set_source_rgba(cr, 1.0, 1.0, 1.0, 1.0);
+          else
+            cairo_set_source_rgba(cr, 0.0, 0.0, 0.0, 1.0);
+          cairo_paint(cr);
+          cairo_destroy(cr);
+        }
+#endif
     }
   if (p->wtype == 142)
     {
@@ -1767,12 +1825,41 @@ static void write_page(void)
       free(pix);
     }
 #ifndef _WIN32
-  else if (p->wtype == 151 || p->wtype == 152)
+  else if (p->wtype >= 151 && p->wtype <= 153)
     {
       FILE *stream;
       long size, b64_size;
       unsigned char *string;
       char *b64_string;
+      int term_height_in_cells, term_width_in_cells, term_height_in_pixels, term_width_in_pixels;
+      int image_height_in_cells = p->inline_options.height, image_width_in_cells;
+      if (!term_size(&term_height_in_cells, &term_width_in_cells, &term_height_in_pixels, &term_width_in_pixels))
+        {
+          fprintf(stderr, "GKS: Failed to query terminal size.\n");
+          return;
+        }
+      {
+        double cell_height = (double)term_height_in_pixels / term_height_in_cells;
+        double cell_width = (double)term_width_in_pixels / term_width_in_cells;
+        double rendered_image_height = cell_height * image_height_in_cells;
+        double rendered_image_width = 0;
+        if (p->inline_options.width > 0)
+          {
+            rendered_image_width = cell_width * p->inline_options.width;
+            if (rendered_image_width / rendered_image_height < (double)p->width / p->height)
+              {
+                rendered_image_height = rendered_image_width / p->width * p->height;
+                image_height_in_cells = ceil(rendered_image_height / cell_height);
+                rendered_image_height = image_height_in_cells * cell_height;
+              }
+            else
+              {
+                rendered_image_width = 0;
+              }
+          }
+        if (rendered_image_width == 0) rendered_image_width = rendered_image_height * p->width / p->height;
+        image_width_in_cells = ceil(rendered_image_width / cell_width);
+      }
 
       gks_filepath(path, p->path, "png", p->page_counter, 0);
       cairo_surface_write_to_png(p->surface, path);
@@ -1786,6 +1873,7 @@ static void write_page(void)
       if ((long)fread(string, 1, size, stream) != size)
         {
           fprintf(stderr, "GKS: Failed to read from file: %s\n", path);
+          return;
         }
       fclose(stream);
       string[size] = 0;
@@ -1794,38 +1882,67 @@ static void write_page(void)
       b64_string = (char *)gks_malloc(b64_size);
       gks_base64(string, size, b64_string, b64_size);
 
-      if (p->have_tmux)
+      if (!p->inline_options.scroll)
         {
-          int i;
           /*
-           * tmux does not recognize the drawn image and reserves no space for it
-           * -> place the cursor at the end of the drawing area and jump back to make
-           *    a space reservation.
+           * If scrolling is disabled and it is not the first page then move the cursor up and clear the screen below it
+           * to overwrite the previous graphics
            */
-          for (i = 0; i < HEIGHT_IN_CELLS; ++i)
+          if (p->page_counter > 1)
+            {
+              fprintf(stdout, "\033[%dF", image_height_in_cells); /* Move up `image_height_in_cells` lines */
+            }
+          fputs("\033[J", stdout); /* Clear the screen below the cursor */
+        }
+      if (p->wtype == 153)
+        {
+          /*
+           * Print special characters as an image placeholder so image unaware applications (like tmux)
+           * reserve space for the image to display.
+           * For a description of the Kitty image protocol, see <https://sw.kovidgoyal.net/kitty/graphics-protocol/>.
+           */
+          const size_t kitty_utf8_image_placeholder_len = strlen(kitty_utf8_image_placeholder);
+          char *line_buffer = (char *)gks_malloc((image_width_in_cells - 1) * kitty_utf8_image_placeholder_len + 1);
+          int i, j;
+          for (i = 0; i < image_width_in_cells - 1; ++i)
+            {
+              for (j = 0; j < kitty_utf8_image_placeholder_len; ++j)
+                {
+                  line_buffer[i * kitty_utf8_image_placeholder_len + j] = kitty_utf8_image_placeholder[j];
+                }
+            }
+          line_buffer[(image_width_in_cells - 1) * kitty_utf8_image_placeholder_len] = '\0';
+          for (i = 0; i < image_height_in_cells; ++i)
+            {
+              fprintf(stdout, "\033[38;2;%u;%u;%um%s%s%s%s", p->image_id_prefix & 0xff,
+                      ((p->page_counter - 1) >> 8) & 0xff, (p->page_counter - 1) & 0xff, kitty_utf8_image_placeholder,
+                      kitty_utf8_diacritics[i], kitty_utf8_diacritics[0],
+                      kitty_utf8_diacritics[(p->image_id_prefix >> 8) & 0xff]);
+              fputs(line_buffer, stdout);
+              fputs("\033[39m\n", stdout);
+            }
+          gks_free(line_buffer);
+        }
+      else if (p->have_tmux)
+        {
+          /*
+           * tmux (without Unicode placeholders) does not recognize the drawn image and reserves no space for it
+           * -> place the cursor at the end of the drawing area and jump back to make a space reservation.
+           */
+          int i;
+          for (i = 0; i < image_height_in_cells; ++i)
             {
               fprintf(stdout, "\n"); /* only `\n` creates new lines on the screen */
             }
-          fprintf(stdout, "\033[%dA", HEIGHT_IN_CELLS); /* Move up `HEIGHT_IN_CELLS` lines */
-          send_tmux_escape_sequence_start();
+          fprintf(stdout, "\033[%dF", image_height_in_cells); /* Move up `image_height_in_cells` lines */
         }
-      else if (p->wtype == 151 && !p->scroll)
-        {
-          if (p->page_counter == 1)
-            {
-              fprintf(stdout, "\033[H\033[J");
-            }
-          else
-            {
-              fprintf(stdout, "\033[H");
-            }
-        }
+      if (p->have_tmux) send_tmux_escape_sequence_start();
       if (p->wtype == 151)
         {
-          /* For a description of the iTerm image protocol, see <https://iterm2.com/documentation-images.html> */
+          /* For a description of the iTerm image protocol, see <https://iterm2.com/documentation-images.html>. */
           long sent_bytes;
           send_tmux_escaped_escape();
-          fprintf(stdout, "]1337;MultipartFile=inline=1;height=%d;preserveAspectRatio=0\a", HEIGHT_IN_CELLS);
+          fprintf(stdout, "]1337;MultipartFile=inline=1;height=%u;preserveAspectRatio=1\a", image_height_in_cells);
           for (sent_bytes = 0; sent_bytes < b64_size; sent_bytes += CHUNK_SIZE)
             {
               send_tmux_escaped_escape();
@@ -1833,7 +1950,21 @@ static void write_page(void)
                       b64_string + sent_bytes);
             }
           send_tmux_escaped_escape();
-          fprintf(stdout, "]1337;FileEnd\a");
+          fputs("]1337;FileEnd\a", stdout);
+        }
+      else if (p->wtype == 152)
+        {
+          /* For a description of the Kitty image protocol, see <https://sw.kovidgoyal.net/kitty/graphics-protocol/>. */
+          long sent_bytes;
+          for (sent_bytes = 0; sent_bytes < b64_size; sent_bytes += CHUNK_SIZE)
+            {
+              send_tmux_escaped_escape();
+              fprintf(stdout, "_Gf=100,a=T,q=2,r=%u,m=%u;%.*s", image_height_in_cells,
+                      (sent_bytes < b64_size - CHUNK_SIZE) ? 1 : 0, min((int)(b64_size - sent_bytes), CHUNK_SIZE),
+                      b64_string + sent_bytes);
+              send_tmux_escaped_escape();
+              fputs("\\", stdout);
+            }
         }
       else
         {
@@ -1842,30 +1973,35 @@ static void write_page(void)
           for (sent_bytes = 0; sent_bytes < b64_size; sent_bytes += CHUNK_SIZE)
             {
               send_tmux_escaped_escape();
-              fprintf(stdout, "_Gf=100,a=T,q=2,r=%d,m=%d;%.*s", HEIGHT_IN_CELLS,
+              fprintf(stdout, "_Gf=100,a=T,q=2,r=%u,c=%u,i=%u,U=1,m=%u;%.*s", image_height_in_cells,
+                      image_width_in_cells, p->image_id_prefix << 16 | ((p->page_counter - 1) & 0xffff),
                       (sent_bytes < b64_size - CHUNK_SIZE) ? 1 : 0, min((int)(b64_size - sent_bytes), CHUNK_SIZE),
                       b64_string + sent_bytes);
               send_tmux_escaped_escape();
-              fprintf(stdout, "\\");
+              fputs("\\", stdout);
             }
         }
-      if (p->have_tmux)
+      if (p->have_tmux) send_tmux_escape_sequence_end();
+      if (p->wtype != 153)
         {
-          send_tmux_escape_sequence_end();
-          /*
-           * tmux does not recognize the drawn image and reserves no space for it
-           * -> place the cursor at the end of the drawn image
-           */
-          fprintf(stdout, "\033[%dB", HEIGHT_IN_CELLS); /* Move down `HEIGHT_IN_CELLS` lines */
-        }
-      else if (p->wtype == 151 && !p->scroll)
-        {
-          fprintf(stdout, "\033[%dH\n", HEIGHT_IN_CELLS);
+          if (p->have_tmux)
+            {
+              /*
+               * tmux does not recognize the drawn image and reserves no space for it
+               * -> place the cursor at the end of the drawn image
+               */
+              fprintf(stdout, "\033[%dE", image_height_in_cells); /* Move down `image_height_in_cells` lines */
+            }
+          else
+            {
+              /* Without tmux, the cursor is right of the drawn image, so end the line with a newline */
+              fputs("\n", stdout);
+            }
         }
       fflush(stdout);
 
-      free(string);
-      free(b64_string);
+      gks_free(string);
+      gks_free(b64_string);
 
       remove(path);
     }
@@ -2336,9 +2472,20 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
         }
 #endif
 #ifndef _WIN32
-      if (p->wtype == 151 || p->wtype == 152)
+      if (p->wtype >= 151 && p->wtype <= 153)
         {
           p->have_tmux = have_tmux();
+          p->inline_options = parse_inline_env_var();
+          if (p->wtype == 153)
+            {
+              unsigned int seed = time(NULL);
+              /*
+               * Use 16 bits as a random id prefix to avoid clashes between different GR instances and 16 more bits to
+               * distinguish between different images (pages) within a single GR instance. A kitty image index can hold
+               * 32 bits maximum.
+               * */
+              p->image_id_prefix = rand_r32(&seed) & 0xffff;
+            }
         }
       else
         {
@@ -2348,7 +2495,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->mem = NULL;
 
       if (p->wtype == 140 || p->wtype == 144 || p->wtype == 145 || p->wtype == 146 || p->wtype == 151 ||
-          p->wtype == 152)
+          p->wtype == 152 || p->wtype == 153)
         {
           p->mw = 0.28575;
           p->mh = 0.19685;
@@ -2450,7 +2597,44 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->empty = 1;
       p->current_page_written = 1;
       p->page_counter = 0;
-      p->scroll = gks_getenv("GKS_SCROLL_ITERM") != NULL;
+#ifndef _WIN32
+      p->background = -1;
+      if (p->wtype >= 151 && p->wtype <= 153)
+        {
+          if (p->inline_options.background == INLINE_BACKGROUND_DARK)
+            p->background = BACKGROUND_DARK;
+          else if (p->inline_options.background == INLINE_BACKGROUND_LIGHT)
+            p->background = BACKGROUND_DARK;
+          else if (p->inline_options.background == INLINE_BACKGROUND_NONE)
+            p->background = BACKGROUND_NONE;
+          else
+            p->background = is_dark_term() ? BACKGROUND_DARK : BACKGROUND_LIGHT;
+        }
+      else
+        {
+          const char *background = gks_getenv("GKS_BACKGROUND");
+          if (background != NULL)
+            {
+              if (strcmp(background, "light") == 0)
+                p->background = BACKGROUND_LIGHT;
+              else if (strcmp(background, "dark") == 0)
+                p->background = BACKGROUND_DARK;
+              else if (strcmp(background, "none") == 0)
+                p->background = BACKGROUND_NONE;
+            }
+        }
+      /* Swap default foreground and background color in dark mode */
+      /* TODO: Put this into a separate colortheme function? */
+      if (p->background == BACKGROUND_DARK)
+        {
+          double r0, g0, b0;
+          double r1, g1, b1;
+          gks_inq_rgb(0, &r0, &g0, &b0);
+          gks_inq_rgb(1, &r1, &g1, &b1);
+          gks_set_rgb(0, r1, g1, b1);
+          gks_set_rgb(1, r0, g0, b0);
+        }
+#endif
 
       p->transparency = 1.0;
       p->linewidth = p->nominal_size;
@@ -2502,7 +2686,18 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       lock();
       cairo_save(p->cr);
       cairo_reset_clip(p->cr);
-      cairo_set_operator(p->cr, CAIRO_OPERATOR_CLEAR);
+#ifndef _WIN32
+      /* For terminal output only: fill the background with white */
+      if (p->background != BACKGROUND_NONE && p->wtype >= 151 && p->wtype <= 153)
+        {
+          if (p->background == BACKGROUND_LIGHT)
+            cairo_set_source_rgba(p->cr, 1.0, 1.0, 1.0, 1.0);
+          else
+            cairo_set_source_rgba(p->cr, 0.0, 0.0, 0.0, 1.0);
+        }
+      else
+#endif
+        cairo_set_operator(p->cr, CAIRO_OPERATOR_CLEAR);
       cairo_paint(p->cr);
       cairo_restore(p->cr);
       p->empty = 1;

@@ -8,6 +8,13 @@ ifneq (,$(filter self,$(MAKECMDGOALS)))
 else
   USE_BUNDLED_LIBRARIES = OFF
 endif
+ifeq ($(CMAKE_GENERATOR),)
+ifneq ($(shell command -v "ninja"),)
+  CMAKE_GENERATOR = Ninja
+else
+  CMAKE_GENERATOR = Unix Makefiles
+endif
+endif
 
 PREFERRED_CLANG_FORMAT_VERSION="13"
 ifeq ($(shell command -v "clang-format-$(PREFERRED_CLANG_FORMAT_VERSION)"),)
@@ -32,7 +39,8 @@ configure: pre-check $(subst ON,bundled-libraries,$(filter ON,$(USE_BUNDLED_LIBR
 	  -DGR_USE_BUNDLED_LIBRARIES="$(USE_BUNDLED_LIBRARIES)" \
 	  -DCMAKE_EXPORT_COMPILE_COMMANDS="$(EXPORT_COMPILE_COMMANDS)" \
 	  -S . \
-	  -B build
+	  -B build \
+	  -G "$(CMAKE_GENERATOR)"
 
 build:
 	@if [ ! -d build ]; then \
@@ -43,7 +51,7 @@ build:
 	    USE_BUNDLED_LIBRARIES="$(USE_BUNDLED_LIBRARIES)" \
 	    EXPORT_COMPILE_COMMANDS="$(EXPORT_COMPILE_COMMANDS)"; \
 	fi
-	cmake --build build -j
+	cmake --build build -j $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.logicalcpu)
 
 install:
 	@if [ ! -d build ]; then \

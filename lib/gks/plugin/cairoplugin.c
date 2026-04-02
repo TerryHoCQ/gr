@@ -2604,7 +2604,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           if (p->inline_options.background == INLINE_BACKGROUND_DARK)
             p->background = BACKGROUND_DARK;
           else if (p->inline_options.background == INLINE_BACKGROUND_LIGHT)
-            p->background = BACKGROUND_DARK;
+            p->background = BACKGROUND_LIGHT;
           else if (p->inline_options.background == INLINE_BACKGROUND_NONE)
             p->background = BACKGROUND_NONE;
           else

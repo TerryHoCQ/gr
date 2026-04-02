@@ -43,7 +43,7 @@ build:
 	    USE_BUNDLED_LIBRARIES="$(USE_BUNDLED_LIBRARIES)" \
 	    EXPORT_COMPILE_COMMANDS="$(EXPORT_COMPILE_COMMANDS)"; \
 	fi
-	cmake --build build -j
+	cmake --build build -j $(shell getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.logicalcpu)
 
 install:
 	@if [ ! -d build ]; then \

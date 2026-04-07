@@ -1717,7 +1717,7 @@ else()
 endif()
 
 if(NOT EMSCRIPTEN AND (NOT MINGW OR NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "i686"))
-  add_library(grplotConsole SHARED lib/grm/grplot/GRPlotConsole.cxx lib/grm/grplot/Util.cxx)
+  add_library(grplotConsole SHARED $<TARGET_OBJECTS:term_util> lib/grm/grplot/GRPlotConsole.cxx lib/grm/grplot/Util.cxx)
   target_link_libraries(grplotConsole grm_shared gr_shared gks_shared)
   set(grplotConsole_INSTALL_RPATH "${INSTALL_RPATH}")
 

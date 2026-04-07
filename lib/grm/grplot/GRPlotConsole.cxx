@@ -5,6 +5,7 @@
 #include <filesystem>
 #else
 #include <sys/wait.h>
+#include "term_util.h"
 #endif
 
 int run(int argc, char **argv, bool pass, bool listen_mode, bool test_mode, bool help_mode, int width, int height,
@@ -70,6 +71,67 @@ int run(int argc, char **argv, bool pass, bool listen_mode, bool test_mode, bool
 
       return 1;
     }
+
+#ifndef _WIN32
+  /*
+   * In console mode, we need to check which kind of output we can actually use. If the terminal is capable of
+   * displaying inline graphics, use this. Otherwise, write the output to a file.
+   * But only do this if `GKS_INLINE` and `GKS_WSTYPE` are not set, because we don't want to overwrite the user's
+   * settings.
+   */
+  if ((getenv("GKS_INLINE") == nullptr || getenv("GKS_INLINE")[0] == '\0') &&
+      (getenv("GKS_WSTYPE") == nullptr || getenv("GKS_WSTYPE")[0] == '\0'))
+    {
+      bool use_inline = false;
+      if (isatty(STDOUT_FILENO))
+        {
+          enum image_protocol_support_t protocol = have_image_protocol();
+          if (protocol != NO_IMAGE_PROTOCOL)
+            {
+              std::string gks_inline_config{"background=light,backend="};
+              switch (protocol)
+                {
+                case NO_IMAGE_PROTOCOL: // is handled before
+                  break;
+                case ITERM_IMAGE_PROTOCOL:
+                  gks_inline_config += "iterm";
+                  break;
+                case KITTY_IMAGE_PROTOCOL:
+                  gks_inline_config += "kitty";
+                  break;
+                case KITTY_IMAGE_PROTOCOL_WITH_UNICODE_PLACEHOLDERS:
+                  gks_inline_config += "kitty-unicode";
+                  break;
+                default:
+                  std::cerr << "Unexpected image protocol: " << protocol << std::endl;
+                  gks_inline_config += "auto"; // this works but is inefficient, since GKS will run the detection again
+                  break;
+                }
+              setenv("GKS_INLINE", gks_inline_config.c_str(), 1);
+              use_inline = true;
+            }
+          else
+            {
+              std::cerr << "Inline graphics not available, falling back to file output." << std::endl;
+            }
+        }
+      if (!use_inline)
+        {
+          /* If no image protocol support could be detected, write to a file instead. */
+          setenv("GKS_WSTYPE", "pdf", 1);
+          setenv("GKS_FILEPATH", "grplot", 1);
+          std::cout << "Writing to file \"grplot.pdf\"" << std::endl;
+        }
+    }
+#else
+  /* On Windows, inline graphics are not supported, so write to a file instead. */
+  if (getenv("GKS_WSTYPE") == nullptr || getenv("GKS_WSTYPE")[0] == '\0')
+    {
+      SetEnvironmentVariableA("GKS_WSTYPE", "pdf");
+      SetEnvironmentVariableA("GKS_FILEPATH", "grplot");
+      std::cout << "Writing to file \"grplot.pdf\"" << std::endl;
+    }
+#endif
 
   if (width != 600 || height != 450)
     {

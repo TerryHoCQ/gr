@@ -50,50 +50,35 @@ darwin-self-contained:
       otool -L "${binary}" | grep "${dependency}" | awk 'NR == 1 { print $1 }' || true
     }
 
-    create_artifacts_directory() {
-      local app gr_library needed_qt_frameworks top_level_binaries binaries_to_scan binary rpath qt_framework dependency
-      local altered_dependency
+    relpath () {
+        local path relative_to
 
-      mv ./install/usr/local/gr ./artifacts
-      for app in gksqt.app grplot.app; do
-        mkdir -p "artifacts/Applications/${app}/Contents/Frameworks"
-        mkdir -p "artifacts/Applications/${app}/Contents/plugins/platforms"
-        mkdir -p "artifacts/Applications/${app}/Contents/plugins/styles"
+        path="$1"
+        relative_to="$2"
 
-        cp /usr/local/qt6/plugins/platforms/libqcocoa.dylib "artifacts/Applications/${app}/Contents/plugins/platforms/"
-        cp /usr/local/qt6/plugins/styles/libqmacstyle.dylib "artifacts/Applications/${app}/Contents/plugins/styles/"
+        python3 -c "import os; print(os.path.relpath('${path}', '${relative_to}'))"
+    }
 
-        pushd artifacts/Applications
+    create_artifacts_directory () (
+      local qt6_dir
 
-        binary="${app}/Contents/MacOS/${app%.*}"
-        while read -r gr_library; do
-          dependency="$(list_dependency "${binary}" "${gr_library}")"
-          [[ -n "${dependency}" ]] || continue
-          altered_dependency="@executable_path/../../../../lib/${gr_library}"
-          printf "Changing dependency of binary \"%s\":\n\t\"%s\"\n\t->\n\t\"%s\"\n" \
-            "${binary}" \
-            "${dependency}" \
-            "${altered_dependency}"
-          install_name_tool \
-            -change "${dependency}" \
-            "${altered_dependency}" \
-            "${binary}"
-        done < <(list_dependent_gr_libs "${binary}")
+      qt6_dir="/usr/local/qt6"
 
-        top_level_binaries=(
-          "${app}/Contents/plugins/platforms/libqcocoa.dylib"
-          "${app}/Contents/plugins/styles/libqmacstyle.dylib"
-          "${app}/Contents/MacOS/${app%.*}"
-        )
-        for binary in "${top_level_binaries[@]}"; do
-          while read -r rpath; do
-            printf "Deleting rpath \"%s\" from binary \"%s\"\n" "${rpath}" "${binary}"
-            install_name_tool -delete_rpath "${rpath}" "${binary}"
-          done < <(list_rpaths "${binary}")
-        done
+      scan_needed_qt_frameworks () {
+        local binaries_to_scan binary
+
+        echo "Scanning for needed Qt frameworks..."
 
         needed_qt_frameworks=()
-        binaries_to_scan=( "${top_level_binaries[@]}" )
+        binaries_to_scan=(
+          "${qt6_dir}/plugins/platforms/libqcocoa.dylib"
+          "${qt6_dir}/plugins/styles/libqmacstyle.dylib"
+          "install/usr/local/gr/Applications/gksqt.app/Contents/MacOS/gksqt"
+          "install/usr/local/gr/Applications/grplot.app/Contents/MacOS/grplot"
+        )
+        for binary in install/usr/local/gr/lib/*.{dylib,so}; do
+          binaries_to_scan+=( "${binary}" )
+        done
 
         while (( ${#binaries_to_scan[@]} > 0 )); do
           binary="${binaries_to_scan[0]}"
@@ -105,6 +90,19 @@ darwin-self-contained:
             fi
           done < <(list_dependent_qt_frameworks "${binary}")
         done
+      }
+
+      move_files_into_place () {
+        echo "Moving all files into place..."
+
+        mv ./install/usr/local/gr ./artifacts
+
+        mkdir -p "artifacts/qt6/lib"
+        mkdir -p "artifacts/qt6/plugins/platforms"
+        mkdir -p "artifacts/qt6/plugins/styles"
+
+        cp "${qt6_dir}/plugins/platforms/libqcocoa.dylib" "artifacts/qt6/plugins/platforms/"
+        cp "${qt6_dir}/plugins/styles/libqmacstyle.dylib" "artifacts/qt6/plugins/styles/"
 
         for qt_framework in "${needed_qt_frameworks[@]}"; do
           rsync \
@@ -112,12 +110,87 @@ darwin-self-contained:
             --exclude Headers \
             --exclude *_debug* \
             "/usr/local/qt6/lib/${qt_framework}.framework" \
-            "${app}/Contents/Frameworks/"
-          for binary in "${top_level_binaries[@]}"; do
+            "artifacts/qt6/lib/"
+        done
+      }
+
+      delete_rpaths () {
+        local binaries binary
+
+        echo "Deleting rpaths..."
+
+        binaries=(
+          "artifacts/Applications/gksqt.app/Contents/MacOS/gksqt"
+          "artifacts/Applications/grplot.app/Contents/MacOS/grplot"
+        )
+        for binary in artifacts/lib/*.dylib; do
+          binaries+=( "${binary}" )
+        done
+
+        for binary in "${binaries[@]}"; do
+          while read -r rpath; do
+            printf "  Deleting rpath \"%s\" from binary \"%s\"\n" "${rpath}" "${binary}"
+            install_name_tool -delete_rpath "${rpath}" "${binary}"
+          done < <(list_rpaths "${binary}")
+        done
+      }
+
+      add_rpath () {
+        local rpath binaries binary
+
+        rpath="@loader_path"
+
+        echo "Add \`${rpath}\` to rpaths..."
+
+        for binary in artifacts/lib/*.dylib; do
+          printf "  Add rpath \"%s\" to binary \"%s\"\n" "${rpath}" "${binary}"
+          install_name_tool -add_rpath "${rpath}" "${binary}"
+        done
+      }
+
+      patch_gr_lib_paths () {
+        local app binary dependency altered_dependency
+
+        echo "Patching GR library paths..."
+
+        for app in gksqt.app grplot.app; do
+          binary="artifacts/Applications/${app}/Contents/MacOS/${app%.*}"
+          while read -r gr_library; do
+            dependency="$(list_dependency "${binary}" "${gr_library}")"
+            [[ -n "${dependency}" ]] || continue
+            altered_dependency="@loader_path/../../../../lib/${gr_library}"
+            printf "  Changing dependency of binary \"%s\":\n\t\"%s\"\n\t->\n\t\"%s\"\n" \
+              "${binary}" \
+              "${dependency}" \
+              "${altered_dependency}"
+            install_name_tool \
+              -change "${dependency}" \
+              "${altered_dependency}" \
+              "${binary}"
+          done < <(list_dependent_gr_libs "${binary}")
+        done
+      }
+
+      patch_qt_framework_paths () {
+        local binaries qt_framework binary dependency relative_qt_lib_path altered_dependency
+
+        echo "Patching Qt framework paths..."
+
+        binaries=(
+          "artifacts/Applications/gksqt.app/Contents/MacOS/gksqt"
+          "artifacts/Applications/grplot.app/Contents/MacOS/grplot"
+        )
+        for binary in artifacts/lib/*.{dylib,so}; do
+          binaries+=( "${binary}" )
+        done
+
+        for qt_framework in "${needed_qt_frameworks[@]}"; do
+          for binary in "${binaries[@]}"; do
             dependency="$(list_dependency "${binary}" "${qt_framework}")"
             [[ -n "${dependency}" ]] || continue
-            altered_dependency="@executable_path/../Frameworks/${qt_framework}.framework/Versions/Current/${qt_framework}"
-            printf "Changing dependency of binary \"%s\":\n\t\"%s\"\n\t->\n\t\"%s\"\n" \
+            relative_qt_lib_path="$(relpath "artifacts/qt6/lib" "$(dirname "${binary}")")"
+            altered_dependency="@loader_path/${relative_qt_lib_path}/${qt_framework}.framework/Versions/Current/${qt_framework}"
+            printf "  Changing dependency of binary \"%s\":\n\t\"%s\"\n\t->\n\t\"%s\"\n" \
               "${binary}" \
               "${dependency}" \
               "${altered_dependency}"
@@ -127,16 +200,15 @@ darwin-self-contained:
               "${binary}"
           done
         done
+      }
 
-        codesign -f -s - ${app}
-        codesign -f -s - ${app}/Contents/Frameworks/*.framework
-        codesign -f -s - ${app}/Contents/Frameworks/Qt*.framework/Qt*
-        codesign -f -s - ${app}/Contents/plugins/platforms/libqcocoa.dylib
-        codesign -f -s - ${app}/Contents/plugins/styles/libqmacstyle.dylib
-
-        popd
-      done
-    }
+      scan_needed_qt_frameworks
+      move_files_into_place
+      delete_rpaths
+      add_rpath
+      patch_gr_lib_paths
+      patch_qt_framework_paths
+    )
 
     merge_artifacts () (
       needs_merge () {

@@ -8,6 +8,10 @@
 #define HIDDEN
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum image_protocol_support_t
 {
   NO_IMAGE_PROTOCOL = 0,
@@ -74,6 +78,10 @@ HIDDEN int term_size(int *rows, int *cols, int *width, int *height);
 HIDDEN int term_background_color(int *r, int *g, int *b);
 
 #undef HIDDEN
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 #endif /* _TERM_UTIL_H_ */

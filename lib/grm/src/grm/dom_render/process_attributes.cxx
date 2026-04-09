@@ -416,7 +416,7 @@ void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::Element
       if (location == 11 || location == 12 || location == 13)
         {
           legendSize(element, &w, &h);
-          viewport[1] -= w + 0.1;
+          viewport[1] -= w;
         }
     }
 
@@ -2530,7 +2530,9 @@ void processColorRep(const std::shared_ptr<GRM::Element> &element, const std::st
 
   red = ((hex_int >> 16) & 0xFF) / 255.0;
   green = ((hex_int >> 8) & 0xFF) / 255.0;
+  // clang-format off
   blue = ((hex_int)&0xFF) / 255.0;
+  // clang-format on
 
   gr_setcolorrep(index, red, green, blue);
 }

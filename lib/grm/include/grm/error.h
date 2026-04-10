@@ -83,7 +83,8 @@ extern "C" {
   X(GRM_ERROR_LAYOUT_INVALID_ARGUMENT_RANGE, 59)          \
   X(GRM_ERROR_LAYOUT_COMPONENT_LENGTH_MISMATCH, 60)       \
   X(GRM_ERROR_TMP_DIR_CREATION, 61)                       \
-  Y(GRM_ERROR_NOT_IMPLEMENTED, 62)
+  X(GRM_ERROR_NOT_IMPLEMENTED, 62)                        \
+  Y(GRM_ERROR_DATAREADER_UNKNOWN_FILETYPE, 63)
 
 #define GRM_ENUM_VALUE(name, value) name = value,
 #define GRM_ENUM_LAST_VALUE(name, value) name = value

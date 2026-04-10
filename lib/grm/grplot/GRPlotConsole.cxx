@@ -1,4 +1,5 @@
 #include "grm/import.h"
+#include "grm/plot.h"
 #include "GRPlotConsole.hxx"
 #include "Util.hxx"
 #ifdef _WIN32

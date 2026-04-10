@@ -133,4 +133,20 @@ double round(double val, int digits);
 double ceil(double val, int digits);
 double floor(double val, int digits);
 
+#ifdef _WIN32
+std::wstring getEnvVar(const std::wstring &name, const std::wstring &default_value = L"");
+#else
+std::string getEnvVar(const std::string &name, const std::string &default_value = "");
+#endif
+
+/*
+ * `w` can be used to convert a C++ `std::string` to a `std::wstring` on Windows, but not on other platforms
+ * For string literals, see `W` in `util_int.h`
+ */
+#ifdef _WIN32
+std::wstring w(const std::string &s);
+#else
+#define w(x) (x)
+#endif
+
 #endif // GRM_UTIL_INT_HXX_INCLUDED

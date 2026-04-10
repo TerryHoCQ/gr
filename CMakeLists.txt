@@ -608,6 +608,28 @@ elseif(NOT OpenGL_FOUND)
   endif()
 endif()
 
+if(NOT EMSCRIPTEN)
+  add_library(
+    csv_plugin SHARED lib/grm/src/grm/import_plugins/csv_plugin.cxx lib/grm/src/grm/import_utils.cxx
+                      lib/grm/src/grm/utilcpp.cxx
+  )
+  target_link_libraries(csv_plugin PUBLIC GR::GR GR::GRM)
+  if(WIN32)
+    target_compile_definitions(csv_plugin PRIVATE BUILDING_DLL)
+  endif()
+  set_target_properties(
+    csv_plugin
+    PROPERTIES C_STANDARD 90
+               C_EXTENSIONS OFF
+               C_STANDARD_REQUIRED ON
+               C_VISIBILITY_PRESET hidden
+               CXX_STANDARD 17
+               CXX_EXTENSIONS OFF
+               CXX_STANDARD_REQUIRED ON
+               CXX_VISIBILITY_PRESET hidden
+  )
+endif()
+
 set(GRM_SOURCES
     lib/grm/src/grm/args.c
     lib/grm/src/grm/backtrace.c
@@ -617,6 +639,8 @@ set(GRM_SOURCES
     lib/grm/src/grm/dynamic_args_array.c
     lib/grm/src/grm/error.c
     lib/grm/src/grm/event.c
+    lib/grm/src/grm/import.cxx
+    lib/grm/src/grm/import_utils.cxx
     lib/grm/src/grm/interaction.cxx
     lib/grm/src/grm/json.c
     lib/grm/src/grm/layout_c.cxx
@@ -627,7 +651,6 @@ set(GRM_SOURCES
     lib/grm/src/grm/net.c
     lib/grm/src/grm/plot.cxx
     lib/grm/src/grm/util.c
-    lib/grm/src/grm/import.cxx
     lib/grm/src/grm/utilcpp.cxx
     lib/grm/src/grm/datatype/double_map.c
     lib/grm/src/grm/datatype/size_t_list.c
@@ -653,7 +676,12 @@ set(GRM_SOURCES
     lib/grm/src/grm/dom_render/manage_custom_color_index.cxx
     lib/grm/src/grm/dom_render/manage_gr_context_ids.cxx
     lib/grm/src/grm/dom_render/manage_z_index.cxx
+    lib/grm/src/grm/import_plugins/plugin_loader.cxx
+    lib/grm/src/grm/import_plugins/vdr.cxx
 )
+if(EMSCRIPTEN)
+  list(APPEND GRM_SOURCES lib/grm/src/grm/import_plugins/csv_plugin.cxx)
+endif()
 
 add_library(grm_static STATIC ${GRM_SOURCES})
 list(APPEND GRM_LIBRARIES grm_static)
@@ -2283,6 +2311,13 @@ if(GR_INSTALL)
     DESTINATION ./
     USE_SOURCE_PERMISSIONS
   )
+  if(TARGET csv_plugin)
+    install(
+      TARGETS csv_plugin
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+  endif()
 endif()
 
 message(${GR_REPORT})

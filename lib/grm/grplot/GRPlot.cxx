@@ -35,6 +35,43 @@
 const unsigned int WIDTH = 600;
 const unsigned int HEIGHT = 450;
 
+class LastDLError
+{
+public:
+  LastDLError()
+  {
+#ifdef _WIN32
+    auto error_code = GetLastError();
+    LPWSTR error_message = nullptr;
+
+    if (!FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                        nullptr, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&error_message, 0,
+                        nullptr))
+      {
+        error_message_ = L"<Could not get error message>";
+        return;
+      }
+    error_message_ = error_message;
+    LocalFree(error_message);
+#else
+    error_message_ = dlerror();
+#endif
+  }
+
+private:
+#ifdef _WIN32
+  std::wstring error_message_;
+  friend std::wostream &operator<<(std::wostream &os, const LastDLError &ld)
+#else
+  std::string error_message_;
+  friend std::ostream &operator<<(std::ostream &os, const LastDLError &ld)
+#endif
+  {
+    os << ld.error_message_;
+    return os;
+  }
+};
+
 int main(int argc, char **argv)
 {
   bool pass = false, listen_mode = false, test_mode = false, help_mode = false;
@@ -43,8 +80,10 @@ int main(int argc, char **argv)
   void *run;
 #ifdef _WIN32
   HINSTANCE handle;
+  auto &cerr = std::wcerr;
 #else
   void *handle;
+  auto &cerr = std::cerr;
 #endif
 
   // Ensure that the `GRDIR` environment variable is set, so GR can find its components like fonts.
@@ -198,10 +237,8 @@ int main(int argc, char **argv)
       path_name += W("." LIB_EXT);
 #ifdef _WIN32
       handle = LoadLibraryW(path_name.c_str());
-      run = (void *)GetProcAddress(handle, "run");
 #else
       handle = dlopen(path_name.c_str(), RTLD_LAZY);
-      run = dlsym(handle, "run");
 #endif
       if (handle != nullptr)
         {
@@ -215,24 +252,23 @@ int main(int argc, char **argv)
 
   if (handle == nullptr)
     {
-      fprintf(
-          stderr,
-          "Internal error: Could not load any GRPlot backend, although the console mode should always be available.\n");
-#ifdef _WIN32
-      fwprintf(stderr, L"Expected the console library in \"%ls\".\n", path_name.c_str());
-#else
-      fprintf(stderr, "Expected the console library in \"%s\".\n", path_name.c_str());
-#endif
+      cerr << "Internal error: Could not load any GRPlot backend, although the console mode should always be "
+              "available.\n"
+           << "Error reason: \"" << LastDLError() << "\"\n"
+           << "Expected the console library in \"" << path_name << "\"." << std::endl;
       return 1;
     }
+
+#ifdef _WIN32
+  run = (void *)GetProcAddress(handle, "run");
+#else
+  run = dlsym(handle, "run");
+#endif
   if (run == nullptr)
     {
-      fprintf(stderr, "Internal error: Could not load the \"run\" function from the GRPlot library.\n");
-#ifdef _WIN32
-      fwprintf(stderr, L"Expected the \"run\" function in \"%ls\".\n", path_name.c_str());
-#else
-      fprintf(stderr, "Expected the \"run\" function in \"%s\".\n", path_name.c_str());
-#endif
+      cerr << "Internal error: Could not load the \"run\" function from the GRPlot library.\n"
+           << "Error reason: \"" << LastDLError() << "\"\n"
+           << "Expected the \"run\" function in \"" << path_name << "\"." << std::endl;
       return 1;
     }
 

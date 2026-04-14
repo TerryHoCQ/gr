@@ -3414,46 +3414,36 @@ void GRPlotWidget::polarScatter()
   redraw();
 }
 
+void GRPlotWidget::exportGraphics(const QString &file_type, const QString &file_ext)
+{
+  QFileDialog file_dialog(this, "Save " + file_type, QDir::homePath(), file_type + " files (*." + file_ext + ")");
+  file_dialog.setDefaultSuffix("." + file_ext);
+  file_dialog.setAcceptMode(QFileDialog::AcceptSave);
+  if (!file_dialog.exec()) return;
+  auto save_file_name = file_dialog.selectedFiles().front().toStdString();
+  if (save_file_name.empty()) return;
+  file_export = save_file_name;
+  redraw();
+}
+
 void GRPlotWidget::pdf()
 {
-  file_export = "pdf";
-  redraw();
+  exportGraphics("PDF", "pdf");
 }
 
 void GRPlotWidget::png()
 {
-  QFileDialog file_dialog(this, "Save PNG", QDir::homePath(), "PNG files (*.png)");
-  file_dialog.setDefaultSuffix(".png");
-  file_dialog.setAcceptMode(QFileDialog::AcceptSave);
-  if (!file_dialog.exec()) return;
-  auto save_file_name = file_dialog.selectedFiles().front().toStdString();
-  if (save_file_name.empty()) return;
-  file_export = save_file_name;
-  redraw();
+  exportGraphics("PNG", "png");
 }
 
 void GRPlotWidget::jpeg()
 {
-  QFileDialog file_dialog(this, "Save JPEG", QDir::homePath(), "JPEG files (*.jpeg)");
-  file_dialog.setDefaultSuffix(".jpeg");
-  file_dialog.setAcceptMode(QFileDialog::AcceptSave);
-  if (!file_dialog.exec()) return;
-  auto save_file_name = file_dialog.selectedFiles().front().toStdString();
-  if (save_file_name.empty()) return;
-  file_export = save_file_name;
-  redraw();
+  exportGraphics("JPEG", "jpg");
 }
 
 void GRPlotWidget::svg()
 {
-  QFileDialog file_dialog(this, "Save SVG", QDir::homePath(), "SVG files (*.svg)");
-  file_dialog.setDefaultSuffix(".svg");
-  file_dialog.setAcceptMode(QFileDialog::AcceptSave);
-  if (!file_dialog.exec()) return;
-  auto save_file_name = file_dialog.selectedFiles().front().toStdString();
-  if (save_file_name.empty()) return;
-  file_export = save_file_name;
-  redraw();
+  exportGraphics("SVG", "svg");
 }
 
 void GRPlotWidget::moveableMode()

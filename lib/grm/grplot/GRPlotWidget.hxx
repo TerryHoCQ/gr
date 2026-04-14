@@ -222,6 +222,7 @@ public:
 protected:
   virtual void draw();
   void collectTooltips();
+  void exportGraphics(const QString &file_type, const QString &file_ext);
   void keyPressEvent(QKeyEvent *event) override;
   void keyReleaseEvent(QKeyEvent *event) override;
   void mouseMoveEvent(QMouseEvent *event) override;

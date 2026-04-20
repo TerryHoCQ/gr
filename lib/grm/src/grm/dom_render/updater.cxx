@@ -241,6 +241,9 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
       "int_lim_low",
       "x_shift_wc",
   };
+  std::vector<std::string> figure_critical_attributes{
+      "consecutive_colorbars",
+  };
   bool automatic_update;
   auto global_creator = grm_get_creator();
   auto global_render = grm_get_render();
@@ -1494,6 +1497,30 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                                                                   static_cast<int>(DelValues::RECREATE_OWN_CHILDREN));
                                 }
                             }
+                        }
+                    }
+                }
+            }
+          else if (element->localName() == "figure" &&
+                   std::find(figure_critical_attributes.begin(), figure_critical_attributes.end(), attr) !=
+                       figure_critical_attributes.end())
+            {
+              for (const auto &colorbar : element->querySelectorsAll("colorbar"))
+                {
+                  colorbar->setAttribute("_update_required", true);
+                  colorbar->setAttribute("_delete_children", 2);
+                }
+              for (const auto &plot : element->querySelectorsAll("plot"))
+                {
+                  auto central_region = plot->querySelectors("central_region");
+                  for (const auto &series : central_region->children())
+                    {
+                      if (!startsWith(series->localName(), "series_")) continue;
+                      auto series_kind = static_cast<std::string>(series->getAttribute("kind"));
+                      if (strEqualsAny(series_kind, "heatmap", "contour", "contourf", "polar_heatmap", "tricontour"))
+                        {
+                          series->setAttribute("_update_required", true);
+                          series->setAttribute("_delete_children", 2);
                         }
                     }
                 }

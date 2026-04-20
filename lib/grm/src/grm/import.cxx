@@ -25,9 +25,10 @@
  */
 static Vdr *reader = nullptr;
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ join_plots ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ depending all plots ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static std::list<int> join_plot_numbers;
+static int consecutive_colorbars = 0;
 
 /* ========================= functions ============================================================================== */
 
@@ -1697,6 +1698,10 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       if (!grm_args_values(plot[plot_i], "use_grplot_changes", "i", &use_grplot_changes))
         grm_args_push(plot[plot_i], "use_grplot_changes", "i", 1);
     }
+  if (consecutive_colorbars)
+    {
+      grm_args_push(args, "consecutive_colorbars", "i", consecutive_colorbars);
+    }
   grm_args_push(args, "subplots", "nA", plot_num, plot.data());
   if (!join_plot_numbers.empty())
     {
@@ -1845,6 +1850,11 @@ int convertInputstreamIntoArgs(grm_args_t *args, grm_file_args_t *file_args, int
         {
           auto tmp = token.substr(11, token.length() - 1);
           parseColumns(&join_plot_numbers, tmp.c_str());
+        }
+      else if (startsWith(token, "consecutive_colorbars:"))
+        {
+          auto tmp = token.substr(22, token.length() - 1);
+          if (tmp != "") consecutive_colorbars = std::stoi(tmp);
         }
       else
         {

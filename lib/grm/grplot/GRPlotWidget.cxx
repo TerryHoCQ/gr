@@ -267,6 +267,7 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
       "clip_negative",
       "colored",
       "colormap_inverted",
+      "consecutive_colorbars",
       "disable_x_trans",
       "disable_y_trans",
       "draw_grid",
@@ -551,6 +552,10 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
   connect(text_color_ind_act, &QAction::triggered, this, &GRPlotWidget::colorIndexSlot);
   disable_grid_act = new QAction(tr(""), this);
   connect(disable_grid_act, &QAction::triggered, this, &GRPlotWidget::disableGridSlot);
+  consecutive_colorbars_act = new QAction(tr("&Consecutive Colorbars"), this);
+  connect(consecutive_colorbars_act, &QAction::triggered, this, &GRPlotWidget::consecutiveColorbarsSlot);
+  consecutive_colorbars_act->setCheckable(true);
+  consecutive_colorbars_act->setChecked(false);
 
   vertical_orientation_act = new QAction(tr("&Vertical"), this);
   connect(vertical_orientation_act, &QAction::triggered, this, &GRPlotWidget::verticalOrientationSlot);
@@ -601,6 +606,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
   show_orientation_sub_menu_act = new QAction(this);
   hide_aspect_ratio_sub_menu_act = new QAction(this);
   show_aspect_ratio_sub_menu_act = new QAction(this);
+  hide_multiplot_sub_menu_act = new QAction(this);
+  show_multiplot_sub_menu_act = new QAction(this);
   add_seperator_act = new QAction(this);
 
   if (!getenv("GRDISPLAY") || (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "view") != 0))
@@ -5894,6 +5901,21 @@ void GRPlotWidget::addImageSlot()
   this->activateWindow(); // needed so that the grplot widget is the active one again and events are tracked
 }
 
+void GRPlotWidget::consecutiveColorbarsSlot()
+{
+  auto render = grm_get_render();
+  const auto global_root = grm_get_document_root();
+  const auto figure_elem = global_root->querySelectors("figure[active=1]");
+  if (figure_elem == nullptr) return;
+  bool consecutive_colorbars = false;
+
+  if (figure_elem->hasAttribute("consecutive_colorbars"))
+    consecutive_colorbars = static_cast<int>(figure_elem->getAttribute("consecutive_colorbars"));
+  figure_elem->setAttribute("consecutive_colorbars", !consecutive_colorbars);
+  consecutive_colorbars_act->setChecked(!consecutive_colorbars);
+  redraw();
+}
+
 void GRPlotWidget::multipleRadioButtonGroupsListener()
 {
   auto checked_rb = static_cast<QRadioButton *>(sender());
@@ -6406,6 +6428,7 @@ void GRPlotWidget::setReferencedElements(const std::vector<BoundingObject> &refe
 
 void GRPlotWidget::adjustPlotTypeMenu(const std::shared_ptr<GRM::Element> &plot_parent)
 {
+  const auto global_root = grm_get_document_root();
   auto error = false;
   bool edit_enabled = !getenv("GRDISPLAY") || (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "view") != 0);
 
@@ -6452,6 +6475,7 @@ void GRPlotWidget::adjustPlotTypeMenu(const std::shared_ptr<GRM::Element> &plot_
       hidePlotTypeMenuElements();
       hide_marginal_sub_menu_act->trigger();
       hide_algo_menu_act->trigger();
+      hide_multiplot_sub_menu_act->trigger();
       use_gr3_act->setVisible(false);
       polar_with_pan_act->setVisible(false);
       z_flip_act->setVisible(false);
@@ -6484,6 +6508,8 @@ void GRPlotWidget::adjustPlotTypeMenu(const std::shared_ptr<GRM::Element> &plot_
           show_lim_sub_menu_act->trigger();
           show_plot_type_sub_menu_act->trigger();
           hide_location_sub_menu_act->trigger();
+          if (global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid") != nullptr)
+            show_multiplot_sub_menu_act->trigger();
         }
       if (colormap_act->isVisible() && plot_parent->hasAttribute("colormap"))
         {
@@ -6532,6 +6558,7 @@ void GRPlotWidget::adjustPlotTypeMenu(const std::shared_ptr<GRM::Element> &plot_
         {
           if (edit_enabled) show_location_sub_menu_act->trigger();
           colorbar_act->setVisible(true);
+          z_lim_act->setVisible(true); // to manipulate the color limits of the plot
         }
       if (plot_parent->querySelectors("side_plot_region"))
         {
@@ -6613,6 +6640,8 @@ void GRPlotWidget::adjustPlotTypeMenu(const std::shared_ptr<GRM::Element> &plot_
                 }
             }
         }
+      if (global_root->querySelectors("figure[active=1]")->hasAttribute("consecutive_colorbars"))
+        consecutive_colorbars_act->setChecked(static_cast<int>(global_root->getAttribute("consecutive_colorbars")));
 
       for (const auto &name : valid_series_names)
         {
@@ -7061,6 +7090,16 @@ QAction *GRPlotWidget::getShowPlotTypeSubMenuAct()
   return show_plot_type_sub_menu_act;
 }
 
+QAction *GRPlotWidget::getHideMultiplotSubMenuAct()
+{
+  return hide_multiplot_sub_menu_act;
+}
+
+QAction *GRPlotWidget::getShowMultiplotSubMenuAct()
+{
+  return show_multiplot_sub_menu_act;
+}
+
 QAction *GRPlotWidget::getAddSeperatorAct()
 {
   return add_seperator_act;
@@ -7308,6 +7347,11 @@ QAction *GRPlotWidget::getDisableGridAct()
 QAction *GRPlotWidget::getUpdateEditElementTitleAct()
 {
   return update_edit_element_title_act;
+}
+
+QAction *GRPlotWidget::getConsecutiveColorbarsAct()
+{
+  return consecutive_colorbars_act;
 }
 
 QWidget *GRPlotWidget::getEditElementWidget()

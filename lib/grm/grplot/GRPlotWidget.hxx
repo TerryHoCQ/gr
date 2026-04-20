@@ -162,6 +162,8 @@ public:
   QAction *getShowFlipSubMenuAct();
   QAction *getHidePlotTypeSubMenuAct();
   QAction *getShowPlotTypeSubMenuAct();
+  QAction *getHideMultiplotSubMenuAct();
+  QAction *getShowMultiplotSubMenuAct();
   QAction *getAddSeperatorAct();
   QAction *getXLogAct();
   QAction *getYLogAct();
@@ -212,6 +214,7 @@ public:
   QAction *getTextColorIndAct();
   QAction *getDisableGridAct();
   QAction *getUpdateEditElementTitleAct();
+  QAction *getConsecutiveColorbarsAct();
   QWidget *getEditElementWidget();
   QWidget *getTreeWidget();
   QWidget *getTableWidget();
@@ -317,6 +320,7 @@ private slots:
   void yLimSlot();
   void zLimSlot();
   void addImageSlot();
+  void consecutiveColorbarsSlot();
   void listItemCheckStatusChanged(QListWidgetItem *item);
   void listItemPressed(QListWidgetItem *item);
   void showIconBarSlot();
@@ -461,13 +465,15 @@ private:
   QAction *pdf_act, *png_act, *jpeg_act, *svg_act;
   QAction *show_container_action, *save_file_action, *load_file_action, *editor_action, *add_element_action;
   QAction *moveable_mode_act, *selectable_grid_act;
+  QAction *consecutive_colorbars_act;
   QAction *show_context_action, *add_context_action, *generate_linear_context_action, *add_grplot_data_context;
   QAction *hide_algo_menu_act, *show_algo_menu_act, *hide_marginal_sub_menu_act, *show_marginal_sub_menu_act,
       *hide_orientation_sub_menu_act, *show_orientation_sub_menu_act, *hide_aspect_ratio_sub_menu_act,
       *show_aspect_ratio_sub_menu_act, *hide_location_sub_menu_act, *show_location_sub_menu_act, *add_seperator_act,
       *undo_action, *redo_action, *advanced_editor_act, *hide_lim_sub_menu_act, *show_lim_sub_menu_act,
       *hide_log_sub_menu_act, *show_log_sub_menu_act, *hide_flip_sub_menu_act, *show_flip_sub_menu_act,
-      *hide_plot_type_sub_menu_act, *show_plot_type_sub_menu_act, *update_edit_element_title_act;
+      *hide_plot_type_sub_menu_act, *show_plot_type_sub_menu_act, *update_edit_element_title_act,
+      *hide_multiplot_sub_menu_act, *show_multiplot_sub_menu_act;
   QAction *x_flip_act, *y_flip_act, *z_flip_act, *theta_flip_act;
   QAction *x_log_act, *y_log_act, *z_log_act, *r_log_act;
   QAction *use_gr3_act, *polar_with_pan_act, *keep_window_act, *colormap_act, *text_color_ind_act, *disable_grid_act;

@@ -23,9 +23,9 @@
 #define xFlipIf(x, scale_options, xmin, xmax) \
   ((GR_OPTION_FLIP_X & (scale_options) ? (xmin) + (xmax) : 0) + (GR_OPTION_FLIP_X & (scale_options) ? -1 : 1) * (x))
 
-#define xLin(x, scale_options, xmin, xmax, a, b)                                                                      \
-  xFlipIf((GR_OPTION_X_LOG & (scale_options) ? ((x) > 0 ? (a)*log10(x) + (b) : -FLT_MAX) : (x)), scale_options, xmin, \
-          xmax)
+#define xLin(x, scale_options, xmin, xmax, a, b)                                                                  \
+  xFlipIf((GR_OPTION_X_LOG & (scale_options) ? ((x) > 0 ? (a) * log10(x) + (b) : -FLT_MAX) : (x)), scale_options, \
+          xmin, xmax)
 
 #define xLog(x, scale_options, xmin, xmax, a, b)                                                                  \
   (GR_OPTION_X_LOG & (scale_options) ? (pow(10.0, (double)((xFlipIf(x, scale_options, xmin, xmax) - (b)) / (a)))) \
@@ -6084,6 +6084,7 @@ void processText(const std::shared_ptr<GRM::Element> &element, const std::shared
   processTextEncoding(active_figure);
   processPrivateTransparency(element);
   if (element->hasAttribute("transparency")) processTransparency(element);
+  if (element->hasAttribute("char_height")) processCharHeight(element);
 
   if (world_coordinates == CoordinateSpace::WC) gr_wctondc(&x, &y);
   if (element->hasAttribute("width") && element->hasAttribute("height"))
@@ -6621,6 +6622,33 @@ void processHeatmap(const std::shared_ptr<GRM::Element> &element, const std::sha
         {
           c_min = z_min;
           c_max = z_max;
+        }
+    }
+
+  auto active_figure = grm_get_render()->getActiveFigure();
+  if (active_figure->hasAttribute("consecutive_colorbars") &&
+      static_cast<int>(active_figure->getAttribute("consecutive_colorbars")))
+    {
+      for (const auto &plot_elem : active_figure->querySelectorsAll("plot"))
+        {
+          if (plot_elem->querySelectors("colorbar"))
+            {
+              if (plot_elem->hasAttribute("_z_lim_min") && plot_elem->hasAttribute("_z_lim_max") &&
+                  plot_elem->querySelectors("coordinate_system[plot_type=\"2d\"]"))
+                {
+                  auto new_c_min = static_cast<double>(plot_elem->getAttribute("_z_lim_min"));
+                  auto new_c_max = static_cast<double>(plot_elem->getAttribute("_z_lim_max"));
+                  if (!grm_isnan(new_c_min)) c_min = grm_min(c_min, new_c_min);
+                  if (!grm_isnan(new_c_max)) c_max = grm_max(c_max, new_c_max);
+                }
+              else if (plot_elem->hasAttribute("_c_lim_min") && plot_elem->hasAttribute("_c_lim_max"))
+                {
+                  auto new_c_min = static_cast<double>(plot_elem->getAttribute("_c_lim_min"));
+                  auto new_c_max = static_cast<double>(plot_elem->getAttribute("_c_lim_max"));
+                  if (!grm_isnan(new_c_min)) c_min = grm_min(c_min, new_c_min);
+                  if (!grm_isnan(new_c_max)) c_max = grm_max(c_max, new_c_max);
+                }
+            }
         }
     }
 
@@ -7348,6 +7376,33 @@ void processContour(const std::shared_ptr<GRM::Element> &element, const std::sha
                                          : static_cast<double>(plot_parent->getAttribute("_z_lim_min"));
   z_max = element->hasAttribute("z_max") ? static_cast<double>(element->getAttribute("z_max"))
                                          : static_cast<double>(plot_parent->getAttribute("_z_lim_max"));
+  auto active_figure = grm_get_render()->getActiveFigure();
+  if (active_figure->hasAttribute("consecutive_colorbars") &&
+      static_cast<int>(active_figure->getAttribute("consecutive_colorbars")))
+    {
+      for (const auto &plot_elem : active_figure->querySelectorsAll("plot"))
+        {
+          if (plot_elem->querySelectors("colorbar"))
+            {
+              if (plot_elem->hasAttribute("_z_lim_min") && plot_elem->hasAttribute("_z_lim_max") &&
+                  plot_elem->querySelectors("coordinate_system[plot_type=\"2d\"]"))
+                {
+                  auto new_z_min = static_cast<double>(plot_elem->getAttribute("_z_lim_min"));
+                  auto new_z_max = static_cast<double>(plot_elem->getAttribute("_z_lim_max"));
+                  if (!grm_isnan(new_z_min)) z_min = grm_min(z_min, new_z_min);
+                  if (!grm_isnan(new_z_max)) z_max = grm_max(z_max, new_z_max);
+                }
+              else if (plot_elem->hasAttribute("_c_lim_min") && plot_elem->hasAttribute("_c_lim_max"))
+                {
+                  auto new_c_min = static_cast<double>(plot_elem->getAttribute("_c_lim_min"));
+                  auto new_c_max = static_cast<double>(plot_elem->getAttribute("_c_lim_max"));
+                  if (!grm_isnan(new_c_min)) z_min = grm_min(z_min, new_c_min);
+                  if (!grm_isnan(new_c_max)) z_max = grm_max(z_max, new_c_max);
+                }
+            }
+        }
+    }
+
   if (element->hasAttribute("levels"))
     {
       num_levels = static_cast<int>(element->getAttribute("levels"));
@@ -7512,6 +7567,33 @@ void processContourf(const std::shared_ptr<GRM::Element> &element, const std::sh
                                          : static_cast<double>(plot_parent->getAttribute("_z_lim_min"));
   z_max = element->hasAttribute("z_max") ? static_cast<double>(element->getAttribute("z_max"))
                                          : static_cast<double>(plot_parent->getAttribute("_z_lim_max"));
+  auto active_figure = grm_get_render()->getActiveFigure();
+  if (active_figure->hasAttribute("consecutive_colorbars") &&
+      static_cast<int>(active_figure->getAttribute("consecutive_colorbars")))
+    {
+      for (const auto &plot_elem : active_figure->querySelectorsAll("plot"))
+        {
+          if (plot_elem->querySelectors("colorbar"))
+            {
+              if (plot_elem->hasAttribute("_z_lim_min") && plot_elem->hasAttribute("_z_lim_max") &&
+                  plot_elem->querySelectors("coordinate_system[plot_type=\"2d\"]"))
+                {
+                  auto new_z_min = static_cast<double>(plot_elem->getAttribute("_z_lim_min"));
+                  auto new_z_max = static_cast<double>(plot_elem->getAttribute("_z_lim_max"));
+                  if (!grm_isnan(new_z_min)) z_min = grm_min(z_min, new_z_min);
+                  if (!grm_isnan(new_z_max)) z_max = grm_max(z_max, new_z_max);
+                }
+              else if (plot_elem->hasAttribute("_c_lim_min") && plot_elem->hasAttribute("_c_lim_max"))
+                {
+                  auto new_c_min = static_cast<double>(plot_elem->getAttribute("_c_lim_min"));
+                  auto new_c_max = static_cast<double>(plot_elem->getAttribute("_c_lim_max"));
+                  if (!grm_isnan(new_c_min)) z_min = grm_min(z_min, new_c_min);
+                  if (!grm_isnan(new_c_max)) z_max = grm_max(z_max, new_c_max);
+                }
+            }
+        }
+    }
+
   if (element->hasAttribute("levels"))
     {
       num_levels = static_cast<int>(element->getAttribute("levels"));
@@ -8382,6 +8464,32 @@ void processPolarHeatmap(const std::shared_ptr<GRM::Element> &element, const std
         {
           c_min = z_min;
           c_max = z_max;
+        }
+    }
+  auto active_figure = grm_get_render()->getActiveFigure();
+  if (active_figure->hasAttribute("consecutive_colorbars") &&
+      static_cast<int>(active_figure->getAttribute("consecutive_colorbars")))
+    {
+      for (const auto &plot_elem : active_figure->querySelectorsAll("plot"))
+        {
+          if (plot_elem->querySelectors("colorbar"))
+            {
+              if (plot_elem->hasAttribute("_z_lim_min") && plot_elem->hasAttribute("_z_lim_max") &&
+                  plot_elem->querySelectors("coordinate_system[plot_type=\"2d\"]"))
+                {
+                  auto new_c_min = static_cast<double>(plot_elem->getAttribute("_z_lim_min"));
+                  auto new_c_max = static_cast<double>(plot_elem->getAttribute("_z_lim_max"));
+                  if (!grm_isnan(new_c_min)) c_min = grm_min(c_min, new_c_min);
+                  if (!grm_isnan(new_c_max)) c_max = grm_max(c_max, new_c_max);
+                }
+              else if (plot_elem->hasAttribute("_c_lim_min") && plot_elem->hasAttribute("_c_lim_max"))
+                {
+                  auto new_c_min = static_cast<double>(plot_elem->getAttribute("_c_lim_min"));
+                  auto new_c_max = static_cast<double>(plot_elem->getAttribute("_c_lim_max"));
+                  if (!grm_isnan(new_c_min)) c_min = grm_min(c_min, new_c_min);
+                  if (!grm_isnan(new_c_max)) c_max = grm_max(c_max, new_c_max);
+                }
+            }
         }
     }
 
@@ -10628,6 +10736,33 @@ void processTriContour(const std::shared_ptr<GRM::Element> &element, const std::
 
   z_min = static_cast<double>(plot_parent->getAttribute("_z_lim_min"));
   z_max = static_cast<double>(plot_parent->getAttribute("_z_lim_max"));
+  auto active_figure = grm_get_render()->getActiveFigure();
+  if (active_figure->hasAttribute("consecutive_colorbars") &&
+      static_cast<int>(active_figure->getAttribute("consecutive_colorbars")))
+    {
+      for (const auto &plot_elem : active_figure->querySelectorsAll("plot"))
+        {
+          if (plot_elem->querySelectors("colorbar"))
+            {
+              if (plot_elem->hasAttribute("_z_lim_min") && plot_elem->hasAttribute("_z_lim_max") &&
+                  plot_elem->querySelectors("coordinate_system[plot_type=\"2d\"]"))
+                {
+                  auto new_c_min = static_cast<double>(plot_elem->getAttribute("_z_lim_min"));
+                  auto new_c_max = static_cast<double>(plot_elem->getAttribute("_z_lim_max"));
+                  if (!grm_isnan(new_c_min)) z_min = grm_min(z_min, new_c_min);
+                  if (!grm_isnan(new_c_max)) z_max = grm_max(z_max, new_c_max);
+                }
+              else if (plot_elem->hasAttribute("_c_lim_min") && plot_elem->hasAttribute("_c_lim_max"))
+                {
+                  auto new_c_min = static_cast<double>(plot_elem->getAttribute("_c_lim_min"));
+                  auto new_c_max = static_cast<double>(plot_elem->getAttribute("_c_lim_max"));
+                  if (!grm_isnan(new_c_min)) z_min = grm_min(z_min, new_c_min);
+                  if (!grm_isnan(new_c_max)) z_max = grm_max(z_max, new_c_max);
+                }
+            }
+        }
+    }
+
   if (element->hasAttribute("levels"))
     {
       num_levels = static_cast<int>(element->getAttribute("levels"));

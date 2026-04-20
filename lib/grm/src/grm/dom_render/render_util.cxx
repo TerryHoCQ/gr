@@ -2493,6 +2493,26 @@ bool getLimitsForColorbar(const std::shared_ptr<GRM::Element> &element, double &
       limits_found = false;
     }
 
+  auto active_figure = grm_get_render()->getActiveFigure();
+  if (active_figure->hasAttribute("consecutive_colorbars") &&
+      static_cast<int>(active_figure->getAttribute("consecutive_colorbars")))
+    {
+      for (const auto &plot_elem : active_figure->querySelectorsAll("plot"))
+        {
+          if (!std::isnan(static_cast<double>(plot_elem->getAttribute("_c_lim_min"))) &&
+              !std::isnan(static_cast<double>(plot_elem->getAttribute("_c_lim_max"))))
+            {
+              c_min = grm_min(c_min, static_cast<double>(plot_elem->getAttribute("_c_lim_min")));
+              c_max = grm_max(c_max, static_cast<double>(plot_elem->getAttribute("_c_lim_max")));
+            }
+          else if (!std::isnan(static_cast<double>(plot_elem->getAttribute("_z_lim_min"))) &&
+                   !std::isnan(static_cast<double>(plot_elem->getAttribute("_z_lim_max"))))
+            {
+              c_min = grm_min(c_min, static_cast<double>(plot_elem->getAttribute("_z_lim_min")));
+              c_max = grm_max(c_max, static_cast<double>(plot_elem->getAttribute("_z_lim_max")));
+            }
+        }
+    }
   return limits_found;
 }
 

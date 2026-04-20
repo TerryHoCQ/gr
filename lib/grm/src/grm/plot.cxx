@@ -264,7 +264,8 @@ static int pre_plot_text_encoding = -1;
  * flat object that mixes keys of different hierarchies */
 
 const char *valid_root_keys[] = {"plots", "append_plots", "hold_plots", nullptr};
-const char *valid_plot_keys[] = {"clear", "join_plots", "raw", "size", "subplots", "update", nullptr};
+const char *valid_plot_keys[] = {"clear", "consecutive_colorbars", "join_plots", "raw", "size", "subplots", "update",
+                                 nullptr};
 
 const char *valid_subplot_keys[] = {"abs_height",
                                     "abs_width",
@@ -6699,6 +6700,7 @@ int grm_plot(const grm_args_t *args) // TODO: rename this method so the name dis
   bool hold_figures = false, append_figures = false, figure_id_given = false;
   int *join_plot_numbers;
   unsigned int join_plot_numbers_size;
+  int consecutive_colorbars;
 
   if (!grm_merge(args)) return 0;
   int figure_id = active_plot_index - 1; // the container is 1 based, the  DOM-tree 0
@@ -6913,6 +6915,9 @@ int grm_plot(const grm_args_t *args) // TODO: rename this method so the name dis
             }
           global_render->setAutoUpdate(false);
         }
+
+      if (grm_args_values(active_plot_args, "consecutive_colorbars", "i", &consecutive_colorbars))
+        edit_figure->setAttribute("consecutive_colorbars", consecutive_colorbars);
 
       // workaround to get a valid background for the group_mask which is getting used for the highlights
       auto active_figure = global_render->querySelectors("figure[active=\"1\"]");

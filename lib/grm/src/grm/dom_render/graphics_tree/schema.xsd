@@ -22,6 +22,7 @@
                 <xs:element ref="plot" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attribute name="active" type="xs:integer"/>
+            <xs:attribute name="consecutive_colorbars" type="xs:integer"/>
             <xs:attribute name="size_x" type="xs:double"/>
             <xs:attribute name="size_x_type" type="xs:string"/>
             <xs:attribute name="size_x_unit" type="xs:string"/>
@@ -492,6 +493,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attributeGroup ref="text_modifications"/>
+            <xs:attribute name="char_height" type="xs:double"/>
             <xs:attribute name="char_up_x" type="xs:double"/>
             <xs:attribute name="char_up_y" type="xs:double"/>
             <xs:attribute name="height" type="xs:double"/>

@@ -11,6 +11,7 @@ set(GRPLOT_ICONS
     polar_with_pan
     text_color_ind
     disable_grid
+    multiplot
     use_gr3_dark
     algorithm_dark
     aspect_ratio_dark
@@ -23,6 +24,7 @@ set(GRPLOT_ICONS
     polar_with_pan_dark
     text_color_ind_dark
     disable_grid_dark
+    multiplot_dark
 )
 set(GRPLOT_ICON_QRC "<RCC>\n    <qresource prefix=\"/\">\n")
 foreach(icon IN LISTS GRPLOT_ICONS)

@@ -339,6 +339,8 @@ static int first_color = DEFAULT_FIRST_COLOR, last_color = DEFAULT_LAST_COLOR;
 
 static unsigned int rgb[MAX_COLOR], used[MAX_COLOR];
 
+static double color_lim_min = NAN, color_lim_max = NAN;
+
 #define MAX_TICKS 500
 
 #define check_autoinit \
@@ -9683,7 +9685,7 @@ void gr_gradient(int nx, int ny, double *x, double *y, double *z, double *u, dou
 void gr_quiver(int nx, int ny, double *x, double *y, double *u, double *v, int color)
 {
   int i, j, ci;
-  double gnorm, gmax = 0;
+  double gnorm, gmax = 0, gmin = 0;
   double dx = 0, dy = 0;
   int errind, linecolor, fillcolor;
 
@@ -9746,17 +9748,20 @@ void gr_quiver(int nx, int ny, double *x, double *y, double *u, double *v, int c
         }
     }
 
+  if (!isnan(color_lim_min)) gmin = color_lim_min;
+  if (!isnan(color_lim_max)) gmax = color_lim_max;
   for (j = 0; j < ny; j++)
     for (i = 0; i < nx; i++)
       {
-        gnorm = sqrt(U(i, j) * U(i, j) + V(i, j) * V(i, j)) / gmax;
+        gnorm = sqrt(U(i, j) * U(i, j) + V(i, j) * V(i, j));
         if (color)
           {
-            ci = first_color + (int)((last_color - first_color) * gnorm);
+            ci = (int)(first_color + (gnorm - gmin) / (gmax - gmin) * (last_color - first_color));
+            ci = max(min(ci, last_color), first_color);
             gr_setlinecolorind(ci);
             gr_setfillcolorind(ci);
           }
-        gr_setarrowsize(gnorm);
+        gr_setarrowsize(gnorm / gmax);
         gr_drawarrow(x[i], y[j], x[i] + dx * U(i, j) / gmax, y[j] + dy * V(i, j) / gmax);
       }
 
@@ -10322,6 +10327,7 @@ const hexbin_2pass_t *gr_hexbin_2pass(int n, double *x, double *y, int nbins, co
           int *cell, *cnt;
           double *xcm, *ycm;
           double xlist[7], ylist[7], xdelta[6], ydelta[6];
+          double gmax = 0, gmin = 0;
           int i, j;
 
           nc = context->nc;
@@ -10330,6 +10336,10 @@ const hexbin_2pass_t *gr_hexbin_2pass(int n, double *x, double *y, int nbins, co
           cnt = context->priv->cnt;
           xcm = context->priv->xcm;
           ycm = context->priv->ycm;
+          gmax = cntmax;
+
+          if (!isnan(color_lim_min)) gmin = color_lim_min;
+          if (!isnan(color_lim_max)) gmax = color_lim_max;
 
           for (j = 0; j < 6; j++)
             {
@@ -10356,7 +10366,9 @@ const hexbin_2pass_t *gr_hexbin_2pass(int n, double *x, double *y, int nbins, co
               xlist[6] = xlist[0];
               ylist[6] = ylist[0];
 
-              gks_set_fill_color_index(first_color + (last_color - first_color) * ((double)cnt[i] / cntmax));
+              int ci = (int)(first_color + ((double)cnt[i] - gmin) / (gmax - gmin) * (last_color - first_color));
+              ci = max(min(ci, last_color), first_color);
+              gks_set_fill_color_index(ci);
               gks_fillarea(6, xlist, ylist);
               gks_polyline(7, xlist, ylist);
             }
@@ -10387,6 +10399,7 @@ const hexbin_2pass_t *gr_hexbin_2pass(int n, double *x, double *y, int nbins, co
 
   return context_;
 }
+
 /*!
  * Set the currently used colormap.
  *
@@ -14968,7 +14981,7 @@ void gr_inqvolumeflags(int *border, int *max_threads, int *picture_width, int *p
 static void draw_volume(const double *pixels)
 {
   int i;
-  double dmax;
+  double dmax, dmin = 0;
   double xmin, ymin, xmax, ymax;
   int *ipixels, *colormap;
 
@@ -14982,6 +14995,9 @@ static void draw_volume(const double *pixels)
           dmax = pixels[i];
         }
     }
+
+  if (!isnan(color_lim_min)) dmin = color_lim_min;
+  if (!isnan(color_lim_max)) dmax = color_lim_max;
 
   colormap = (int *)gks_malloc((last_color - first_color + 1) * sizeof(int));
   for (i = first_color; i <= last_color; i++)
@@ -14999,7 +15015,8 @@ static void draw_volume(const double *pixels)
             }
           else
             {
-              ipixels[i] = (255u << 24) + colormap[(int)(pixels[i] / dmax * (last_color - first_color))];
+              ipixels[i] =
+                  (255u << 24) + colormap[(int)((pixels[i] - dmin) / (dmax - dmin) * (last_color - first_color))];
             }
         }
     }
@@ -16940,4 +16957,16 @@ void gr_inqmathfont(int *font)
   check_autoinit;
 
   *font = math_font;
+}
+
+void gr_setcolorlimits(double min, double max)
+{
+  color_lim_min = min;
+  color_lim_max = max;
+}
+
+void gr_inqcolorlimits(double *min, double *max)
+{
+  *min = color_lim_min;
+  *max = color_lim_max;
 }

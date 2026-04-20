@@ -2476,13 +2476,19 @@ bool getLimitsForColorbar(const std::shared_ptr<GRM::Element> &element, double &
   auto plot_parent = element->parentElement();
   getPlotParent(plot_parent);
 
-  if (!std::isnan(static_cast<double>(plot_parent->getAttribute("_c_lim_min"))) &&
-      !std::isnan(static_cast<double>(plot_parent->getAttribute("_c_lim_max"))))
+  if (auto volume = plot_parent->querySelectors("series_volume"); volume != nullptr)
+    {
+      c_min = static_cast<double>(volume->getAttribute("_c_lim_min"));
+      c_max = static_cast<double>(volume->getAttribute("_c_lim_max"));
+      limits_found = true;
+    }
+  else if (volume == nullptr && !std::isnan(static_cast<double>(plot_parent->getAttribute("_c_lim_min"))) &&
+           !std::isnan(static_cast<double>(plot_parent->getAttribute("_c_lim_max"))))
     {
       c_min = static_cast<double>(plot_parent->getAttribute("_c_lim_min"));
       c_max = static_cast<double>(plot_parent->getAttribute("_c_lim_max"));
     }
-  else if (!std::isnan(static_cast<double>(plot_parent->getAttribute("_z_lim_min"))) &&
+  else if (volume == nullptr && !std::isnan(static_cast<double>(plot_parent->getAttribute("_z_lim_min"))) &&
            !std::isnan(static_cast<double>(plot_parent->getAttribute("_z_lim_max"))))
     {
       c_min = static_cast<double>(plot_parent->getAttribute("_z_lim_min"));
@@ -2497,19 +2503,34 @@ bool getLimitsForColorbar(const std::shared_ptr<GRM::Element> &element, double &
   if (active_figure->hasAttribute("consecutive_colorbars") &&
       static_cast<int>(active_figure->getAttribute("consecutive_colorbars")))
     {
+      auto current_type =
+          static_cast<std::string>(plot_parent->querySelectors("coordinate_system")->getAttribute("plot_type"));
       for (const auto &plot_elem : active_figure->querySelectorsAll("plot"))
         {
-          if (!std::isnan(static_cast<double>(plot_elem->getAttribute("_c_lim_min"))) &&
-              !std::isnan(static_cast<double>(plot_elem->getAttribute("_c_lim_max"))))
+          auto new_type =
+              static_cast<std::string>(plot_elem->querySelectors("coordinate_system")->getAttribute("plot_type"));
+          if (current_type == new_type)
             {
-              c_min = grm_min(c_min, static_cast<double>(plot_elem->getAttribute("_c_lim_min")));
-              c_max = grm_max(c_max, static_cast<double>(plot_elem->getAttribute("_c_lim_max")));
-            }
-          else if (!std::isnan(static_cast<double>(plot_elem->getAttribute("_z_lim_min"))) &&
-                   !std::isnan(static_cast<double>(plot_elem->getAttribute("_z_lim_max"))))
-            {
-              c_min = grm_min(c_min, static_cast<double>(plot_elem->getAttribute("_z_lim_min")));
-              c_max = grm_max(c_max, static_cast<double>(plot_elem->getAttribute("_z_lim_max")));
+              if (auto volume = plot_elem->querySelectors("series_volume");
+                  !std::isnan(static_cast<double>(plot_elem->getAttribute("_z_lim_min"))) &&
+                  !std::isnan(static_cast<double>(plot_elem->getAttribute("_z_lim_max"))) && volume != nullptr)
+                {
+                  c_min = grm_min(c_min, static_cast<double>(volume->getAttribute("_c_lim_min")));
+                  c_max = grm_max(c_max, static_cast<double>(volume->getAttribute("_c_lim_max")));
+                }
+              else if (volume == nullptr && !std::isnan(static_cast<double>(plot_elem->getAttribute("_c_lim_min"))) &&
+                       !std::isnan(static_cast<double>(plot_elem->getAttribute("_c_lim_max"))))
+                {
+                  c_min = grm_min(c_min, static_cast<double>(plot_elem->getAttribute("_c_lim_min")));
+                  c_max = grm_max(c_max, static_cast<double>(plot_elem->getAttribute("_c_lim_max")));
+                }
+              else if (volume == nullptr && !std::isnan(static_cast<double>(plot_elem->getAttribute("_z_lim_min"))) &&
+                       !std::isnan(static_cast<double>(plot_elem->getAttribute("_z_lim_max"))) &&
+                       plot_elem->querySelectors("series_volume") == nullptr)
+                {
+                  c_min = grm_min(c_min, static_cast<double>(plot_elem->getAttribute("_z_lim_min")));
+                  c_max = grm_max(c_max, static_cast<double>(plot_elem->getAttribute("_z_lim_max")));
+                }
             }
         }
     }
@@ -3658,8 +3679,8 @@ void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &element
   {
     const char *plot;
     const char *series;
-  } *current_range_keys, range_keys[] = {{"x_lim", "x_range"}, {"y_lim", "y_range"}, {"z_lim", "z_range"},
-                                         {"c_lim", "c_range"}, {"r_lim", "r_range"}, {"theta_lim", "theta_range"}};
+  } * current_range_keys, range_keys[] = {{"x_lim", "x_range"}, {"y_lim", "y_range"}, {"z_lim", "z_range"},
+                                          {"c_lim", "c_range"}, {"r_lim", "r_range"}, {"theta_lim", "theta_range"}};
 
   logger((stderr, "Storing coordinate ranges\n"));
 

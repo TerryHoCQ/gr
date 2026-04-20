@@ -296,6 +296,7 @@ IconBarWidget::IconBarWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(pa
 
   multiplot_sub_menu = new QMenu(this);
   multiplot_sub_menu->addAction(grplot_widget->getConsecutiveColorbarsAct());
+  multiplot_sub_menu->addAction(grplot_widget->getFlipLayoutAct());
   multiplot_tool_button->setMenu(multiplot_sub_menu);
 
   connect(grplot_widget->getHideAlgoMenuAct(), &QAction::triggered, this, &IconBarWidget::hideAlgoMenu);

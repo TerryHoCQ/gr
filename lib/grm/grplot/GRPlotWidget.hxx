@@ -215,6 +215,7 @@ public:
   QAction *getDisableGridAct();
   QAction *getUpdateEditElementTitleAct();
   QAction *getConsecutiveColorbarsAct();
+  QAction *getFlipLayoutAct();
   QWidget *getEditElementWidget();
   QWidget *getTreeWidget();
   QWidget *getTableWidget();
@@ -321,6 +322,7 @@ private slots:
   void zLimSlot();
   void addImageSlot();
   void consecutiveColorbarsSlot();
+  void flipLayoutSlot();
   void listItemCheckStatusChanged(QListWidgetItem *item);
   void listItemPressed(QListWidgetItem *item);
   void showIconBarSlot();
@@ -465,7 +467,7 @@ private:
   QAction *pdf_act, *png_act, *jpeg_act, *svg_act;
   QAction *show_container_action, *save_file_action, *load_file_action, *editor_action, *add_element_action;
   QAction *moveable_mode_act, *selectable_grid_act;
-  QAction *consecutive_colorbars_act;
+  QAction *consecutive_colorbars_act, *flip_layout_act;
   QAction *show_context_action, *add_context_action, *generate_linear_context_action, *add_grplot_data_context;
   QAction *hide_algo_menu_act, *show_algo_menu_act, *hide_marginal_sub_menu_act, *show_marginal_sub_menu_act,
       *hide_orientation_sub_menu_act, *show_orientation_sub_menu_act, *hide_aspect_ratio_sub_menu_act,

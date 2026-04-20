@@ -1563,6 +1563,7 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
       GLint previous_cull_face_mode;
       GLfloat previous_clear_color[4];
       int border, max_threads, approximative_calculation;
+      double color_lim_min = NAN, color_lim_max = NAN;
 
       const float vertices[] = {
           -1, -1, -1, -1, -1, +1, -1, +1, -1, -1, +1, -1, -1, -1, +1, -1, +1, +1, /* yz-plane, negative x */
@@ -1999,6 +2000,10 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
         {
           gr_inqcolor(i, colormap + i - first_color);
         }
+
+      gr_inqcolorlimits(&color_lim_min, &color_lim_max);
+      if (!isnan(color_lim_min)) min = color_lim_min;
+      if (!isnan(color_lim_max)) max = color_lim_max;
 
       for (i = 0; i < width * height; i++)
         {
@@ -2604,6 +2609,7 @@ const gr3_volume_2pass_t *gr_volume_2pass(int nx, int ny, int nz, double *data, 
           double xmin, ymin, xmax, ymax;
           int scale;
           int i;
+          double color_lim_min = NAN, color_lim_max = NAN;
 
           min = context->dmin;
           max = context->dmax;
@@ -2621,6 +2627,10 @@ const gr3_volume_2pass_t *gr_volume_2pass(int nx, int ny, int nz, double *data, 
             {
               gr_inqcolor(i, colormap + i - first_color);
             }
+
+          gr_inqcolorlimits(&color_lim_min, &color_lim_max);
+          if (!isnan(color_lim_min)) min = color_lim_min;
+          if (!isnan(color_lim_max)) max = color_lim_max;
 
           for (i = 0; i < width * height; i++)
             {

@@ -1146,19 +1146,20 @@ grm_error_t plotPreSubplot(grm_args_t *subplot_args)
 void plotProcessColormap(grm_args_t *subplot_args)
 {
   int colormap;
-  auto group = edit_figure->lastChildElement();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
-  if (grm_args_values(subplot_args, "colormap", "i", &colormap)) group->setAttribute("colormap", colormap);
+  if (grm_args_values(subplot_args, "colormap", "i", &colormap))
+    group->parentElement()->setAttribute("colormap", colormap);
 }
 
 void plotProcessFont(grm_args_t *subplot_args)
 {
   int font, font_precision;
-  auto group = edit_figure->lastChildElement();
+  auto group = (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 
-  if (grm_args_values(subplot_args, "font", "i", &font)) group->setAttribute("font", font);
+  if (grm_args_values(subplot_args, "font", "i", &font)) group->parentElement()->setAttribute("font", font);
   if (grm_args_values(subplot_args, "font_precision", "i", &font_precision))
-    group->setAttribute("font_precision", font_precision);
+    group->parentElement()->setAttribute("font_precision", font_precision);
 }
 
 grm_error_t plotProcessGridArguments(const grm_args_t *args)
@@ -1319,7 +1320,6 @@ grm_error_t plotProcessGridArguments(const grm_args_t *args)
 void plotProcessResampleMethod(grm_args_t *subplot_args)
 {
   int resample_method_flag;
-  auto group = edit_figure->lastChildElement();
   auto central_region =
       (!current_central_region_element.expired()) ? current_central_region_element.lock() : getCentralRegion();
 

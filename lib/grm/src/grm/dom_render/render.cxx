@@ -699,7 +699,8 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("c_range_min"), std::vector<std::string>{"None", "The lower color-value"}},
       {std::string("cap_x_max"), std::vector<std::string>{"None", "The maximum x-value for the error cap"}},
       {std::string("cap_x_min"), std::vector<std::string>{"None", "The minimum x-value for the error cap"}},
-      {std::string("char_height"), std::vector<std::string>{"None", "The height of the characters"}},
+      {std::string("char_height"),
+       std::vector<std::string>{"None", "The height of the characters in percentage of NDC-space"}},
       {std::string("char_up_x"),
        std::vector<std::string>{"None", "X component of the character up vector. Used to rotate the text"}},
       {std::string("char_up_y"),
@@ -724,6 +725,10 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("colormap"), std::vector<std::string>{"viridis", "Sets the current colormap"}},
       {std::string("colormap_inverted"),
        std::vector<std::string>{"0", "Determines whether the colormap should be inverted"}},
+      {std::string("consecutive_colorbars"),
+       std::vector<std::string>{
+           "None", "Allows to force the same colorbar on all plots that share the same type of coordinate system. "
+                   "Therefore the maximum and minimum values of all matching kinds gets calculated and used."}},
       {std::string("count"), std::vector<std::string>{"None", "The count value of a polar bar"}},
       {std::string("counts"),
        std::vector<std::string>{"None", "References the polar histogram counts stored in the context"}},
@@ -841,6 +846,9 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
       {std::string("movable"),
        std::vector<std::string>{"0", "Determines whether the element can be moved via interaction. This attribute "
                                      "allows to only move certain parts"}},
+      {std::string("move_to_plot"),
+       std::vector<std::string>{"None", "This attribute can be used to move a single series into a existing or a "
+                                        "complety new generated plot. For this the exisitng plot gets copied."}},
       {std::string("name"), std::vector<std::string>{"None", "The name of the element"}},
       {std::string("num_bins"), std::vector<std::string>{"None", "Number of bins"}},
       {std::string("num_col"), std::vector<std::string>{"None", "Number of columns"}},

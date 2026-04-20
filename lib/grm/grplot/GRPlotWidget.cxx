@@ -556,6 +556,8 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
   connect(consecutive_colorbars_act, &QAction::triggered, this, &GRPlotWidget::consecutiveColorbarsSlot);
   consecutive_colorbars_act->setCheckable(true);
   consecutive_colorbars_act->setChecked(false);
+  flip_layout_act = new QAction(tr("&Flip Layout"), this);
+  connect(flip_layout_act, &QAction::triggered, this, &GRPlotWidget::flipLayoutSlot);
 
   vertical_orientation_act = new QAction(tr("&Vertical"), this);
   connect(vertical_orientation_act, &QAction::triggered, this, &GRPlotWidget::verticalOrientationSlot);
@@ -2156,7 +2158,8 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
   highlightCurrentSelection((QPainter &)painter);
   // Todo: only trigger this method in non multiplot case where 1 plot has different series when not all elements has to
   // be processed to figure out which kinds are all used
-  if (auto global_root = grm_get_document_root(); global_root->querySelectors("layout_grid") == nullptr)
+  if (auto global_root = grm_get_document_root(); (global_root->querySelectors("layout_grid") == nullptr ||
+                                                   global_root->querySelectorsAll("layout_grid_element").size() <= 1))
     adjustPlotTypeMenu(global_root->querySelectors("figure[active=1]")->querySelectors("plot"));
   else
     adjustPlotTypeMenu(global_root->querySelectors("figure[active=1]")->querySelectors("plot[_selected_for_menu=1]"));
@@ -2601,9 +2604,14 @@ void GRPlotWidget::disableGridSlot()
 
   bool draw_grid =
       static_cast<int>(coordinate_system->querySelectors("axis[axis_type=\"y\"]")->getAttribute("draw_grid"));
-  for (const auto &axis_elem : coordinate_system->querySelectorsAll("axis"))
+  if (coordinate_system->querySelectors("axis[location=\"twin_x\"]") == nullptr &&
+      coordinate_system->querySelectors("axis[location=\"twin_y\"]") == nullptr)
     {
-      axis_elem->setAttribute("draw_grid", !draw_grid);
+      for (const auto &axis_elem : coordinate_system->querySelectorsAll("axis"))
+        {
+          auto location = static_cast<std::string>(axis_elem->getAttribute("location"));
+          if (location == "x" || location == "y") axis_elem->setAttribute("draw_grid", !draw_grid);
+        }
     }
 
   redraw();
@@ -3696,8 +3704,9 @@ void GRPlotWidget::xLogSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   const auto plot_elems = figure_elem->querySelectorsAll("plot");
   std::shared_ptr<GRM::Element> plot_elem;
@@ -3723,8 +3732,9 @@ void GRPlotWidget::yLogSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   const auto plot_elems = figure_elem->querySelectorsAll("plot");
   std::shared_ptr<GRM::Element> plot_elem;
@@ -3750,8 +3760,9 @@ void GRPlotWidget::zLogSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   const auto plot_elems = figure_elem->querySelectorsAll("plot");
   std::shared_ptr<GRM::Element> plot_elem;
@@ -3777,8 +3788,9 @@ void GRPlotWidget::rLogSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   const auto plot_elems = figure_elem->querySelectorsAll("plot");
   std::shared_ptr<GRM::Element> plot_elem;
@@ -3804,8 +3816,9 @@ void GRPlotWidget::xFlipSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   const auto plot_elems = figure_elem->querySelectorsAll("plot");
   std::shared_ptr<GRM::Element> plot_elem;
@@ -3831,8 +3844,9 @@ void GRPlotWidget::yFlipSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   const auto plot_elems = figure_elem->querySelectorsAll("plot");
   std::shared_ptr<GRM::Element> plot_elem;
@@ -3858,8 +3872,9 @@ void GRPlotWidget::zFlipSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   const auto plot_elems = figure_elem->querySelectorsAll("plot");
   std::shared_ptr<GRM::Element> plot_elem;
@@ -3885,8 +3900,9 @@ void GRPlotWidget::thetaFlipSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   const auto plot_elems = figure_elem->querySelectorsAll("plot");
   std::shared_ptr<GRM::Element> plot_elem;
@@ -3912,8 +3928,9 @@ void GRPlotWidget::useGR3Slot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   const auto series_elements = figure_elem->querySelectorsAll("series_surface");
   for (const auto &series_elem : series_elements)
@@ -3929,8 +3946,9 @@ void GRPlotWidget::polarWithPanSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   const auto plot_elems = figure_elem->querySelectorsAll("plot");
   std::shared_ptr<GRM::Element> plot_elem;
@@ -3956,8 +3974,9 @@ void GRPlotWidget::keepWindowSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   const auto central_region = figure_elem->querySelectors("central_region");
 
@@ -3973,8 +3992,9 @@ void GRPlotWidget::colormapSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   const auto plot_elems = figure_elem->querySelectorsAll("plot");
   std::shared_ptr<GRM::Element> plot_elem;
@@ -4075,8 +4095,9 @@ void GRPlotWidget::xLimSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   const auto plot_elems = figure_elem->querySelectorsAll("plot");
   std::shared_ptr<GRM::Element> plot_elem;
@@ -4146,8 +4167,9 @@ void GRPlotWidget::yLimSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   const auto plot_elems = figure_elem->querySelectorsAll("plot");
   std::shared_ptr<GRM::Element> plot_elem;
@@ -4217,8 +4239,9 @@ void GRPlotWidget::zLimSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   const auto plot_elems = figure_elem->querySelectorsAll("plot");
   std::shared_ptr<GRM::Element> plot_elem;
@@ -4326,8 +4349,9 @@ void GRPlotWidget::colorIndexPopUp(const std::string &attribute_name, int curren
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   const auto plot_elems = figure_elem->querySelectorsAll("plot");
   std::shared_ptr<GRM::Element> plot_elem;
@@ -4511,8 +4535,9 @@ void GRPlotWidget::keepAspectRatioSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   const auto plot_elems = figure_elem->querySelectorsAll("plot");
   std::shared_ptr<GRM::Element> plot_elem;
@@ -4538,8 +4563,9 @@ void GRPlotWidget::onlySquareAspectRatioSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   const auto plot_elems = figure_elem->querySelectorsAll("plot");
   std::shared_ptr<GRM::Element> plot_elem;
@@ -4565,8 +4591,9 @@ void GRPlotWidget::verticalOrientationSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   const auto central_region = figure_elem->querySelectors("central_region");
 
@@ -4581,8 +4608,9 @@ void GRPlotWidget::horizontalOrientationSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   const auto central_region = figure_elem->querySelectors("central_region");
 
@@ -4597,8 +4625,9 @@ void GRPlotWidget::legendSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
 
   if (const auto legend_elem = figure_elem->querySelectors("legend"))
@@ -4631,8 +4660,9 @@ void GRPlotWidget::colorbarSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
 
   if (const auto colorbar = figure_elem->querySelectors("colorbar"))
@@ -4666,8 +4696,9 @@ void GRPlotWidget::leftAxisSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
 
   if (const auto side_region = figure_elem->querySelectors("side_region[location=\"left\"]"))
@@ -4708,8 +4739,9 @@ void GRPlotWidget::rightAxisSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
 
   if (const auto side_region = figure_elem->querySelectors("side_region[location=\"right\"]"))
@@ -4750,8 +4782,9 @@ void GRPlotWidget::bottomAxisSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
 
   if (const auto side_region = figure_elem->querySelectors("side_region[location=\"bottom\"]"))
@@ -4792,8 +4825,9 @@ void GRPlotWidget::topAxisSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
 
   if (const auto side_region = figure_elem->querySelectors("side_region[location=\"top\"]"))
@@ -4834,8 +4868,9 @@ void GRPlotWidget::twinXAxisSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
 
   if (const auto coordinate_system = figure_elem->querySelectors("coordinate_system"))
@@ -4870,8 +4905,9 @@ void GRPlotWidget::twinYAxisSlot()
 {
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
 
   if (const auto coordinate_system = figure_elem->querySelectors("coordinate_system"))
@@ -5812,8 +5848,9 @@ void GRPlotWidget::addTextSlot()
   const auto creator = grm_get_creator();
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   auto overlay = figure_elem->querySelectors("overlay");
 
@@ -5846,8 +5883,9 @@ void GRPlotWidget::addImageSlot()
   auto creator = grm_get_creator();
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   auto overlay = figure_elem->querySelectors("overlay");
   auto context = render->getContext();
@@ -5916,6 +5954,18 @@ void GRPlotWidget::consecutiveColorbarsSlot()
   redraw();
 }
 
+void GRPlotWidget::flipLayoutSlot()
+{
+  auto render = grm_get_render();
+  const auto global_root = grm_get_document_root();
+  const auto figure_elem = global_root->querySelectors("figure[active=1]");
+  if (figure_elem == nullptr) return;
+
+  if (auto layout_grid = figure_elem->querySelectors("layout_grid"); layout_grid != nullptr)
+    layout_grid->setAttribute("flip_col_and_row", true);
+  redraw();
+}
+
 void GRPlotWidget::multipleRadioButtonGroupsListener()
 {
   auto checked_rb = static_cast<QRadioButton *>(sender());
@@ -5933,8 +5983,9 @@ void GRPlotWidget::colorIndexSlot()
   auto render = grm_get_render();
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   const auto plot_elems = figure_elem->querySelectorsAll("plot");
   std::shared_ptr<GRM::Element> plot_elem;
@@ -6582,7 +6633,7 @@ void GRPlotWidget::adjustPlotTypeMenu(const std::shared_ptr<GRM::Element> &plot_
             }
         }
 
-      // reset visible checkstate in multiplot case because it could be the state from the previos plot
+      // reset visible checkstate in multiplot case because it could be the state from the previous plot
       if (plot_parent->parentElement()->localName() != "figure")
         {
           if (plot_parent->hasAttribute("x_log"))
@@ -6642,6 +6693,11 @@ void GRPlotWidget::adjustPlotTypeMenu(const std::shared_ptr<GRM::Element> &plot_
         }
       if (global_root->querySelectors("figure[active=1]")->hasAttribute("consecutive_colorbars"))
         consecutive_colorbars_act->setChecked(static_cast<int>(global_root->getAttribute("consecutive_colorbars")));
+
+      if (global_root->querySelectorsAll("layout_grid_element").size() <= 1)
+        flip_layout_act->setVisible(false);
+      else
+        flip_layout_act->setVisible(true);
 
       for (const auto &name : valid_series_names)
         {
@@ -7354,6 +7410,11 @@ QAction *GRPlotWidget::getConsecutiveColorbarsAct()
   return consecutive_colorbars_act;
 }
 
+QAction *GRPlotWidget::getFlipLayoutAct()
+{
+  return flip_layout_act;
+}
+
 QWidget *GRPlotWidget::getEditElementWidget()
 {
   return edit_element_widget;
@@ -7482,8 +7543,9 @@ void GRPlotWidget::overlayElementEdit()
   auto render = grm_get_render();
   const auto global_root = grm_get_document_root();
   const auto layout_grid = global_root->querySelectors("figure[active=1]")->querySelectors("layout_grid");
-  const auto figure_elem = (layout_grid != nullptr) ? layout_grid->querySelectors("[_selected_for_menu]")
-                                                    : global_root->querySelectors("figure[active=1]");
+  const auto figure_elem = (layout_grid != nullptr && layout_grid->querySelectorsAll("layout_grid_element").size() > 1)
+                               ? layout_grid->querySelectors("[_selected_for_menu]")
+                               : global_root->querySelectors("figure[active=1]");
   if (figure_elem == nullptr) return;
   auto overlay = figure_elem->querySelectors("overlay");
   auto tmp = overlay->querySelectorsAll("overlay_element");

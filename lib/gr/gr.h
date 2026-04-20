@@ -533,6 +533,8 @@ DLLEXPORT void gr_settextoffset(double xoff, double yoff);
 DLLEXPORT char *gr_ftoa(char *string, double value, format_reference_t *reference);
 DLLEXPORT void gr_getformat(format_reference_t *result, double origin, double min, double max, double tick_width,
                             int major);
+DLLEXPORT void gr_setcolorlimits(double, double);
+DLLEXPORT void gr_inqcolorlimits(double *, double *);
 
 #ifdef __cplusplus
 }

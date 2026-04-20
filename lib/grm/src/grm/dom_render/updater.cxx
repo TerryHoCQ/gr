@@ -1517,7 +1517,8 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                     {
                       if (!startsWith(series->localName(), "series_")) continue;
                       auto series_kind = static_cast<std::string>(series->getAttribute("kind"));
-                      if (strEqualsAny(series_kind, "heatmap", "contour", "contourf", "polar_heatmap", "tricontour"))
+                      if (strEqualsAny(series_kind, "heatmap", "contour", "contourf", "polar_heatmap", "tricontour",
+                                       "hexbin", "quiver", "surface", "trisurface", "volume"))
                         {
                           series->setAttribute("_update_required", true);
                           series->setAttribute("_delete_children", 2);

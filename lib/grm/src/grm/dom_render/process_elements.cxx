@@ -23,9 +23,9 @@
 #define xFlipIf(x, scale_options, xmin, xmax) \
   ((GR_OPTION_FLIP_X & (scale_options) ? (xmin) + (xmax) : 0) + (GR_OPTION_FLIP_X & (scale_options) ? -1 : 1) * (x))
 
-#define xLin(x, scale_options, xmin, xmax, a, b)                                                                  \
-  xFlipIf((GR_OPTION_X_LOG & (scale_options) ? ((x) > 0 ? (a) * log10(x) + (b) : -FLT_MAX) : (x)), scale_options, \
-          xmin, xmax)
+#define xLin(x, scale_options, xmin, xmax, a, b)                                                                      \
+  xFlipIf((GR_OPTION_X_LOG & (scale_options) ? ((x) > 0 ? (a)*log10(x) + (b) : -FLT_MAX) : (x)), scale_options, xmin, \
+          xmax)
 
 #define xLog(x, scale_options, xmin, xmax, a, b)                                                                  \
   (GR_OPTION_X_LOG & (scale_options) ? (pow(10.0, (double)((xFlipIf(x, scale_options, xmin, xmax) - (b)) / (a)))) \
@@ -374,8 +374,17 @@ void processSeries(const std::shared_ptr<GRM::Element> &element, const std::shar
               if (element->parentElement()->parentElement()->hasAttribute("_c_lim_max"))
                 plot_c_max = static_cast<double>(element->parentElement()->parentElement()->getAttribute("_c_lim_max"));
               if (grm_isnan(plot_c_max)) plot_c_max = c_max;
-              element->parentElement()->parentElement()->setAttribute("_c_lim_min", grm_min(plot_c_min, c_min));
-              element->parentElement()->parentElement()->setAttribute("_c_lim_max", grm_max(plot_c_max, c_max));
+
+              if (kind == "volume")
+                {
+                  element->parentElement()->parentElement()->setAttribute("_c_lim_min", grm_min(plot_c_min, c_min));
+                  element->parentElement()->parentElement()->setAttribute("_c_lim_max", grm_max(plot_c_max, c_max));
+                }
+              else
+                {
+                  element->parentElement()->parentElement()->setAttribute("_z_lim_min", grm_min(plot_c_min, c_min));
+                  element->parentElement()->parentElement()->setAttribute("_z_lim_max", grm_max(plot_c_max, c_max));
+                }
             }
         }
     }
@@ -6761,6 +6770,7 @@ static void hexbin(const std::shared_ptr<GRM::Element> &element, const std::shar
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
+  double c_min = NAN, c_max = NAN;
   auto x = static_cast<std::string>(element->getAttribute("x"));
   auto y = static_cast<std::string>(element->getAttribute("y"));
   auto nbins = static_cast<int>(element->getAttribute("num_bins"));
@@ -6774,6 +6784,34 @@ static void hexbin(const std::shared_ptr<GRM::Element> &element, const std::shar
 
   auto redraw_ws = grm_get_render()->getRedrawWs();
 
+  auto active_figure = grm_get_render()->getActiveFigure();
+  if (active_figure->hasAttribute("consecutive_colorbars") &&
+      static_cast<int>(active_figure->getAttribute("consecutive_colorbars")))
+    {
+      for (const auto &plot_elem : active_figure->querySelectorsAll("plot"))
+        {
+          if (plot_elem->querySelectors("colorbar"))
+            {
+              if (plot_elem->hasAttribute("_z_lim_min") && plot_elem->hasAttribute("_z_lim_max") &&
+                  plot_elem->querySelectors("coordinate_system[plot_type=\"2d\"]"))
+                {
+                  auto new_c_min = static_cast<double>(plot_elem->getAttribute("_z_lim_min"));
+                  auto new_c_max = static_cast<double>(plot_elem->getAttribute("_z_lim_max"));
+                  if (!grm_isnan(new_c_min)) c_min = grm_min(c_min, new_c_min);
+                  if (!grm_isnan(new_c_max)) c_max = grm_max(c_max, new_c_max);
+                }
+              else if (plot_elem->hasAttribute("_c_lim_min") && plot_elem->hasAttribute("_c_lim_max"))
+                {
+                  auto new_c_min = static_cast<double>(plot_elem->getAttribute("_c_lim_min"));
+                  auto new_c_max = static_cast<double>(plot_elem->getAttribute("_c_lim_max"));
+                  if (!grm_isnan(new_c_min)) c_min = grm_min(c_min, new_c_min);
+                  if (!grm_isnan(new_c_max)) c_max = grm_max(c_max, new_c_max);
+                }
+            }
+        }
+    }
+
+  gr_setcolorlimits(c_min, c_max);
   if (element->hasAttribute("_hexbin_context_address"))
     {
       auto address = static_cast<std::string>(element->getAttribute("_hexbin_context_address"));
@@ -6788,12 +6826,14 @@ static void hexbin(const std::shared_ptr<GRM::Element> &element, const std::shar
       applyMoveTransformation(element);
       if (redraw_ws) gr_hexbin(x_length, x_p, y_p, nbins);
     }
+  gr_setcolorlimits(NAN, NAN);
 }
 
 void processHexbin(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
 {
   int nbins = PLOT_DEFAULT_HEXBIN_NBINS;
   std::string orientation = PLOT_DEFAULT_ORIENTATION;
+  int series_count = 0;
 
   if (!element->hasAttribute("x")) throw NotFoundError("Hexbin series is missing required attribute x-data.\n");
   auto x = static_cast<std::string>(element->getAttribute("x"));
@@ -6834,11 +6874,15 @@ void processHexbin(const std::shared_ptr<GRM::Element> &element, const std::shar
   auto plot_parent = element->parentElement();
   getPlotParent(plot_parent);
 
+  for (const auto &elem : plot_parent->querySelectors("central_region")->children())
+    {
+      if (startsWith(elem->localName(), "series_")) series_count += 1;
+    }
   double plot_c_min = c_min, plot_c_max = c_max;
-  if (plot_parent->hasAttribute("_c_lim_min"))
+  if (plot_parent->hasAttribute("_c_lim_min") && series_count > 1)
     plot_c_min = static_cast<double>(plot_parent->getAttribute("_c_lim_min"));
   if (grm_isnan(plot_c_min)) plot_c_min = c_min;
-  if (plot_parent->hasAttribute("_c_lim_max"))
+  if (plot_parent->hasAttribute("_c_lim_max") && series_count > 1)
     plot_c_max = static_cast<double>(plot_parent->getAttribute("_c_lim_max"));
   if (grm_isnan(plot_c_max)) plot_c_max = c_max;
   plot_parent->setAttribute("_c_lim_min", grm_min(plot_c_min, c_min));
@@ -8027,6 +8071,7 @@ void processQuiver(const std::shared_ptr<GRM::Element> &element, const std::shar
    * \param[in] element The GRM::Element that contains the attributes and data keys
    * \param[in] context The GRM::Context that contains the actual data
    */
+  double c_min = NAN, c_max = NAN;
   std::string orientation = PLOT_DEFAULT_ORIENTATION;
   if (element->parentElement()->hasAttribute("orientation"))
     orientation = static_cast<std::string>(element->parentElement()->getAttribute("orientation"));
@@ -8084,7 +8129,36 @@ void processQuiver(const std::shared_ptr<GRM::Element> &element, const std::shar
   applyMoveTransformation(element);
   processColormap(element->parentElement()->parentElement());
 
+  auto active_figure = grm_get_render()->getActiveFigure();
+  if (active_figure->hasAttribute("consecutive_colorbars") &&
+      static_cast<int>(active_figure->getAttribute("consecutive_colorbars")))
+    {
+      for (const auto &plot_elem : active_figure->querySelectorsAll("plot"))
+        {
+          if (plot_elem->querySelectors("colorbar"))
+            {
+              if (plot_elem->hasAttribute("_z_lim_min") && plot_elem->hasAttribute("_z_lim_max") &&
+                  plot_elem->querySelectors("coordinate_system[plot_type=\"2d\"]"))
+                {
+                  auto new_c_min = static_cast<double>(plot_elem->getAttribute("_z_lim_min"));
+                  auto new_c_max = static_cast<double>(plot_elem->getAttribute("_z_lim_max"));
+                  if (!grm_isnan(new_c_min)) c_min = grm_min(c_min, new_c_min);
+                  if (!grm_isnan(new_c_max)) c_max = grm_max(c_max, new_c_max);
+                }
+              else if (plot_elem->hasAttribute("_c_lim_min") && plot_elem->hasAttribute("_c_lim_max"))
+                {
+                  auto new_c_min = static_cast<double>(plot_elem->getAttribute("_c_lim_min"));
+                  auto new_c_max = static_cast<double>(plot_elem->getAttribute("_c_lim_max"));
+                  if (!grm_isnan(new_c_min)) c_min = grm_min(c_min, new_c_min);
+                  if (!grm_isnan(new_c_max)) c_max = grm_max(c_max, new_c_max);
+                }
+            }
+        }
+    }
+
+  gr_setcolorlimits(c_min, c_max);
   if (grm_get_render()->getRedrawWs()) gr_quiver(x_length, y_length, x_p, y_p, u_p, v_p, colored);
+  gr_setcolorlimits(NAN, NAN);
 }
 
 void processPolarLine(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -10866,6 +10940,7 @@ static void volume(const std::shared_ptr<GRM::Element> &element, const std::shar
   int width, height;
   double device_pixel_ratio;
   double d_min = -1, d_max = -1;
+  double c_min = NAN, c_max = NAN;
   auto global_render = grm_get_render();
   auto redraw_ws = global_render->getRedrawWs();
 
@@ -10877,12 +10952,44 @@ static void volume(const std::shared_ptr<GRM::Element> &element, const std::shar
   if (element->hasAttribute("d_min")) d_min = static_cast<double>(element->getAttribute("d_min"));
   if (element->hasAttribute("d_max")) d_max = static_cast<double>(element->getAttribute("d_max"));
 
+  if (d_min != -1) c_min = d_min;
+  if (d_max != -1) c_max = d_max;
+  auto active_figure = grm_get_render()->getActiveFigure();
+  if (active_figure->hasAttribute("consecutive_colorbars") &&
+      static_cast<int>(active_figure->getAttribute("consecutive_colorbars")))
+    {
+      for (const auto &plot_elem : active_figure->querySelectorsAll("plot"))
+        {
+          if (plot_elem->querySelectors("colorbar"))
+            {
+              if (plot_elem->hasAttribute("_z_lim_min") && plot_elem->hasAttribute("_z_lim_max") &&
+                  plot_elem->querySelectors("coordinate_system[plot_type=\"3d\"]") &&
+                  plot_elem->querySelectors("series_volume") == nullptr)
+                {
+                  auto new_c_min = static_cast<double>(plot_elem->getAttribute("_z_lim_min"));
+                  auto new_c_max = static_cast<double>(plot_elem->getAttribute("_z_lim_max"));
+                  if (!grm_isnan(new_c_min)) c_min = grm_min(c_min, new_c_min);
+                  if (!grm_isnan(new_c_max)) c_max = grm_max(c_max, new_c_max);
+                }
+              else if (auto volume = plot_elem->querySelectors("series_volume"); volume != nullptr)
+                {
+                  auto new_c_min = static_cast<double>(volume->getAttribute("_c_lim_min"));
+                  auto new_c_max = static_cast<double>(volume->getAttribute("_c_lim_max"));
+                  if (!grm_isnan(new_c_min)) c_min = grm_min(c_min, new_c_min);
+                  if (!grm_isnan(new_c_max)) c_max = grm_max(c_max, new_c_max);
+                }
+            }
+        }
+    }
+
   applyMoveTransformation(element);
   if (redraw_ws)
     {
       gr_inqvpsize(&width, &height, &device_pixel_ratio);
       gr_setpicturesizeforvolume((int)(width * device_pixel_ratio), (int)(height * device_pixel_ratio));
     }
+
+  gr_setcolorlimits(c_min, c_max);
   if (element->hasAttribute("_volume_context_address"))
     {
       auto address = static_cast<std::string>(element->getAttribute("_volume_context_address"));
@@ -10897,6 +11004,7 @@ static void volume(const std::shared_ptr<GRM::Element> &element, const std::shar
     {
       if (redraw_ws) gr_volume(z_dims_vec[0], z_dims_vec[1], z_dims_vec[2], &(z_vec[0]), algorithm, &d_min, &d_max);
     }
+  gr_setcolorlimits(NAN, NAN);
 }
 
 void processVolume(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context)
@@ -10960,18 +11068,8 @@ void processVolume(const std::shared_ptr<GRM::Element> &element, const std::shar
 
   auto plot_parent = element->parentElement();
   getPlotParent(plot_parent); // parent is plot in this case
-  if (plot_parent->hasAttribute("z_lim_min") && plot_parent->hasAttribute("z_lim_max"))
-    {
-      dlim[0] = static_cast<double>(plot_parent->getAttribute("z_lim_min"));
-      dlim[1] = static_cast<double>(plot_parent->getAttribute("z_lim_max"));
-      dlim[0] = grm_min(dlim[0], d_min);
-      dlim[1] = grm_max(dlim[1], d_max);
-    }
-  else
-    {
-      dlim[0] = d_min;
-      dlim[1] = d_max;
-    }
+  dlim[0] = d_min;
+  dlim[1] = d_max;
 
   double plot_c_min = dlim[0], plot_c_max = dlim[1];
   int series_count = 0;

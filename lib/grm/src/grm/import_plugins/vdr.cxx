@@ -21,15 +21,18 @@ Vdr::~Vdr()
 DataSource *Vdr::loadSourceForFile(const std::string &path)
 {
   std::string extension = getFileExtension(path);
-  std::string plugin_name;
-  try
+  std::string plugin_name = "csv_plugin"; // Use CSV as fallback
+  if (path != "-")
     {
-      plugin_name = Vdr::plugin_names.at(extension);
-    }
-  catch (std::out_of_range)
-    {
-      std::cerr << "No plugin for reading files with extension ." << extension << std::endl;
-      return nullptr;
+      try
+        {
+          plugin_name = Vdr::plugin_names.at(extension);
+        }
+      catch (std::out_of_range)
+        {
+          std::cerr << "The file extension \"" << extension
+                    << "\" is not assigned to any input plugin, assuming CSV input." << std::endl;
+        }
     }
 
   auto iter = loaders.find(plugin_name);

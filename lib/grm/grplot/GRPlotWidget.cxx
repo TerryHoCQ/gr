@@ -414,6 +414,11 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
         {
 #ifndef NO_XERCES_C
           auto file = fopen(file_name.c_str(), "rb");
+          if (!file)
+            {
+              std::cerr << "Unable to open file \"" << file_name << "\"." << std::endl;
+              exit(1);
+            }
           grm_load_graphics_tree(file);
           grm_get_render()->setAutoUpdate(true);
           redraw();

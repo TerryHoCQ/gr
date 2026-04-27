@@ -1762,7 +1762,10 @@ int convertInputstreamIntoArgs(grm_args_t *args, grm_file_args_t *file_args, int
         {
           file_args->file_path = token.substr(5, token.length() - 1);
         }
-      else if (i == 1 && (token.find(delim) == std::string::npos || (token.find(delim) == 1 && token.find('/') == 2)))
+      else if (i == 1 &&
+               (token.find(":") == std::string::npos ||
+                // Check if is an absolute Windows path, like `C:\Users\...`
+                (token.length() > 2 && isalpha(token[0]) && token[1] == ':' && (token[2] == '/' || token[2] == '\\'))))
         {
           optional_file = token; /* it's only used, if no "file:" keyword was found */
         }

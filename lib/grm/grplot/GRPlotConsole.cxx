@@ -159,7 +159,10 @@ int run(int argc, char **argv, bool pass, bool listen_mode, bool test_mode, bool
               file_name = token.substr(5, token.length() - 1);
               break;
             }
-          else if (i == 1 && (token.find(":") == std::string::npos || (token.find(":") == 1 && token.find('/') == 2)))
+          else if (i == 1 && (token.find(":") == std::string::npos ||
+                              // Check if is an absolute Windows path, like `C:\Users\...`
+                              (token.length() > 2 && isalpha(token[0]) && token[1] == ':' &&
+                               (token[2] == '/' || token[2] == '\\'))))
             {
               optional_file = token; /* it's only used, if no "file:" keyword was found */
             }

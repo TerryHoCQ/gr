@@ -38,7 +38,6 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
 {
   std::string line;
   std::string token;
-  std::streampos old_pos;
   std::ifstream file_path(path);
   std::istream &cin_path = std::cin;
   std::list<int> columns, x_columns, y_columns, e_columns;
@@ -182,23 +181,21 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
             }
           break;
         }
-      old_pos = file.tellg();
     }
 
   // Save locale setting
   const std::string old_locale = std::setlocale(LC_NUMERIC, nullptr);
   std::setlocale(LC_NUMERIC, "C");
 
-  if (!legend_line)
-    {
-      file.seekg(old_pos);
-      linecount -= 1;
-    }
+  if (!legend_line) --linecount;
 
   /* read the numeric data for the plot */
   int skipped = 0;
-  for (size_t row = 0; std::getline(file, line); row++)
+  // Skip the first line read if the current `line` is not a legend line -> it already contains data
+  bool skip_first_getline = !legend_line;
+  for (size_t row = 0; skip_first_getline ? true : static_cast<bool>(std::getline(file, line)); row++)
     {
+      skip_first_getline = false;
       std::istringstream line_ss(normalizeLine(line));
       int cnt = 0, start_with_nan = 0;
       char det = '\t';

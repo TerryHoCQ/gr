@@ -1,3 +1,4 @@
+#include <csignal>
 #include <string>
 #include <QApplication>
 #include "GRPlotMainWindow.hxx"
@@ -5,6 +6,15 @@
 #ifdef _WIN32
 #include <processenv.h>
 #endif
+
+static void handleInterrupt(int)
+{
+  /*
+   * Trigger an application shutdown in Qt's event loop
+   * -> close events are generated and processed
+   */
+  QApplication::quit();
+}
 
 int run(int argc, char **argv, bool pass, bool listen_mode, bool test_mode, bool help_mode, int width, int height,
         int listen_port, const std::string &test_commands_file_path)
@@ -21,5 +31,7 @@ int run(int argc, char **argv, bool pass, bool listen_mode, bool test_mode, bool
                           QString::fromStdString(test_commands_file_path), help_mode);
 
   if (!listen_mode) window.show();
+  std::signal(SIGINT, handleInterrupt);
+  std::signal(SIGTERM, handleInterrupt);
   return app.exec();
 }

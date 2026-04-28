@@ -254,6 +254,11 @@ void GRPlotMainWindow::findButtonClickedSlot()
   message->find(search_string, QTextDocument::FindWholeWords);
 }
 
+void GRPlotMainWindow::closeEvent(QCloseEvent *event)
+{
+  grm_finalize();
+}
+
 void GRPlotMainWindow::keyPressEvent(QKeyEvent *event)
 {
   if (this->help_mode)

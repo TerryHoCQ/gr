@@ -143,6 +143,7 @@ int run(int argc, char **argv, bool pass, bool listen_mode, bool test_mode, bool
         {
           grm_plot(args);
           grm_args_delete(args);
+          grm_finalize();
           return 1;
         }
     }
@@ -174,7 +175,10 @@ int run(int argc, char **argv, bool pass, bool listen_mode, bool test_mode, bool
 #ifndef NO_XERCES_C
           auto file = fopen(file_name.c_str(), "rb");
           grm_load_graphics_tree(file);
-          return grm_render();
+          fclose(file);
+          auto ret = grm_render();
+          grm_finalize();
+          return ret;
 #else
           std::stringstream text_stream;
           text_stream << "XML support not compiled in. Please recompile GRPlot with xerces support.";
@@ -182,7 +186,9 @@ int run(int argc, char **argv, bool pass, bool listen_mode, bool test_mode, bool
           return 0;
 #endif
         }
-      return grm_plot_from_file(argc, argv) != 1;
+      auto ret = grm_plot_from_file(argc, argv) != 1;
+      grm_finalize();
+      return ret;
     }
   return 0;
 }

@@ -19,6 +19,7 @@ public:
   void resizeGRPlotWidget(int width, int height);
 
 protected:
+  void closeEvent(QCloseEvent *event) override;
   void keyPressEvent(QKeyEvent *event) override;
 
 private:

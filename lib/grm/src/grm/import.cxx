@@ -16,9 +16,21 @@
 
 /* ------------------------- reader --------------------------------------------------------------------------------- */
 
-static std::unique_ptr<Vdr> reader;
+/* Intentionally use a raw pointer instead of a smart pointer here.
+ * Using a smart pointer would cause an automatic cleanup on program exit, however then we have no control over the
+ * actual object destruction order, potentially causing segfaults. Use an explicit cleanup function instead, which is
+ * called from `grm_finalize`.
+ */
+static Vdr *reader = nullptr;
 
 /* ========================= functions ============================================================================== */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ general ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+void cleanupImportModule(void)
+{
+  delete reader;
+}
 
 /* ------------------------- import --------------------------------------------------------------------------------- */
 
@@ -30,7 +42,7 @@ grm_error_t readDataFile(const std::string &path, std::vector<std::vector<std::v
 {
   if (!reader)
     {
-      reader = std::unique_ptr<Vdr>(new Vdr);
+      reader = new Vdr;
     }
   DataSource *source = reader->loadSourceForFile(path);
 

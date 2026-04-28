@@ -43,6 +43,7 @@ extern "C" {
 #include "bson_int.h"
 #include "logging_int.h"
 }
+#include "import_int.hxx"
 #include "utilcpp_int.hxx"
 
 // centos 7 system dependency uses libpng15 which doesn't have the restricted pointers
@@ -6258,6 +6259,7 @@ void grm_finalize(void)
       type_map = nullptr;
       grm_grid_delete(global_grid);
       global_grid = nullptr;
+      cleanupImportModule();
       deleteTmpDir();
       uninstallBacktraceHandlerIfEnabled();
       plot_static_variables_initialized = 0;

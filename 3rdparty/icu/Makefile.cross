@@ -2,10 +2,38 @@ ifeq ($(strip $(PREFIX)),)
 override PREFIX = $(abspath $(CURDIR)/../build)
 endif
 
+ifndef HOST
+$(error HOST is not set)
+# HOST can be one of:
+# - `x86_64-apple-darwin`
+# - `aarch64-linux-gnu`
+# - `arm-linux-gnueabihf`
+# - `armhf-linux-gnu`
+# - `i686-w64-mingw32`
+# - `x86_64-w64-mingw32`
+endif
+
 VERSION = 74.2
+ifeq ($(HOST),x86_64-apple-darwin)
+ICU_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.15
+ICU_EXTRA_CONFIGURE_FLAGS += CXXFLAGS=-mmacosx-version-min=10.15
+else ifeq ($(patsubst %-w64-mingw32,mingw,$(HOST)),mingw)
 MINGW_STD_THREADS_COMMIT_SHORT_HASH = c931bac2
-HOST = x86_64-w64-mingw32
-ICU_EXTRA_CONFIGURE_FLAGS ?=
+ICU_CPPFLAGS += "-I$(PREFIX)/src/mingw-std-threads"
+endif
+
+ifeq ($(patsubst %-w64-mingw32,mingw,$(HOST)),mingw)
+TARGET_PREFIX = /usr/$(HOST)
+else
+TARGET_PREFIX = $(PREFIX)
+endif
+
+UNAME := $(shell uname)
+ifeq ($(UNAME),Darwin)
+DYNAMIC_LIB_EXT = dylib
+else
+DYNAMIC_LIB_EXT = so
+endif
 
 ifeq ($(DOWNLOAD_CMD),)
 ifneq ($(shell curl --version 2>/dev/null),)
@@ -27,10 +55,12 @@ $(PREFIX)/src/icu4c-$(VERSION).tar.gz:
 	mkdir -p $(PREFIX)/src
 	cd $(PREFIX)/src/ && $(DOWNLOAD_CMD) https://gr-framework.org/downloads/3rdparty/icu4c-$(VERSION).tar.gz
 
+ifeq ($(patsubst %-w64-mingw32,mingw,$(HOST)),mingw)
 $(PREFIX)/src/mingw-std-threads-g$(MINGW_STD_THREADS_COMMIT_SHORT_HASH).tar.gz:
 	mkdir -p $(PREFIX)/src
 	cd $(PREFIX)/src/ && \
 	$(DOWNLOAD_CMD) https://gr-framework.org/downloads/3rdparty/mingw-std-threads-g$(MINGW_STD_THREADS_COMMIT_SHORT_HASH).tar.gz
+endif
 
 $(PREFIX)/src/icu/source/configure: $(PREFIX)/src/icu4c-$(VERSION).tar.gz
 	cd $(PREFIX)/src/ && tar -xf icu4c-$(VERSION).tar.gz
@@ -40,6 +70,7 @@ $(PREFIX)/src/icu-cross/source/configure: $(PREFIX)/src/icu4c-$(VERSION).tar.gz
 	mkdir -p $(PREFIX)/src/icu-cross
 	cd $(PREFIX)/src && tar -C icu-cross --strip-components=1 -xf icu4c-$(VERSION).tar.gz
 	touch $@
+ifeq ($(patsubst %-w64-mingw32,mingw,$(HOST)),mingw)
 	cd $(PREFIX)/src/icu-cross && \
 	( \
 	echo 'diff --git a/source/common/umutex.h b/source/common/umutex.h'; \
@@ -75,33 +106,63 @@ $(PREFIX)/src/icu-cross/source/configure: $(PREFIX)/src/icu4c-$(VERSION).tar.gz
 $(PREFIX)/src/mingw-std-threads/mingw.thread.h: $(PREFIX)/src/mingw-std-threads-g$(MINGW_STD_THREADS_COMMIT_SHORT_HASH).tar.gz
 	mkdir -p $(PREFIX)/src/mingw-std-threads
 	cd $(PREFIX)/src/ && tar -C mingw-std-threads --strip-components=1 -xf mingw-std-threads-g$(MINGW_STD_THREADS_COMMIT_SHORT_HASH).tar.gz
+endif
 
-$(PREFIX)/build/icu/build/Makefile: $(PREFIX)/src/mingw-std-threads/mingw.thread.h $(PREFIX)/src/icu/source/configure
-	mkdir -p $(PREFIX)/build/icu/build && \
+$(PREFIX)/build/icu/build/Makefile: $(PREFIX)/src/icu/source/configure $(subst mingw,$(PREFIX)/src/mingw-std-threads/mingw.thread.h,$(filter mingw,$(patsubst %-w64-mingw32,mingw,$(HOST))))
+	mkdir -p $(PREFIX)/build/icu/build
+ifeq ($(patsubst %-w64-mingw32,mingw,$(HOST)),mingw)
 	cd $(PREFIX)/build/icu/build && \
-	AR=ar \
-	CC=cc \
-	CXX=c++ \
-	HOST= \
-	OS= \
-	CFLAGS="-fPIC" \
-	CXXFLAGS="-fPIC" \
-	CPPFLAGS="-I$(PREFIX)/src/mingw-std-threads" \
+	ARCHS= CC=cc CXX=c++ CFLAGS="-fPIC" CXXFLAGS="-fPIC" AR=ar HOST= OS= CPPFLAGS="$(ICU_CPPFLAGS)" \
 	$(PREFIX)/src/icu/source/configure
+else
+	cd $(PREFIX)/build/icu/build && \
+	ARCHS= CC=cc CXX=c++ CFLAGS="-fPIC" CXXFLAGS="-fPIC" \
+	$(PREFIX)/src/icu/source/configure
+endif
 	touch $@
 
-$(PREFIX)/build/icu/build/lib/libicuuc.so: $(PREFIX)/build/icu/build/Makefile
-	$(MAKE) -C $(PREFIX)/build/icu/build -j4 AR=ar CC=cc CXX=c++ HOST= OS=
+$(PREFIX)/build/icu/build/lib/libicuuc.$(DYNAMIC_LIB_EXT): $(PREFIX)/build/icu/build/Makefile
+ifeq ($(patsubst %-w64-mingw32,mingw,$(HOST)),mingw)
+	$(MAKE) -C $(PREFIX)/build/icu/build \
+	    -j4 ARCHS= CC=cc CXX=c++ AR=ar HOST= OS=
+else
+	$(MAKE) -C $(PREFIX)/build/icu/build \
+	    -j4 ARCHS= CC=cc CXX=c++
+endif
 
-$(PREFIX)/build/icu/build-cross/Makefile: $(PREFIX)/build/icu/build/lib/libicuuc.so $(PREFIX)/src/mingw-std-threads/mingw.thread.h $(PREFIX)/src/icu-cross/source/configure
-	mkdir -p $(PREFIX)/build/icu/build-cross && \
+$(PREFIX)/build/icu/build-cross/Makefile: $(PREFIX)/build/icu/build/lib/libicuuc.$(DYNAMIC_LIB_EXT) $(PREFIX)/src/icu-cross/source/configure
+ifeq ($(HOST),x86_64-apple-darwin)
+	cd $(PREFIX)/src/icu-cross/source && \
+	( \
+	echo '--- runConfigureICU     2024-07-11 17:16:00.516208356 +0200'; \
+	echo '+++ runConfigureICU.patched     2024-07-11 17:14:02.226097097 +0200'; \
+	echo '@@ -325,6 +325,16 @@'; \
+	echo '         CC=gcc; export CC'; \
+	echo '         CXX=g++; export CXX'; \
+	echo '         ;;'; \
+	echo '+    macOS/cross/x86_64)'; \
+	echo '+        THE_OS="macOS (Darwin)"'; \
+	echo '+        THE_COMP="the default"'; \
+	echo '+        RELEASE_CFLAGS="-O2"'; \
+	echo '+        RELEASE_CXXFLAGS="-O2"'; \
+	echo '+        DEBUG_CFLAGS="-g -O0"'; \
+	echo '+        DEBUG_CXXFLAGS="-g -O0"'; \
+	echo '+        CC="cc -arch x86_64"; export CC'; \
+	echo '+        CXX="c++ -arch x86_64"; export CXX'; \
+	echo '+        ;;'; \
+	echo '     MinGW)'; \
+	echo '         THE_OS="MinGW"'; \
+	echo '         THE_COMP="the GNU C++"'; \
+	) | patch -Np1
+endif
+	mkdir -p $(PREFIX)/build/icu/build-cross
 	cd $(PREFIX)/build/icu/build-cross && \
 	CFLAGS="-fPIC" \
 	CXXFLAGS="-fPIC" \
-	CPPFLAGS="-I$(PREFIX)/src/mingw-std-threads" \
-	$(PREFIX)/src/icu-cross/source/runConfigureICU MinGW \
+	CPPFLAGS="$(ICU_CPPFLAGS)" \
+	$(PREFIX)/src/icu-cross/source/runConfigureICU $(patsubst %-w64-mingw32,MinGW,$(patsubst %-linux-gnu,Linux,$(subst arm-linux-gnueabihf,Linux,$(subst x86_64-apple-darwin,macOS/cross/x86_64,$(HOST))))) \
 		--host=$(HOST) \
-		--prefix=/usr/$(HOST) \
+		--prefix=$(TARGET_PREFIX) \
 		--with-cross-build="$$(cd ../build && pwd)" \
 		--enable-static \
 		--disable-shared \
@@ -113,10 +174,15 @@ $(PREFIX)/build/icu/build-cross/Makefile: $(PREFIX)/build/icu/build/lib/libicuuc
 		$(ICU_EXTRA_CONFIGURE_FLAGS)
 	touch $@
 
+ifeq ($(patsubst %-w64-mingw32,mingw,$(HOST)),mingw)
 /usr/$(HOST)/lib/libsicuuc.a: $(PREFIX)/build/icu/build-cross/Makefile
+else
+$(PREFIX)/lib/libicuuc.a: $(PREFIX)/build/icu/build-cross/Makefile
+endif
 	$(MAKE) -C $(PREFIX)/build/icu/build-cross -j4
 	$(MAKE) -C $(PREFIX)/build/icu/build-cross install
 
+ifeq ($(patsubst %-w64-mingw32,mingw,$(HOST)),mingw)
 /usr/$(HOST)/lib/libicuuc.a: /usr/$(HOST)/lib/libsicuuc.a
 	for component in dt in io uc; do \
 		ln -sf libsicu$${component}.a "/usr/$(HOST)/lib/libicu$${component}.a"; \
@@ -128,6 +194,7 @@ $(PREFIX)/lib/libicuuc.a: /usr/$(HOST)/lib/libicuuc.a
 		cp "/usr/$(HOST)/lib/libicu$${component}.a" "$(PREFIX)/lib/libicu$${component}.a"; \
 	done
 	ln -sf libicudt.a "$(PREFIX)/lib/libicudata.a"
+endif
 
 install: $(PREFIX)/lib/libicuuc.a
 

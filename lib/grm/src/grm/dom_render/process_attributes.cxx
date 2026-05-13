@@ -1451,6 +1451,12 @@ void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element> &eleme
                                    ? plot_parent->parentElement()
                                    : plot_parent;
 
+      // special case cause a single plot inside a layout_grid_element would differ from a single plot without layout
+      // this happened with the joining of plots
+      if (plot_parent->parentElement()->localName() == "layout_grid_element" &&
+          active_figure->querySelectorsAll("layout_grid_element").size() <= 1)
+        figure_vp_element = plot_parent;
+
       auto default_diag_factor =
           ((DEFAULT_ASPECT_RATIO_FOR_SCALING) *
            (start_aspect_ratio_ws <= 1 ? start_aspect_ratio_ws : (1.0 / start_aspect_ratio_ws))) /
@@ -3100,6 +3106,30 @@ void GRM::processWindow(const std::shared_ptr<GRM::Element> &element)
         {
           auto zmin = static_cast<double>(element->getAttribute("window_z_min"));
           auto zmax = static_cast<double>(element->getAttribute("window_z_max"));
+
+          if (strEqualsAny(kind, "surface", "trisurface"))
+            {
+              auto active_figure = grm_get_render()->getActiveFigure();
+              if (active_figure->hasAttribute("consecutive_colorbars") &&
+                  static_cast<int>(active_figure->getAttribute("consecutive_colorbars")))
+                {
+                  for (const auto &plot_elem : active_figure->querySelectorsAll("plot"))
+                    {
+                      if (plot_elem->querySelectors("colorbar"))
+                        {
+                          if (plot_elem->hasAttribute("_z_lim_min") && plot_elem->hasAttribute("_z_lim_max") &&
+                              plot_elem->querySelectors("coordinate_system[plot_type=\"3d\"]") &&
+                              plot_elem->querySelectors("series_volume") == nullptr)
+                            {
+                              auto new_c_min = static_cast<double>(plot_elem->getAttribute("_z_lim_min"));
+                              auto new_c_max = static_cast<double>(plot_elem->getAttribute("_z_lim_max"));
+                              if (!grm_isnan(new_c_min)) zmin = grm_min(zmin, new_c_min);
+                              if (!grm_isnan(new_c_max)) zmax = grm_max(zmax, new_c_max);
+                            }
+                        }
+                    }
+                }
+            }
 
           gr_setwindow3d(xmin, xmax, ymin, ymax, zmin, zmax);
         }

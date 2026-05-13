@@ -281,6 +281,24 @@ IconBarWidget::IconBarWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(pa
   auto disable_grid = QPixmap((":/icons/" + name + ".png").c_str());
   disable_grid_act->setIcon(disable_grid);
 
+  multiplot_tool_button = new QToolButton(this);
+  name = (grplot_widget->isDarkMode() ? "multiplot_dark" : "multiplot");
+  auto multiplot = QPixmap((":/icons/" + name + ".png").c_str());
+  multiplot_tool_button->setIcon(multiplot);
+  multiplot_tool_button->setIconSize(QSize(ICON_SIZE, ICON_SIZE));
+  multiplot_tool_button->setContentsMargins(0, 0, 0, 0);
+  multiplot_tool_button->setFixedSize(BUTTON_WIDTH, BUTTON_HEIGHT);
+  multiplot_tool_button->setPopupMode(QToolButton::InstantPopup);
+  multiplot_tool_button->setStyleSheet(" QToolButton {border:none;} :hover {background: lightgray;} "
+                                       "QToolButton::menu-indicator { width:5px; height:3px; padding:2px;}");
+  multiplot_tool_button->setToolTip("Multiplot configurations");
+  multiplot_tool_button->setMinimumWidth(0);
+
+  multiplot_sub_menu = new QMenu(this);
+  multiplot_sub_menu->addAction(grplot_widget->getConsecutiveColorbarsAct());
+  multiplot_sub_menu->addAction(grplot_widget->getFlipLayoutAct());
+  multiplot_tool_button->setMenu(multiplot_sub_menu);
+
   connect(grplot_widget->getHideAlgoMenuAct(), &QAction::triggered, this, &IconBarWidget::hideAlgoMenu);
   connect(grplot_widget->getShowAlgoMenuAct(), &QAction::triggered, this, &IconBarWidget::showAlgoMenu);
   connect(grplot_widget->getHideMarginalSubMenuAct(), &QAction::triggered, this, &IconBarWidget::hideMarginalSubMenu);
@@ -302,6 +320,8 @@ IconBarWidget::IconBarWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(pa
   connect(grplot_widget->getShowFlipSubMenuAct(), &QAction::triggered, this, &IconBarWidget::showFlipSubMenu);
   connect(grplot_widget->getHidePlotTypeSubMenuAct(), &QAction::triggered, this, &IconBarWidget::hidePlotTypeSubMenu);
   connect(grplot_widget->getShowPlotTypeSubMenuAct(), &QAction::triggered, this, &IconBarWidget::showPlotTypeSubMenu);
+  connect(grplot_widget->getHideMultiplotSubMenuAct(), &QAction::triggered, this, &IconBarWidget::hideMultiplotMenu);
+  connect(grplot_widget->getShowMultiplotSubMenuAct(), &QAction::triggered, this, &IconBarWidget::showMultiplotMenu);
 
   h_box_layout->addWidget(type_tool_button);
   h_box_layout->addWidget(algo_tool_button);
@@ -317,6 +337,7 @@ IconBarWidget::IconBarWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(pa
   h_box_layout->addWidget(colormap_tool_button);
   h_box_layout->addWidget(text_color_ind_button);
   h_box_layout->addWidget(disable_grid_button);
+  h_box_layout->addWidget(multiplot_tool_button);
 
   h_box_layout->setContentsMargins(0, 0, 0, 0);
   h_box_layout->setAlignment(Qt::AlignLeft);
@@ -430,6 +451,18 @@ void IconBarWidget::showPlotTypeSubMenu()
 {
   type_sub_menu->menuAction()->setVisible(true);
   type_tool_button->setEnabled(true);
+}
+
+void IconBarWidget::hideMultiplotMenu()
+{
+  multiplot_sub_menu->menuAction()->setVisible(false);
+  multiplot_tool_button->setEnabled(false);
+}
+
+void IconBarWidget::showMultiplotMenu()
+{
+  multiplot_sub_menu->menuAction()->setVisible(true);
+  multiplot_tool_button->setEnabled(true);
 }
 
 void IconBarWidget::addSeperator()

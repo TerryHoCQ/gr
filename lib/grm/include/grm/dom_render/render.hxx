@@ -193,6 +193,7 @@ public:
   bool getHighlightedAttrExist();
   int *getPreviousScatterMarkerType();
   int *getPreviousLineMarkerType();
+  int *getPlotID();
   static bool getViewport(const std::shared_ptr<Element> &element, double *xmin, double *xmax, double *ymin,
                           double *ymax);
   std::shared_ptr<Context> getRenderContext();

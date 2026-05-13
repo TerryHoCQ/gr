@@ -2882,6 +2882,7 @@ bool EditElementWidget::setAttributesDuringAccept(std::shared_ptr<GRM::Element> 
             }
           else
             {
+              if (attr_name == "move_to_plot") grplot_widget->setMoveToPlot(true);
               if (attr_name == "location" && current_selection->localName() == "axis")
                 current_selection->setAttribute("_ignore_next_tick_orientation", true);
               const auto value = static_cast<QComboBox *>(fields[i])->itemText(index).toStdString();

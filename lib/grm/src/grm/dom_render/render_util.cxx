@@ -2476,13 +2476,19 @@ bool getLimitsForColorbar(const std::shared_ptr<GRM::Element> &element, double &
   auto plot_parent = element->parentElement();
   getPlotParent(plot_parent);
 
-  if (!std::isnan(static_cast<double>(plot_parent->getAttribute("_c_lim_min"))) &&
-      !std::isnan(static_cast<double>(plot_parent->getAttribute("_c_lim_max"))))
+  if (auto volume = plot_parent->querySelectors("series_volume"); volume != nullptr)
+    {
+      c_min = static_cast<double>(volume->getAttribute("_c_lim_min"));
+      c_max = static_cast<double>(volume->getAttribute("_c_lim_max"));
+      limits_found = true;
+    }
+  else if (volume == nullptr && !std::isnan(static_cast<double>(plot_parent->getAttribute("_c_lim_min"))) &&
+           !std::isnan(static_cast<double>(plot_parent->getAttribute("_c_lim_max"))))
     {
       c_min = static_cast<double>(plot_parent->getAttribute("_c_lim_min"));
       c_max = static_cast<double>(plot_parent->getAttribute("_c_lim_max"));
     }
-  else if (!std::isnan(static_cast<double>(plot_parent->getAttribute("_z_lim_min"))) &&
+  else if (volume == nullptr && !std::isnan(static_cast<double>(plot_parent->getAttribute("_z_lim_min"))) &&
            !std::isnan(static_cast<double>(plot_parent->getAttribute("_z_lim_max"))))
     {
       c_min = static_cast<double>(plot_parent->getAttribute("_z_lim_min"));
@@ -2493,6 +2499,41 @@ bool getLimitsForColorbar(const std::shared_ptr<GRM::Element> &element, double &
       limits_found = false;
     }
 
+  auto active_figure = grm_get_render()->getActiveFigure();
+  if (active_figure->hasAttribute("consecutive_colorbars") &&
+      static_cast<int>(active_figure->getAttribute("consecutive_colorbars")))
+    {
+      auto current_type =
+          static_cast<std::string>(plot_parent->querySelectors("coordinate_system")->getAttribute("plot_type"));
+      for (const auto &plot_elem : active_figure->querySelectorsAll("plot"))
+        {
+          auto new_type =
+              static_cast<std::string>(plot_elem->querySelectors("coordinate_system")->getAttribute("plot_type"));
+          if (current_type == new_type)
+            {
+              if (auto volume = plot_elem->querySelectors("series_volume");
+                  !std::isnan(static_cast<double>(plot_elem->getAttribute("_z_lim_min"))) &&
+                  !std::isnan(static_cast<double>(plot_elem->getAttribute("_z_lim_max"))) && volume != nullptr)
+                {
+                  c_min = grm_min(c_min, static_cast<double>(volume->getAttribute("_c_lim_min")));
+                  c_max = grm_max(c_max, static_cast<double>(volume->getAttribute("_c_lim_max")));
+                }
+              else if (volume == nullptr && !std::isnan(static_cast<double>(plot_elem->getAttribute("_c_lim_min"))) &&
+                       !std::isnan(static_cast<double>(plot_elem->getAttribute("_c_lim_max"))))
+                {
+                  c_min = grm_min(c_min, static_cast<double>(plot_elem->getAttribute("_c_lim_min")));
+                  c_max = grm_max(c_max, static_cast<double>(plot_elem->getAttribute("_c_lim_max")));
+                }
+              else if (volume == nullptr && !std::isnan(static_cast<double>(plot_elem->getAttribute("_z_lim_min"))) &&
+                       !std::isnan(static_cast<double>(plot_elem->getAttribute("_z_lim_max"))) &&
+                       plot_elem->querySelectors("series_volume") == nullptr)
+                {
+                  c_min = grm_min(c_min, static_cast<double>(plot_elem->getAttribute("_z_lim_min")));
+                  c_max = grm_max(c_max, static_cast<double>(plot_elem->getAttribute("_z_lim_max")));
+                }
+            }
+        }
+    }
   return limits_found;
 }
 
@@ -3704,11 +3745,16 @@ void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &element
                 location_names = {"x", "twin_x", "top", "bottom"};
               else if (*current_component_name == "y" && plot_type == "2d")
                 location_names = {"y", "twin_y", "right", "left"};
+              else if (*current_component_name == "c")
+                location_names = {"c"};
+              else if (*current_component_name == "z")
+                location_names = {"z"};
 
               for (const auto location : location_names)
                 {
                   double min_component = DBL_MAX, max_component = -DBL_MAX, step = -DBL_MAX;
-                  if (static_cast<std::string>(fmt).find(*current_component_name) != std::string::npos)
+                  if (strEqualsAny(*current_component_name, "c", "z") ||
+                      static_cast<std::string>(fmt).find(*current_component_name) != std::string::npos)
                     {
                       std::shared_ptr<GRM::Element> series_parent =
                           (kind == "marginal_heatmap") ? element : central_region;
@@ -3920,6 +3966,7 @@ void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &element
                     {
                       if (strEqualsAny(kind, "imshow", "isosurface", "volume"))
                         {
+                          if (*current_component_name == "c" && strEqualsAny(kind, "volume", "isosurface")) continue;
                           min_component = (kind == "imshow" ? 0.0 : -1.0);
                           max_component = 1.0;
                         }

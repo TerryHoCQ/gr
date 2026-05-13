@@ -57,9 +57,9 @@ GRM_EXPORT int grm_validate(void);
 GRM_EXPORT std::shared_ptr<GRM::Element> grm_get_document_root(void);
 GRM_EXPORT std::shared_ptr<GRM::Render> grm_get_render(void);
 GRM_EXPORT std::shared_ptr<GRM::Creator> grm_get_creator(void);
-GRM_EXPORT int grm_iterate_grid(GRM::Grid *grid, const std::shared_ptr<GRM::Element> &parent_dom_element, int plot_id);
+GRM_EXPORT int grm_iterate_grid(GRM::Grid *grid, const std::shared_ptr<GRM::Element> &parent_dom_element, int *plot_id);
 GRM_EXPORT int grm_plot_helper(GRM::GridElement *grid_element, GRM::Slice *slice,
-                               const std::shared_ptr<GRM::Element> &parent_dom_element, int plot_id);
+                               const std::shared_ptr<GRM::Element> &parent_dom_element, int *plot_id);
 GRM_EXPORT std::shared_ptr<GRM::Element> grm_get_subplot_from_ndc_point_using_dom(double x, double y);
 GRM_EXPORT std::shared_ptr<GRM::Element> grm_get_subplot_from_ndc_points_using_dom(unsigned int n, const double *x,
                                                                                    const double *y);

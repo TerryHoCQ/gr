@@ -323,6 +323,7 @@ std::unordered_set<unsigned int> BoundingLogic::getElementsAtPoint(int x, int y,
                   break;
                 }
             }
+          if (plot == nullptr) return group_ids;
         }
       const auto central_region = plot->querySelectors("central_region");
       const auto legend = plot->querySelectors("legend");

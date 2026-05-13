@@ -22,6 +22,7 @@
                 <xs:element ref="plot" minOccurs="0" maxOccurs="unbounded"/>
             </xs:choice>
             <xs:attribute name="active" type="xs:integer"/>
+            <xs:attribute name="consecutive_colorbars" type="xs:integer"/>
             <xs:attribute name="size_x" type="xs:double"/>
             <xs:attribute name="size_x_type" type="xs:string"/>
             <xs:attribute name="size_x_unit" type="xs:string"/>
@@ -169,10 +170,12 @@
             <xs:attribute name="max_y_length" type="xs:integer"/>
             <xs:attribute name="only_square_aspect_ratio" type="xs:integer"/>
             <xs:attribute name="plot_group" type="xs:integer"/>
+            <xs:attribute name="plot_id" type="xs:string" use="required"/>
             <xs:attribute name="polar_with_pan" type="xs:integer"/>
             <xs:attribute name="r_lim_max" type="xs:double"/>
             <xs:attribute name="r_lim_min" type="xs:double"/>
             <xs:attribute name="r_log" type="xs:integer"/>
+            <xs:attribute name="reset_ranges" type="xs:integer"/>
             <xs:attribute name="scale" type="xs:integer"/>
             <xs:attribute name="theta_flip" type="xs:integer"/>
             <xs:attribute name="theta_lim_max" type="xs:double"/>
@@ -490,6 +493,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="move_xform_ndc"/>
             <xs:attributeGroup ref="text_modifications"/>
+            <xs:attribute name="char_height" type="xs:double"/>
             <xs:attribute name="char_up_x" type="xs:double"/>
             <xs:attribute name="char_up_y" type="xs:double"/>
             <xs:attribute name="height" type="xs:double"/>
@@ -1274,6 +1278,7 @@
         <xs:complexType>
             <xs:attributeGroup ref="move_xform_wc"/>
             <xs:attributeGroup ref="ranges"/>
+            <xs:attributeGroup ref="series"/>
             <xs:attribute name="kind" type="xs:string"/>
             <xs:attribute name="use_gr3" type="xs:integer" use="required"/>
             <xs:attribute name="x" type="xs:string"/>
@@ -1413,7 +1418,6 @@
     <xs:element name="polar_bar">
         <xs:complexType>
             <xs:choice minOccurs="1" maxOccurs="2">
-                <xs:element ref="draw_image" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="fill_area" minOccurs="0" maxOccurs="1"/>
                 <xs:element ref="fill_arc" minOccurs="0" maxOccurs="1"/>
             </xs:choice>
@@ -1591,6 +1595,7 @@
 
     <!-- definition of series attributes -->
     <xs:attributeGroup name="series">
+        <xs:attribute name="move_to_plot" type="xs:string"/>
         <xs:attribute name="ref_x_axis_location" type="strint"/>
         <xs:attribute name="ref_y_axis_location" type="strint"/>
     </xs:attributeGroup>

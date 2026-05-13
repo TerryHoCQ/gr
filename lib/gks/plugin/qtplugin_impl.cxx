@@ -809,6 +809,8 @@ public:
     height_ = height;
   }
 
+  void clear() { mask_image_->fill(Qt::white); }
+
   void clearBackground() { background_.reset(); }
 
   void drawBackground()
@@ -918,7 +920,7 @@ public:
     if (group_mask_)
       {
         group_mask_->resize(paint_device.width(), paint_device.height());
-        mask_painter_ = &group_mask_->painter();
+        if (!group_stack_.empty()) mask_painter_ = &group_mask_->painter();
       }
     partial_painters_.assign(paint_device);
   }
@@ -928,6 +930,13 @@ public:
     owned_painter_.reset();
     owned_painter_ = std::unique_ptr<QPainter>(new QPainter(&pixmap));
     assign(*owned_painter_, paint_device);
+  }
+
+  void clear()
+  {
+    painter_.get().fillRect(QRect(0, 0, painter_.get().device()->width(), painter_.get().device()->height()),
+                            Qt::white);
+    if (group_mask_) group_mask_->clear();
   }
 
   void clearBackground()
@@ -978,8 +987,8 @@ public:
             painter_.get().device()->width(), painter_.get().device()->height()
 #endif
                 ));
-        mask_painter_ = &group_mask_->painter();
       }
+    if (group_stack_.empty()) mask_painter_ = &group_mask_->painter();
     group_mask_->id(id);
     group_stack_.push(id);
   }
@@ -987,7 +996,9 @@ public:
   void endGroup()
   {
     group_stack_.pop();
-    group_mask_->id(group_stack_.empty() ? 0 : group_stack_.top());
+    // 0x00FFFFFF (RGB white) is no valid ID
+    group_mask_->id(group_stack_.empty() ? 0x00FFFFFF : group_stack_.top());
+    if (group_stack_.empty()) mask_painter_ = nullptr;
   }
 
   bool hasOpenGroup() const { return !group_stack_.empty(); }
@@ -3541,9 +3552,10 @@ static void interp(char *str)
   s = str;
 
   p->partial_draw = gks_dl_has_one_of_item(s, 1, GKS_BEGIN_PARTIAL);
-  if (!p->partial_draw && p->painter->hasBackground() && !dl_contains_only_background_fctid(s))
+  if (!p->partial_draw && !dl_contains_only_background_fctid(s))
     {
-      p->painter->drawBackground();
+      p->painter->clear();
+      if (p->painter->hasBackground()) p->painter->drawBackground();
     }
 
   RESOLVE(len, int, sizeof(int));

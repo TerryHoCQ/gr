@@ -942,14 +942,22 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                 {
                   x[row] = ranges.xmin + (ranges.xmax - ranges.xmin) * ((double)row / ((double)rows - 1));
                 }
-              for (col = 0; col < series_num; col++)
+              const char *style;
+              if (strcmp(kind, "barplot") != 0 ||
+                  (!grm_args_values(plot[plot_i], "style", "s", &style) || strcmp(style, "default") == 0))
                 {
-                  grm_args_push(series[col], "x_range", "dd", ranges.xmin, ranges.xmax);
+                  for (col = 0; col < series_num; col++)
+                    {
+                      grm_args_push(series[col], "x_range", "dd", ranges.xmin, ranges.xmax);
+                    }
                 }
             }
           else
             {
-              if (!grm_args_values(plot[plot_i], "x_range", "dd", &xmin, &xmax))
+              const char *style;
+              if (!grm_args_values(plot[plot_i], "x_range", "dd", &xmin, &xmax) &&
+                  (strcmp(kind, "barplot") != 0 ||
+                   (!grm_args_values(plot[plot_i], "style", "s", &style) || strcmp(style, "default") == 0)))
                 {
                   double x_min = INFINITY, x_max = -INFINITY;
                   for (col = 0; col < x_data.size(); col++)
@@ -1012,11 +1020,21 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
               int tmp_cnt = 0;
               for (col = 0; col < cols - err; col++)
                 {
-                  ymin = grm_min(
-                      0,
-                      *std::min_element(
+                  if (strcmp(kind, "stairs") == 0)
+                    {
+                      ymin = *std::min_element(
                           std::begin(file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)]),
-                          std::end(file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)])));
+                          std::end(file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)]));
+                    }
+                  else
+                    {
+                      ymin = grm_min(
+                          0, *std::min_element(
+                                 std::begin(
+                                     file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)]),
+                                 std::end(
+                                     file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)])));
+                    }
                   ymax = *std::max_element(
                       std::begin(file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)]),
                       std::end(file_data[depth][col + ((col < err / down_err_off) ? col * down_err_off : err)]));

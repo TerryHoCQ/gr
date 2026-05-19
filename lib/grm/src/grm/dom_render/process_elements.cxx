@@ -7042,11 +7042,12 @@ void processBarplot(const std::shared_ptr<GRM::Element> &element, const std::sha
     {
       x_min = static_cast<double>(element->getAttribute("x_range_min"));
       x_max = static_cast<double>(element->getAttribute("x_range_max"));
-      if (!element->hasAttribute("bar_width")) bar_width = (x_max - x_min) / (y_length - 1.0);
+      if (!element->hasAttribute("bar_width")) bar_width = 0.8 * (x_max - x_min) / (y_length - 1.0);
       bar_shift = (x_max - x_min) / (y_length - 1.0);
       x_min -= 1; // in the later calculation there is always a +1 in combination with x
       wfac = 0.9 * (x_max - x_min) / (y_length - 1.0);
     }
+
   if (style != "stacked" && element->hasAttribute("y_range_min"))
     y_min = static_cast<double>(element->getAttribute("y_range_min"));
   if (auto coordinate_system = element->parentElement()->querySelectors("coordinate_system");

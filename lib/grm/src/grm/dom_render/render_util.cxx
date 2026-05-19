@@ -3455,7 +3455,7 @@ void kindDependentCoordinateLimAdjustments(const std::shared_ptr<GRM::Element> &
   auto kind = static_cast<std::string>(element->getAttribute("_kind"));
   central_region = element->querySelectors("central_region");
 
-  if (kind == "barplot")
+  if (central_region->querySelectors("series_barplot") != nullptr)
     {
       for (const auto &series : central_region->children())
         {
@@ -3793,10 +3793,17 @@ void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &element
                                           static_cast<std::string>(series->getAttribute(*current_component_name));
                                       current_component = GRM::get<std::vector<double>>((*context)[cntx_key]);
                                       current_point_count = (int)current_component.size();
-                                      if (series_kind == "barplot")
+                                      if (strEqualsAny(series_kind, "barplot", "stem") &&
+                                          *current_component_name == "y")
                                         {
+                                          // added to fix an inconsistency with the ranges after kind change
                                           current_min_component = 0.0;
                                           current_max_component = 0.0;
+                                        }
+                                      else if (series_kind == "barplot" && *current_component_name == "x")
+                                        {
+                                          current_min_component = 1.0;
+                                          current_max_component = current_component.size() - 1;
                                         }
                                       for (int i = 0; i < current_point_count; i++)
                                         {
@@ -3807,7 +3814,7 @@ void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &element
                                               else
                                                 current_min_component += current_component[i];
                                             }
-                                          else
+                                          else if (series_kind != "barplot" || *current_component_name != "x")
                                             {
                                               if (!std::isnan(current_component[i]))
                                                 {

@@ -2258,6 +2258,7 @@ void GRPlotWidget::keyPressEvent(QKeyEvent *event)
               current_selection->getRef()->removeAttribute("_highlighted");
               prev_highlighted_tick_group_elem.reset();
             }
+          ctrl_key_mode = false;
           current_selection = nullptr;
           mouse_move_selections.clear();
           prev_selection.reset();
@@ -2584,6 +2585,13 @@ void GRPlotWidget::possibleElementsMenuSlot()
   possible_elems_menu->clear();
   current_selection = bbox;
 
+  // special case if ctrl is used in combination with the possibleElementsMenuWidget
+  std::vector<BoundingObject> cur_clicked;
+  cur_clicked.emplace_back(*bbox);
+  clicked = cur_clicked;
+  auto rel_cursor_pos = mapFromGlobal(QCursor::pos());
+  cursorHandler(rel_cursor_pos.x(), rel_cursor_pos.y()); // get the correct cursor and sets it
+
   // without this, elements selected with this menu don't get selected properly inside the tree widget
   for (const auto &e : grm_get_document_root()->querySelectorsAll("[_highlighted=\"1\"]"))
     {
@@ -2751,12 +2759,12 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
                         }
                     }
                 }
+              clicked = cur_clicked;
               if (elements_at_pos.size() > 1 && old_current_selection == nullptr)
                 {
                   auto pos = event->pos();
                   possible_elems_menu->exec(this->mapToGlobal(pos));
                 }
-              clicked = cur_clicked;
             }
           else
             {
@@ -2852,6 +2860,8 @@ void GRPlotWidget::mousePressEvent(QMouseEvent *event)
                 }
             }
           if (!ctrl_key_mode) attributeEditEvent();
+          // needed since key-release event isnt triggert after an element got selected in this menu
+          if (selected_elem_via_menu) ctrl_key_mode = false;
         }
       else
         {
@@ -7515,6 +7525,10 @@ void GRPlotWidget::cursorHandler(int x, int y)
               if (cursor_state == DEFAULT_HOVER_MODE) csr->setShape(Qt::ArrowCursor);
             }
         }
+      else if (cursor_state == DEFAULT_HOVER_MODE)
+        {
+          csr->setShape(Qt::ArrowCursor);
+        }
     }
   setCursor(*csr);
 }
@@ -7592,6 +7606,26 @@ void GRPlotWidget::listItemCheckStatusChanged(QListWidgetItem *item)
 
       auto multiple_selections = grm_get_document_root()->querySelectorsAll("[_selected_for_move=\"1\"]");
       selection_list_widget->updateSelectionList(multiple_selections);
+      if (multiple_selections.empty())
+        {
+          if (!current_selections.empty()) current_selections.clear();
+          for (const auto &selection : grm_get_document_root()->querySelectorsAll("[_selected_for_move=\"1\"]"))
+            {
+              selection->setAttribute("_selected_for_move", 0);
+            }
+          if (current_selection && current_selection->getRef() != nullptr)
+            {
+              current_selection->getRef()->removeAttribute("_highlighted");
+              prev_highlighted_tick_group_elem.reset();
+            }
+          ctrl_key_mode = false;
+          hide_selection_list_widget_act->trigger();
+          current_selection = nullptr;
+          mouse_move_selections.clear();
+          prev_selection.reset();
+          ignore_resize = 0;
+          this->cursor().setShape(Qt::ArrowCursor);
+        }
       redraw();
     }
 }

@@ -733,7 +733,8 @@ void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element)
       bool private_shift = false;
       double plot[4] = {NAN, NAN, NAN, NAN};
 
-      if (element->hasAttribute("viewport_x_min"))
+      if (element->hasAttribute("_viewport_x_min_org") && element->hasAttribute("_viewport_x_max_org") &&
+          element->hasAttribute("_viewport_y_min_org") && element->hasAttribute("_viewport_y_max_org"))
         {
           vp_org[0] = static_cast<double>(element->getAttribute("_viewport_x_min_org"));
           vp_org[1] = static_cast<double>(element->getAttribute("_viewport_x_max_org"));
@@ -794,6 +795,8 @@ void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element)
               auto aspect_ratio_ws = metric_width / metric_height;
               auto text_x = static_cast<double>(element->getAttribute("x"));
               auto text_y = static_cast<double>(element->getAttribute("y"));
+              double char_height;
+              gr_inqcharheight(&char_height);
 
               // clipping for the text offset
               if (x_shift > 0)
@@ -806,9 +809,9 @@ void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element)
 
               if (y_shift < 0)
                 if (aspect_ratio_ws > 1)
-                  y_shift = grm_max(-text_y, y_shift);
+                  y_shift = grm_max(-1.0 / aspect_ratio_ws + text_y + char_height, y_shift);
                 else
-                  y_shift = grm_max(text_y - 1.0, y_shift);
+                  y_shift = grm_max(-aspect_ratio_ws, y_shift);
               else
                 y_shift = grm_min(text_y - 0.01, y_shift);
               gr_settextoffset(x_shift, -y_shift);
@@ -850,46 +853,49 @@ void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element)
               GRM::Render::setAutoUpdate(old_state);
             }
 
-          // calculate viewport changes in x-direction
-          vp[0] = vp_org[0] + x_min_shift + x_shift;
-          vp[1] = vp_org[1] + x_max_shift + x_shift;
-          diff = grm_min(vp[1] - vp[0], vp_border_x_max - vp_border_x_min);
-
-          // the viewport cant leave the [vp_border_x_min, vp_border_x_max] space
-          if (vp[0] < vp_border_x_min)
+          if (element->localName() != "text")
             {
-              vp[0] = vp_border_x_min;
-              vp[1] = vp_border_x_min + diff;
-            }
-          if (vp[1] > vp_border_x_max)
-            {
-              vp[0] = vp_border_x_max - diff;
-              vp[1] = vp_border_x_max;
-            }
+              // calculate viewport changes in x-direction
+              vp[0] = vp_org[0] + x_min_shift + x_shift;
+              vp[1] = vp_org[1] + x_max_shift + x_shift;
+              diff = grm_min(vp[1] - vp[0], vp_border_x_max - vp_border_x_min);
 
-          // calculate viewport changes in y-direction
-          vp[2] = vp_org[2] - y_min_shift - y_shift;
-          vp[3] = vp_org[3] - y_max_shift - y_shift;
-          diff = grm_min(vp_border_y_max - vp_border_y_min, vp[3] - vp[2]);
+              // the viewport cant leave the [vp_border_x_min, vp_border_x_max] space
+              if (vp[0] < vp_border_x_min)
+                {
+                  vp[0] = vp_border_x_min;
+                  vp[1] = vp_border_x_min + diff;
+                }
+              if (vp[1] > vp_border_x_max)
+                {
+                  vp[0] = vp_border_x_max - diff;
+                  vp[1] = vp_border_x_max;
+                }
 
-          // the viewport cant leave the [vp_border_y_min, vp_border_y_max] space
-          if (vp[2] < vp_border_y_min)
-            {
-              vp[3] = vp_border_y_min + diff;
-              vp[2] = vp_border_y_min;
-            }
-          if (vp[3] > vp_border_y_max)
-            {
-              vp[2] = vp_border_y_max - diff;
-              vp[3] = vp_border_y_max;
-            }
+              // calculate viewport changes in y-direction
+              vp[2] = vp_org[2] - y_min_shift - y_shift;
+              vp[3] = vp_org[3] - y_max_shift - y_shift;
+              diff = grm_min(vp_border_y_max - vp_border_y_min, vp[3] - vp[2]);
 
-          bool old_state;
-          GRM::Render::getAutoUpdate(&old_state);
-          GRM::Render::setAutoUpdate(false);
-          grm_get_render()->setViewport(element, vp[0], vp[1], vp[2], vp[3]);
-          processViewport(element);
-          GRM::Render::setAutoUpdate(old_state);
+              // the viewport cant leave the [vp_border_y_min, vp_border_y_max] space
+              if (vp[2] < vp_border_y_min)
+                {
+                  vp[3] = vp_border_y_min + diff;
+                  vp[2] = vp_border_y_min;
+                }
+              if (vp[3] > vp_border_y_max)
+                {
+                  vp[2] = vp_border_y_max - diff;
+                  vp[3] = vp_border_y_max;
+                }
+
+              bool old_state;
+              GRM::Render::getAutoUpdate(&old_state);
+              GRM::Render::setAutoUpdate(false);
+              grm_get_render()->setViewport(element, vp[0], vp[1], vp[2], vp[3]);
+              processViewport(element);
+              GRM::Render::setAutoUpdate(old_state);
+            }
         }
     }
   else if (x_shift != 0 || x_max_shift != 0 || x_min_shift != 0 || y_shift != 0 || y_max_shift != 0 || y_min_shift != 0)

@@ -1423,6 +1423,7 @@ void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element> &eleme
     }
   start_aspect_ratio_ws = static_cast<double>(plot_parent->getAttribute("_start_aspect_ratio"));
 
+  calculateViewport(central_region);
   if (!GRM::Render::getViewport(central_region, &viewport[0], &viewport[1], &viewport[2], &viewport[3]))
     throw NotFoundError("Central region doesn't have a viewport but it should.\n");
 

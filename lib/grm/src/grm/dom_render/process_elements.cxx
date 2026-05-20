@@ -1542,9 +1542,9 @@ void processAxis(const std::shared_ptr<GRM::Element> &element, const std::shared
   axis_t axis = {min_val, max_val,   tick, org,     pos, major_count, 0,
                  nullptr, tick_size, 0,    nullptr, NAN, 1,           label_orientation};
   if (axis_type == "x")
-    gr_axis('X', &axis);
+    gr_axis("X", &axis);
   else if (axis_type == "y")
-    gr_axis('Y', &axis);
+    gr_axis("Y", &axis);
   tick_orientation = axis.tick_size < 0 ? -1 : 1;
 
   if (element->hasAttribute("_min_value_set_by_user"))
@@ -3058,9 +3058,9 @@ void processColorbar(const std::shared_ptr<GRM::Element> &element, const std::sh
     {
       axis_t axis = {c_min, c_max, 2, c_min, pos, 1, 0, nullptr, NAN, 0, nullptr, NAN, 1, label_orientation};
       if (location == "top" || location == "bottom")
-        gr_axis('X', &axis);
+        gr_axis("X", &axis);
       else
-        gr_axis('Y', &axis);
+        gr_axis("Y", &axis);
 
       if (location == "left" || location == "bottom") axis.tick_size *= -1.0;
       auto tick_orientation = axis.tick_size > 0 ? 1 : -1;
@@ -3145,9 +3145,9 @@ void processColorbar(const std::shared_ptr<GRM::Element> &element, const std::sh
       double c_tick = autoTick(c_min, c_max);
       axis_t axis = {c_min, c_max, c_tick, c_min, pos, 1, 0, nullptr, NAN, 0, nullptr, NAN, 1, label_orientation};
       if (location == "top" || location == "bottom")
-        gr_axis('X', &axis);
+        gr_axis("X", &axis);
       else
-        gr_axis('Y', &axis);
+        gr_axis("Y", &axis);
 
       if (location == "left" || location == "bottom") axis.tick_size *= -1;
       auto tick_orientation = axis.tick_size > 0 ? 1 : -1;

@@ -5292,8 +5292,9 @@ void gr_axes(double x_tick, double y_tick, double x_org, double y_org, int major
   gr_axeslbl(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size, NULL, NULL);
 }
 
-void gr_axis(char which, axis_t *axis)
+void gr_axis(const char *spec, axis_t *axis)
 {
+  char which = *spec;
   int errind, tnr;
   double wn[4], vp[4];
   double x_min, x_max, y_min, y_max;

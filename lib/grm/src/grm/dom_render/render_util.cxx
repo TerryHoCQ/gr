@@ -3685,8 +3685,8 @@ void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &element
   {
     const char *plot;
     const char *series;
-  } * current_range_keys, range_keys[] = {{"x_lim", "x_range"}, {"y_lim", "y_range"}, {"z_lim", "z_range"},
-                                          {"c_lim", "c_range"}, {"r_lim", "r_range"}, {"theta_lim", "theta_range"}};
+  } *current_range_keys, range_keys[] = {{"x_lim", "x_range"}, {"y_lim", "y_range"}, {"z_lim", "z_range"},
+                                         {"c_lim", "c_range"}, {"r_lim", "r_range"}, {"theta_lim", "theta_range"}};
 
   logger((stderr, "Storing coordinate ranges\n"));
 

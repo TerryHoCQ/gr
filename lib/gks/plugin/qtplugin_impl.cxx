@@ -82,11 +82,11 @@ DLLEXPORT void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_
   yd = (p->c * (yn) + p->d);
 
 #define DC_to_NDC(xd, yd, xn, yn) \
-  xn = ((xd)-p->b) / p->a;        \
-  yn = ((yd)-p->d) / p->c;
+  xn = ((xd) - p->b) / p->a;      \
+  yn = ((yd) - p->d) / p->c;
 
-#define CharXform(xrel, yrel, x, y)                  \
-  x = cos(p->alpha) * (xrel)-sin(p->alpha) * (yrel); \
+#define CharXform(xrel, yrel, x, y)                    \
+  x = cos(p->alpha) * (xrel) - sin(p->alpha) * (yrel); \
   y = sin(p->alpha) * (xrel) + cos(p->alpha) * (yrel);
 
 #define nint(a) ((int)(a + 0.5))

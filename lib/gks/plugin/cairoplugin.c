@@ -122,8 +122,8 @@ DLLEXPORT void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *i_arr, 
   xd = (p->a * (xn) + p->b);      \
   yd = (p->c * (yn) + p->d)
 
-#define CharXform(xrel, yrel, x, y)                  \
-  x = cos(p->alpha) * (xrel)-sin(p->alpha) * (yrel); \
+#define CharXform(xrel, yrel, x, y)                    \
+  x = cos(p->alpha) * (xrel) - sin(p->alpha) * (yrel); \
   y = sin(p->alpha) * (xrel) + cos(p->alpha) * (yrel);
 
 #define nint(a) ((int)(a + 0.5))
@@ -137,7 +137,7 @@ DLLEXPORT void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *i_arr, 
 #endif
 
 #ifndef round
-#define round(x) (((x) < 0) ? ceil((x)-.5) : floor((x) + .5))
+#define round(x) (((x) < 0) ? ceil((x) - .5) : floor((x) + .5))
 #endif
 
 

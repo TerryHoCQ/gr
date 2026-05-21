@@ -786,7 +786,7 @@ static const unsigned int symbol_codepoints[] = {
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #endif
 #ifndef round
-#define round(x) (((x) < 0) ? ceil((x)-.5) : floor((x) + .5))
+#define round(x) (((x) < 0) ? ceil((x) - .5) : floor((x) + .5))
 #endif
 
 #include "mathtex2.h"
@@ -1324,8 +1324,7 @@ static void vlist_set_glue_(BoxModelNode *vlist_node, double x, int sign, const 
 {
 
   int o;
-  for (o = 0; o < 4 && totals[o] == 0.0; o++)
-    ;
+  for (o = 0; o < 4 && totals[o] == 0.0; o++);
   o = o % 4;
   vlist_node->u.vlist.glue_order = o;
   vlist_node->u.vlist.glue_sign = sign;
@@ -1516,8 +1515,7 @@ static void hlist_set_glue_(BoxModelNode *hlist_node, double x, int sign, const 
 {
 
   int o;
-  for (o = 0; o < 4 && totals[o] == 0.0; o++)
-    ;
+  for (o = 0; o < 4 && totals[o] == 0.0; o++);
   o = o % 4;
   hlist_node->u.hlist.glue_order = o;
   hlist_node->u.hlist.glue_sign = sign;
@@ -1889,8 +1887,7 @@ static size_t convert_symbol_to_box_model(ParserNode *node)
     {
       char previous_char;
       const char *cursor;
-      for (cursor = node->source - 1; cursor >= input && isspace(*cursor); cursor--)
-        ;
+      for (cursor = node->source - 1; cursor >= input && isspace(*cursor); cursor--);
       if (cursor >= input)
         {
           previous_char = *cursor;
@@ -1943,8 +1940,7 @@ static size_t convert_symbol_to_box_model(ParserNode *node)
         {
           const char *cursor;
           char previous_char;
-          for (cursor = node->source - 1; cursor >= input && isspace(*cursor); cursor--)
-            ;
+          for (cursor = node->source - 1; cursor >= input && isspace(*cursor); cursor--);
           if (cursor >= input)
             {
               previous_char = *cursor;
@@ -1956,8 +1952,7 @@ static size_t convert_symbol_to_box_model(ParserNode *node)
           if (previous_char == '{')
             {
               char next_char;
-              for (cursor = node->source + 1; isspace(*cursor); cursor++)
-                ;
+              for (cursor = node->source + 1; isspace(*cursor); cursor++);
               next_char = *cursor;
               if (next_char == '}')
                 {
@@ -1997,8 +1992,7 @@ static size_t convert_symbol_to_box_model(ParserNode *node)
   if (node->source[0] == '\'' && node->length == 1)
     {
       const char *cursor;
-      for (cursor = node->source - 1; cursor >= input && isspace(*cursor); cursor--)
-        ;
+      for (cursor = node->source - 1; cursor >= input && isspace(*cursor); cursor--);
       if (cursor >= input && cursor[0] != '\'')
         {
           size_t hlist_index = make_hlist();
@@ -2720,13 +2714,13 @@ static size_t convert_subsuper_to_box_model(ParserNode *node, size_t previous_bo
   padding = 2 * default_thickness;
   if (previous_node && previous_node->type == BT_HLIST)
     {
-      if (node->u.subsuper.operator== '_' && previous_node->u.hlist.subsuper_width<0)
+      if (node->u.subsuper.operator == '_' && previous_node->u.hlist.subsuper_width < 0)
         {
           padding += previous_node->u.hlist.subsuper_width;
           is_overunder = previous_node->u.hlist.subsuper_is_overunder;
           sub_and_super_filled = 1;
         }
-      else if (node->u.subsuper.operator== '^' && previous_node->u.hlist.subsuper_width> 0)
+      else if (node->u.subsuper.operator == '^' && previous_node->u.hlist.subsuper_width > 0)
         {
           padding -= previous_node->u.hlist.subsuper_width;
           is_overunder = previous_node->u.hlist.subsuper_is_overunder;
@@ -2808,7 +2802,7 @@ static size_t convert_subsuper_to_box_model(ParserNode *node, size_t previous_bo
           hlist_node->u.hlist.subsuper_width =
               max(previous_node_width + 4 * default_thickness, body_width + 4 * default_thickness);
         }
-      if (node->u.subsuper.operator== '^')
+      if (node->u.subsuper.operator == '^')
         {
           hlist_node->u.hlist.subsuper_width = -hlist_node->u.hlist.subsuper_width;
         }
@@ -2821,7 +2815,7 @@ static size_t convert_subsuper_to_box_model(ParserNode *node, size_t previous_bo
   hlist_node->u.hlist.subsuper_hlist_index = previous_node_hlist_index;
   if (is_overunder)
     {
-      if (node->u.subsuper.operator== '_')
+      if (node->u.subsuper.operator == '_')
         {
           hlist_node->u.hlist.shift_amount = previous_node_depth + 1.5 * hlist_node->u.hlist.height;
         }
@@ -2832,7 +2826,7 @@ static size_t convert_subsuper_to_box_model(ParserNode *node, size_t previous_bo
     }
   else
     {
-      if (node->u.subsuper.operator== '_')
+      if (node->u.subsuper.operator == '_')
         {
           hlist_node->u.hlist.shift_amount = previous_node_depth + 0.6 * hlist_node->u.hlist.height;
         }

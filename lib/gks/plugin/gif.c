@@ -82,8 +82,7 @@ void median_cut(unsigned char *pixels, unsigned char *color_table, int num_pixel
       qsort(pixels + cut_axis, num_pixels, num_channels, compare_color_component);
       for (left_pixels = num_colors / 2;
            (left_pixels < num_pixels - num_colors / 2) && pixels[left_pixels * num_channels + cut_axis] < cut_value;
-           left_pixels++)
-        ;
+           left_pixels++);
       median_cut(pixels, color_table, left_pixels, num_colors / 2, num_channels);
       median_cut(pixels + left_pixels * num_channels, color_table + num_colors / 2 * num_channels,
                  num_pixels - left_pixels, num_colors / 2, num_channels);

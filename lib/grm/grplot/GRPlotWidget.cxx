@@ -48,7 +48,7 @@ struct HighlightMask
   int width, height;
   std::vector<unsigned char> image;
   HighlightMask(int id, int x, int y, int width, int height, std::vector<unsigned char> image)
-      : id(id), x(x), y(y), width(width), height(height), image(image){};
+      : id(id), x(x), y(y), width(width), height(height), image(image) {};
 };
 
 struct ThreadAttr

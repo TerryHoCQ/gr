@@ -78,8 +78,8 @@ DLLEXPORT void gks_svgplugin(int fctid, int dx, int dy, int dimx, int *i_arr, in
   xd = (p->a * (xn) + p->b);      \
   yd = (p->c * (yn) + p->d)
 
-#define CharXform(xrel, yrel, x, y)              \
-  x = cos(p->phi) * (xrel)-sin(p->phi) * (yrel); \
+#define CharXform(xrel, yrel, x, y)                \
+  x = cos(p->phi) * (xrel) - sin(p->phi) * (yrel); \
   y = sin(p->phi) * (xrel) + cos(p->phi) * (yrel);
 
 #define nint(a) ((int)(a + 0.5))

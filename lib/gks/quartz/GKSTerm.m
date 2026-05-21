@@ -451,8 +451,7 @@ static bool initialized = NO;
 {
   /* Search unused window */
   int unused_win_id;
-  for (unused_win_id = 0; unused_win_id < MAX_WINDOWS && window[unused_win_id]; unused_win_id++)
-    ;
+  for (unused_win_id = 0; unused_win_id < MAX_WINDOWS && window[unused_win_id]; unused_win_id++);
 
   /* Either return the index of an unused window or MAX_WINDOWS */
   return unused_win_id;

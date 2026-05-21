@@ -358,8 +358,7 @@ static int open_socket(int wstype)
             struct timespec delay;
             delay.tv_sec = 0;
             delay.tv_nsec = sleep_ms * ms_to_ns;
-            while (nanosleep(&delay, &delay) == -1)
-              ;
+            while (nanosleep(&delay, &delay) == -1);
           }
 #else
           Sleep(sleep_ms);

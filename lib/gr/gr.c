@@ -429,7 +429,7 @@ typedef struct
 #endif
 
 #define arc(angle) (M_PI * (angle) / 180.0)
-#define deg(rad) ((rad)*180.0 / M_PI)
+#define deg(rad) ((rad) * 180.0 / M_PI)
 
 static unsigned char *opcode = NULL;
 
@@ -1018,8 +1018,7 @@ minmax_t find_minmax(int n, double *values)
 {
   int i;
   double d, min, max;
-  for (i = 0; i != n && is_nan(values[i]); ++i)
-    ;
+  for (i = 0; i != n && is_nan(values[i]); ++i);
   if (i == n) return (minmax_t){NAN, NAN};
   min = max = values[i];
   for (++i; i != n; ++i)

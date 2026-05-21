@@ -264,10 +264,8 @@ std::string GRM::strip(const std::string &string)
   if (string.empty()) return string;
   std::string::size_type left_start;
   std::string::size_type right_start;
-  for (left_start = 0; left_start < string.size() && std::isspace(string[left_start]); ++left_start)
-    ;
-  for (right_start = string.size() - 1; right_start >= left_start && std::isspace(string[right_start]); --right_start)
-    ;
+  for (left_start = 0; left_start < string.size() && std::isspace(string[left_start]); ++left_start);
+  for (right_start = string.size() - 1; right_start >= left_start && std::isspace(string[right_start]); --right_start);
   return string.substr(left_start, right_start - left_start + 1);
 }
 

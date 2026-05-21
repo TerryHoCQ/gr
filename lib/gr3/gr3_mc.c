@@ -24,8 +24,8 @@
 #endif
 
 #define ABS(x) ((x) < 0 ? -(x) : (x))
-#define INDEX(x, y, z) ((x)*mcdata.stride[0] + (y)*mcdata.stride[1] + (z)*mcdata.stride[2])
-#define IDX2D(y, z) ((y)*mcdata.dim[2] + (z))
+#define INDEX(x, y, z) ((x) * mcdata.stride[0] + (y) * mcdata.stride[1] + (z) * mcdata.stride[2])
+#define IDX2D(y, z) ((y) * mcdata.dim[2] + (z))
 
 /* speedup does not grow much with a high number of threads */
 #define THREADLIMIT 16
@@ -359,7 +359,7 @@ GR3API void gr3_triangulateindexed(const GR3_MC_DTYPE *data, GR3_MC_DTYPE isolev
 #ifdef _OPENMP
 #pragma omp parallel default(none)                                                                                 \
     shared(num_threads, num_t_vertices, t_vertices, t_normals, num_t_faces, t_faces, mcdata, vertblock, faceblock, \
-           num_vertices, num_faces, vertices, normals, indices)
+               num_vertices, num_faces, vertices, normals, indices)
 #endif
   {
     int thread_id;

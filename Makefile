@@ -16,7 +16,7 @@ else
 endif
 endif
 
-PREFERRED_CLANG_FORMAT_VERSION="13"
+PREFERRED_CLANG_FORMAT_VERSION="22"
 ifeq ($(shell command -v "clang-format-$(PREFERRED_CLANG_FORMAT_VERSION)"),)
   CLANG_FORMAT="clang-format"
 else

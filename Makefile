@@ -99,14 +99,14 @@ ifeq ($(UNAME), Darwin)
 	         ! -path './apps/*' \
 	         ! -path './build/*' \
 	           -exec "$(CLANG_FORMAT)" -i -verbose -style=file {} \;
-	@CMAKE_FORMAT="$$(./.setup_cmakeformat.sh)" && \
+	@GERSEMI="$$(./.setup_gersemi.sh)" && \
 	find -E . -type f \
 	          -regex '(.*/CMakeLists\.txt)|(.*\.cmake)' \
 	        ! -path './3rdparty/*' \
 	        ! -path './apps/*' \
 	        ! -path './build/*' \
 	          -exec echo "Formatting "{} \; \
-	          -exec "$${CMAKE_FORMAT}" -i {} \;
+	          -exec "$${GERSEMI}" -i {} \;
 else
 	@find . -type f \
 	        -regextype posix-extended \
@@ -115,7 +115,7 @@ else
 	      ! -path './apps/*' \
 	      ! -path './build/*' \
 	        -exec "$(CLANG_FORMAT)" -i -verbose -style=file {} \;
-	@CMAKE_FORMAT="$$(./.setup_cmakeformat.sh)" && \
+	@GERSEMI="$$(./.setup_gersemi.sh)" && \
 	find . -type f \
 	       -regextype posix-extended \
 	       -regex '(.*/CMakeLists\.txt)|(.*\.cmake)' \
@@ -123,7 +123,7 @@ else
 	     ! -path './apps/*' \
 	     ! -path './build/*' \
 	       -exec echo "Formatting "{} \; \
-	       -exec "$${CMAKE_FORMAT}" -i {} \;
+	       -exec "$${GERSEMI}" -i {} \;
 endif
 
 

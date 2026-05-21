@@ -87,7 +87,7 @@ code-style-check:
       grep -vr $'\r' "${file}" >/dev/null || { echo "${file} must not contain carriage return as line endings."; exit 1; };
       file --mime "${file}" | grep -E "charset=(us-ascii|utf-8)" >/dev/null || { echo "${file} must be either encoded in ASCII or UTF-8."; exit 1; };
       echo "Formatting ${file}";
-      cmake-format "${file}" > "${file}.formatted";
+      gersemi "${file}" > "${file}.formatted";
       if ! diff -q "${file}" "${file}.formatted"; then
         diff "${file}" "${file}.formatted";
         >&2 echo "The code style of file \"${file}\" does not follow the code style guideline of this project.";

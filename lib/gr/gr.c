@@ -12,6 +12,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include <time.h>
 #include <math.h>
 #include <float.h>
 #ifdef _MSC_VER
@@ -274,6 +276,28 @@ typedef struct
 {
   double min, max;
 } minmax_t;
+
+typedef struct
+{
+  time_t value;
+  char label[128];
+} Tick;
+
+typedef enum
+{
+  TICK_MINUTE,
+  TICK_HOUR,
+  TICK_DAY,
+  TICK_WEEK,
+  TICK_MONTH,
+  TICK_YEAR
+} TickUnit;
+
+typedef struct
+{
+  TickUnit unit;
+  int step;
+} TickSpec;
 
 gauss_t interp_gauss_data = {1, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
 tri_linear_t interp_tri_linear_data = {1, 1, 1};
@@ -5292,6 +5316,267 @@ void gr_axes(double x_tick, double y_tick, double x_org, double y_org, int major
   gr_axeslbl(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size, NULL, NULL);
 }
 
+static struct tm to_tm(time_t t)
+{
+  return *localtime(&t);
+}
+
+static time_t from_tm(struct tm tm)
+{
+  tm.tm_isdst = -1;
+  return mktime(&tm);
+}
+
+static void format_time(time_t t, const char *fmt, char *out, int out_size)
+{
+  struct tm tm = to_tm(t);
+  strftime(out, out_size, fmt, &tm);
+}
+
+static bool same_year(time_t a, time_t b)
+{
+  struct tm ta = to_tm(a);
+  struct tm tb = to_tm(b);
+  return ta.tm_year == tb.tm_year;
+}
+
+static bool same_day(time_t a, time_t b)
+{
+  struct tm ta = to_tm(a);
+  struct tm tb = to_tm(b);
+
+  return ta.tm_year == tb.tm_year && ta.tm_yday == tb.tm_yday;
+}
+
+static int estimate_tick_count(double span, TickSpec spec)
+{
+  switch (spec.unit)
+    {
+    case TICK_MINUTE:
+      return (int)(span / (spec.step * 60)) + 1;
+    case TICK_HOUR:
+      return (int)(span / (spec.step * 3600)) + 1;
+    case TICK_DAY:
+      return (int)(span / (spec.step * 24 * 3600)) + 1;
+    case TICK_WEEK:
+      return (int)(span / (spec.step * 7 * 24 * 3600)) + 1;
+    case TICK_MONTH:
+      return (int)(span / (spec.step * 30 * 24 * 3600)) + 1;
+    case TICK_YEAR:
+      return (int)(span / (spec.step * 365 * 24 * 3600)) + 1;
+    }
+
+  return 0;
+}
+
+static TickSpec choose_tick_spec(double span)
+{
+  const int min_ticks = 6;
+  int i;
+
+  TickSpec candidates[] = {{TICK_MINUTE, 1},  {TICK_MINUTE, 2}, {TICK_MINUTE, 5}, {TICK_MINUTE, 10}, {TICK_MINUTE, 15},
+                           {TICK_MINUTE, 30},
+
+                           {TICK_HOUR, 1},    {TICK_HOUR, 2},   {TICK_HOUR, 3},   {TICK_HOUR, 6},    {TICK_HOUR, 12},
+
+                           {TICK_DAY, 1},     {TICK_DAY, 2},
+
+                           {TICK_WEEK, 1},    {TICK_WEEK, 2},
+
+                           {TICK_MONTH, 1},   {TICK_MONTH, 2},  {TICK_MONTH, 3},  {TICK_MONTH, 6},
+
+                           {TICK_YEAR, 1},    {TICK_YEAR, 2},   {TICK_YEAR, 5},   {TICK_YEAR, 10}};
+
+  int count = sizeof(candidates) / sizeof(candidates[0]);
+  TickSpec best = candidates[0];
+
+  for (i = 0; i < count; ++i)
+    {
+      if (estimate_tick_count(span, candidates[i]) >= min_ticks)
+        best = candidates[i];
+      else
+        break;
+    }
+
+  return best;
+}
+
+static time_t floor_to_unit(time_t t, TickSpec spec)
+{
+  struct tm tm = to_tm(t);
+
+  tm.tm_sec = 0;
+
+  switch (spec.unit)
+    {
+    case TICK_MINUTE:
+      tm.tm_min = (tm.tm_min / spec.step) * spec.step;
+      break;
+
+    case TICK_HOUR:
+      tm.tm_min = 0;
+      tm.tm_hour = (tm.tm_hour / spec.step) * spec.step;
+      break;
+
+    case TICK_DAY:
+      tm.tm_min = 0;
+      tm.tm_hour = 0;
+      break;
+
+    case TICK_WEEK:
+      {
+        tm.tm_min = 0;
+        tm.tm_hour = 0;
+
+        int days_since_monday = (tm.tm_wday + 6) % 7;
+        tm.tm_mday -= days_since_monday;
+        break;
+      }
+
+    case TICK_MONTH:
+      tm.tm_min = 0;
+      tm.tm_hour = 0;
+      tm.tm_mday = 1;
+      tm.tm_mon = (tm.tm_mon / spec.step) * spec.step;
+      break;
+
+    case TICK_YEAR:
+      {
+        tm.tm_min = 0;
+        tm.tm_hour = 0;
+        tm.tm_mday = 1;
+        tm.tm_mon = 0;
+
+        int year = tm.tm_year + 1900;
+        year = (year / spec.step) * spec.step;
+
+        tm.tm_year = year - 1900;
+        break;
+      }
+    }
+
+  return from_tm(tm);
+}
+
+static time_t add_tick(time_t t, TickSpec spec)
+{
+  struct tm tm = to_tm(t);
+
+  switch (spec.unit)
+    {
+    case TICK_MINUTE:
+      tm.tm_min += spec.step;
+      break;
+    case TICK_HOUR:
+      tm.tm_hour += spec.step;
+      break;
+    case TICK_DAY:
+      tm.tm_mday += spec.step;
+      break;
+    case TICK_WEEK:
+      tm.tm_mday += 7 * spec.step;
+      break;
+    case TICK_MONTH:
+      tm.tm_mon += spec.step;
+      break;
+    case TICK_YEAR:
+      tm.tm_year += spec.step;
+      break;
+    }
+
+  return from_tm(tm);
+}
+
+static void make_label(time_t tick, time_t tmin, time_t tmax, TickSpec spec, char *out, int out_size)
+{
+  bool crosses_year = !same_year(tmin, tmax);
+
+  switch (spec.unit)
+    {
+    case TICK_MINUTE:
+    case TICK_HOUR:
+      if (same_day(tick, tmin))
+        format_time(tick, "%H:%M", out, out_size);
+      else
+        format_time(tick, "%d.%m %H:%M", out, out_size);
+      break;
+
+    case TICK_DAY:
+    case TICK_WEEK:
+      if (crosses_year)
+        format_time(tick, "%d.%m.%Y", out, out_size);
+      else
+        format_time(tick, "%d.%m", out, out_size);
+      break;
+
+    case TICK_MONTH:
+      if (crosses_year)
+        format_time(tick, "%m.%Y", out, out_size);
+      else
+        format_time(tick, "%b", out, out_size);
+      break;
+
+    case TICK_YEAR:
+      format_time(tick, "%Y", out, out_size);
+      break;
+    }
+}
+
+static Tick *generate_time_ticks(time_t tmin, time_t tmax, int *out_count)
+{
+  *out_count = 0;
+
+  if (tmax < tmin)
+    {
+      time_t tmp = tmin;
+      tmin = tmax;
+      tmax = tmp;
+    }
+
+  double span = difftime(tmax, tmin);
+  TickSpec spec = choose_tick_spec(span);
+
+  int capacity = 64;
+  Tick *ticks = malloc(capacity * sizeof(Tick));
+
+  if (!ticks) return NULL;
+
+  time_t t = floor_to_unit(tmin, spec);
+
+  if (t < tmin) t = add_tick(t, spec);
+
+  while (t <= tmax)
+    {
+      if (*out_count >= capacity)
+        {
+          capacity *= 2;
+          Tick *new_ticks = realloc(ticks, capacity * sizeof(Tick));
+
+          if (!new_ticks)
+            {
+              free(ticks);
+              return NULL;
+            }
+
+          ticks = new_ticks;
+        }
+
+      ticks[*out_count].value = t;
+
+      make_label(t, tmin, tmax, spec, ticks[*out_count].label, sizeof(ticks[*out_count].label));
+
+      (*out_count)++;
+
+      time_t next = add_tick(t, spec);
+
+      if (next <= t) break;
+
+      t = next;
+    }
+
+  return ticks;
+}
+
 void gr_axis(const char *spec, axis_t *axis)
 {
   char which = *spec;
@@ -5319,6 +5604,31 @@ void gr_axis(const char *spec, axis_t *axis)
   y_max = wn[3];
 
   if (is_nan(axis->tick_size)) axis->tick_size = 0.0075;
+
+  if (!strcmp(spec, "TIMESTAMP"))
+    {
+      long tmin = x_min;
+      long tmax = x_max;
+      Tick *ticks = generate_time_ticks(tmin, tmax, &axis->num_ticks);
+
+      if (ticks)
+        {
+          axis->ticks = (tick_t *)xcalloc(axis->num_ticks, sizeof(tick_t));
+          axis->num_tick_labels = axis->num_ticks;
+          axis->tick_labels = (tick_label_t *)xcalloc(axis->num_tick_labels, sizeof(tick_label_t));
+          for (i = 0; i < axis->num_tick_labels; ++i)
+            {
+              axis->ticks[i].value = ticks[i].value;
+              axis->ticks[i].is_major = true;
+              axis->tick_labels[i].tick = ticks[i].value;
+              axis->tick_labels[i].label = strdup(ticks[i].label);
+              gr_inqtext(0, 0, axis->tick_labels[i].label, tbx, tby);
+              axis->tick_labels[i].width = tbx[2] - tbx[0];
+            }
+          free(ticks);
+        }
+      which = 'X';
+    }
 
   if (which == 'X')
     {

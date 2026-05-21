@@ -139,23 +139,11 @@ if(CYGWIN)
 elseif(WIN32)
 
   if(BORLAND)
-    set(OPENGL_gl_LIBRARY
-        import32
-        CACHE STRING "OpenGL library for win32"
-    )
-    set(OPENGL_glu_LIBRARY
-        import32
-        CACHE STRING "GLU library for win32"
-    )
+    set(OPENGL_gl_LIBRARY import32 CACHE STRING "OpenGL library for win32")
+    set(OPENGL_glu_LIBRARY import32 CACHE STRING "GLU library for win32")
   else()
-    set(OPENGL_gl_LIBRARY
-        opengl32
-        CACHE STRING "OpenGL library for win32"
-    )
-    set(OPENGL_glu_LIBRARY
-        glu32
-        CACHE STRING "GLU library for win32"
-    )
+    set(OPENGL_gl_LIBRARY opengl32 CACHE STRING "OpenGL library for win32")
+    set(OPENGL_glu_LIBRARY glu32 CACHE STRING "GLU library for win32")
   endif()
 
 elseif(APPLE)
@@ -206,23 +194,11 @@ else()
 
   # Search for the GLVND libraries.  We do this regardless of COMPONENTS; we'll
   # take into account the COMPONENTS logic later.
-  find_library(
-    OPENGL_opengl_LIBRARY
-    NAMES OpenGL
-    PATHS ${_OPENGL_LIB_PATH}
-  )
+  find_library(OPENGL_opengl_LIBRARY NAMES OpenGL PATHS ${_OPENGL_LIB_PATH})
 
-  find_library(
-    OPENGL_glx_LIBRARY
-    NAMES GLX
-    PATHS ${_OPENGL_LIB_PATH}
-  )
+  find_library(OPENGL_glx_LIBRARY NAMES GLX PATHS ${_OPENGL_LIB_PATH})
 
-  find_library(
-    OPENGL_egl_LIBRARY
-    NAMES EGL
-    PATHS ${_OPENGL_LIB_PATH}
-  )
+  find_library(OPENGL_egl_LIBRARY NAMES EGL PATHS ${_OPENGL_LIB_PATH})
 
   find_library(
     OPENGL_glu_LIBRARY
@@ -237,8 +213,10 @@ else()
   if(NOT OpenGL_GL_PREFERENCE STREQUAL "")
     # A preference has been explicitly specified.
     if(NOT OpenGL_GL_PREFERENCE MATCHES "^(GLVND|LEGACY)$")
-      message(FATAL_ERROR "OpenGL_GL_PREFERENCE value '${OpenGL_GL_PREFERENCE}' not recognized.  "
-                          "Allowed values are 'GLVND' and 'LEGACY'."
+      message(
+        FATAL_ERROR
+        "OpenGL_GL_PREFERENCE value '${OpenGL_GL_PREFERENCE}' not recognized.  "
+        "Allowed values are 'GLVND' and 'LEGACY'."
       )
     endif()
   elseif(OpenGL_FIND_COMPONENTS)
@@ -260,10 +238,7 @@ else()
     unset(_OpenGL_GL_POLICY)
   endif()
 
-  if("x${OpenGL_GL_PREFERENCE}x" STREQUAL "xGLVNDx"
-     AND OPENGL_opengl_LIBRARY
-     AND OPENGL_glx_LIBRARY
-  )
+  if("x${OpenGL_GL_PREFERENCE}x" STREQUAL "xGLVNDx" AND OPENGL_opengl_LIBRARY AND OPENGL_glx_LIBRARY)
     # We can provide legacy GL using GLVND libraries.
     # Do not use any legacy GL library.
     set(OPENGL_gl_LIBRARY "")
@@ -277,24 +252,20 @@ else()
     )
   endif()
 
-  if(_OpenGL_GL_POLICY_WARN
-     AND OPENGL_gl_LIBRARY
-     AND OPENGL_opengl_LIBRARY
-     AND OPENGL_glx_LIBRARY
-  )
+  if(_OpenGL_GL_POLICY_WARN AND OPENGL_gl_LIBRARY AND OPENGL_opengl_LIBRARY AND OPENGL_glx_LIBRARY)
     message(
       AUTHOR_WARNING
-        "Policy CMP0072 is not set: FindOpenGL prefers GLVND by default when available.  "
-        "Run \"cmake --help-policy CMP0072\" for policy details.  "
-        "Use the cmake_policy command to set the policy and suppress this warning."
-        "\n"
-        "FindOpenGL found both a legacy GL library:\n"
-        "  OPENGL_gl_LIBRARY: ${OPENGL_gl_LIBRARY}\n"
-        "and GLVND libraries for OpenGL and GLX:\n"
-        "  OPENGL_opengl_LIBRARY: ${OPENGL_opengl_LIBRARY}\n"
-        "  OPENGL_glx_LIBRARY: ${OPENGL_glx_LIBRARY}\n"
-        "OpenGL_GL_PREFERENCE has not been set to \"GLVND\" or \"LEGACY\", so for "
-        "compatibility with CMake 3.10 and below the legacy GL library will be used."
+      "Policy CMP0072 is not set: FindOpenGL prefers GLVND by default when available.  "
+      "Run \"cmake --help-policy CMP0072\" for policy details.  "
+      "Use the cmake_policy command to set the policy and suppress this warning."
+      "\n"
+      "FindOpenGL found both a legacy GL library:\n"
+      "  OPENGL_gl_LIBRARY: ${OPENGL_gl_LIBRARY}\n"
+      "and GLVND libraries for OpenGL and GLX:\n"
+      "  OPENGL_opengl_LIBRARY: ${OPENGL_opengl_LIBRARY}\n"
+      "  OPENGL_glx_LIBRARY: ${OPENGL_glx_LIBRARY}\n"
+      "OpenGL_GL_PREFERENCE has not been set to \"GLVND\" or \"LEGACY\", so for "
+      "compatibility with CMake 3.10 and below the legacy GL library will be used."
     )
   endif()
   unset(_OpenGL_GL_POLICY_WARN)
@@ -307,41 +278,27 @@ else()
   # basically comes down to "use libOpenGL when we can, and add in specific
   # context mechanisms when requested, or we need them to preserve the previous
   # default where glx is always available."
-  if((NOT OPENGL_USE_EGL
-      AND NOT OPENGL_opengl_LIBRARY
-      AND OPENGL_glx_LIBRARY
-      AND NOT OPENGL_gl_LIBRARY
-     )
-     OR (NOT OPENGL_USE_EGL
-         AND NOT OPENGL_glx_LIBRARY
-         AND NOT OPENGL_gl_LIBRARY
-        )
-     OR (NOT OPENGL_USE_EGL
-         AND OPENGL_opengl_LIBRARY
-         AND OPENGL_glx_LIBRARY
-        )
-     OR (OPENGL_USE_EGL)
+  if(
+    (NOT OPENGL_USE_EGL AND NOT OPENGL_opengl_LIBRARY AND OPENGL_glx_LIBRARY AND NOT OPENGL_gl_LIBRARY)
+    OR (NOT OPENGL_USE_EGL AND NOT OPENGL_glx_LIBRARY AND NOT OPENGL_gl_LIBRARY)
+    OR (NOT OPENGL_USE_EGL AND OPENGL_opengl_LIBRARY AND OPENGL_glx_LIBRARY)
+    OR (OPENGL_USE_EGL)
   )
     list(APPEND _OpenGL_REQUIRED_VARS OPENGL_opengl_LIBRARY)
   endif()
 
   # GLVND GLX library.  Preferred when available.
-  if((NOT OPENGL_USE_OPENGL
+  if(
+    (
+      NOT OPENGL_USE_OPENGL
       AND NOT OPENGL_USE_GLX
       AND NOT OPENGL_USE_EGL
       AND NOT OPENGL_glx_LIBRARY
       AND NOT OPENGL_gl_LIBRARY
-     )
-     OR (OPENGL_USE_GLX
-         AND NOT OPENGL_USE_EGL
-         AND NOT OPENGL_glx_LIBRARY
-         AND NOT OPENGL_gl_LIBRARY
-        )
-     OR (NOT OPENGL_USE_EGL
-         AND OPENGL_opengl_LIBRARY
-         AND OPENGL_glx_LIBRARY
-        )
-     OR (OPENGL_USE_GLX AND OPENGL_USE_EGL)
+    )
+    OR (OPENGL_USE_GLX AND NOT OPENGL_USE_EGL AND NOT OPENGL_glx_LIBRARY AND NOT OPENGL_gl_LIBRARY)
+    OR (NOT OPENGL_USE_EGL AND OPENGL_opengl_LIBRARY AND OPENGL_glx_LIBRARY)
+    OR (OPENGL_USE_GLX AND OPENGL_USE_EGL)
   )
     list(APPEND _OpenGL_REQUIRED_VARS OPENGL_glx_LIBRARY)
   endif()
@@ -352,15 +309,9 @@ else()
   endif()
 
   # Old-style "libGL" library: used as a fallback when GLVND isn't available.
-  if((NOT OPENGL_USE_EGL
-      AND NOT OPENGL_opengl_LIBRARY
-      AND OPENGL_glx_LIBRARY
-      AND OPENGL_gl_LIBRARY
-     )
-     OR (NOT OPENGL_USE_EGL
-         AND NOT OPENGL_glx_LIBRARY
-         AND OPENGL_gl_LIBRARY
-        )
+  if(
+    (NOT OPENGL_USE_EGL AND NOT OPENGL_opengl_LIBRARY AND OPENGL_glx_LIBRARY AND OPENGL_gl_LIBRARY)
+    OR (NOT OPENGL_USE_EGL AND NOT OPENGL_glx_LIBRARY AND OPENGL_gl_LIBRARY)
   )
     list(APPEND _OpenGL_REQUIRED_VARS OPENGL_gl_LIBRARY)
   endif()
@@ -441,10 +392,7 @@ if(OPENGL_FOUND)
 
   # ::GLX is a GLVND library, and thus Linux-only: we don't bother checking
   # for a framework version of this library.
-  if(OpenGL_GLX_FOUND
-     AND NOT TARGET OpenGL::GLX
-     AND TARGET OpenGL::OpenGL
-  )
+  if(OpenGL_GLX_FOUND AND NOT TARGET OpenGL::GLX AND TARGET OpenGL::OpenGL)
     if(IS_ABSOLUTE "${OPENGL_glx_LIBRARY}")
       add_library(OpenGL::GLX UNKNOWN IMPORTED)
       set_target_properties(OpenGL::GLX PROPERTIES IMPORTED_LOCATION "${OPENGL_glx_LIBRARY}")
@@ -482,20 +430,12 @@ if(OPENGL_FOUND)
       endif()
     endif()
     set_target_properties(OpenGL::GL PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${OPENGL_INCLUDE_DIR}")
-  elseif(
-    NOT TARGET OpenGL::GL
-    AND TARGET OpenGL::OpenGL
-    AND TARGET OpenGL::GLX
-  )
+  elseif(NOT TARGET OpenGL::GL AND TARGET OpenGL::OpenGL AND TARGET OpenGL::GLX)
     # A legacy GL library is not available, but we can provide the legacy GL
     # target using GLVND OpenGL+GLX.
     add_library(OpenGL::GL INTERFACE IMPORTED)
     set_target_properties(OpenGL::GL PROPERTIES INTERFACE_LINK_LIBRARIES OpenGL::OpenGL)
-    set_property(
-      TARGET OpenGL::GL
-      APPEND
-      PROPERTY INTERFACE_LINK_LIBRARIES OpenGL::GLX
-    )
+    set_property(TARGET OpenGL::GL APPEND PROPERTY INTERFACE_LINK_LIBRARIES OpenGL::GLX)
     set_target_properties(OpenGL::GL PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${OPENGL_INCLUDE_DIR}")
   endif()
 
@@ -504,10 +444,7 @@ if(OPENGL_FOUND)
   # Note we test for OpenGL::OpenGL as a target.  When this module is updated to
   # support GLES, we would additionally want to check for the hypothetical GLES
   # target and enable EGL if either ::GLES or ::OpenGL is created.
-  if(TARGET OpenGL::OpenGL
-     AND OpenGL_EGL_FOUND
-     AND NOT TARGET OpenGL::EGL
-  )
+  if(TARGET OpenGL::OpenGL AND OpenGL_EGL_FOUND AND NOT TARGET OpenGL::EGL)
     if(IS_ABSOLUTE "${OPENGL_egl_LIBRARY}")
       add_library(OpenGL::EGL UNKNOWN IMPORTED)
       set_target_properties(OpenGL::EGL PROPERTIES IMPORTED_LOCATION "${OPENGL_egl_LIBRARY}")

@@ -36,8 +36,11 @@ find_path(TIFF_VERSION_DIR tiffvers.h)
 if(TIFF_INCLUDE_DIR AND TIFF_VERSION_DIR)
   if(NOT TIFF_VERSION_STRING)
     file(READ ${TIFF_VERSION_DIR}/tiffvers.h TIFF_H_TEXT)
-    string(REGEX REPLACE ".*#define TIFFLIB_VERSION_STR \"[ \tA-Za-z,]*([0-9]+.[0-9]+.[0-9]+).*\".*" "\\1"
-                         TIFF_VERSION_STRING ${TIFF_H_TEXT}
+    string(
+      REGEX REPLACE ".*#define TIFFLIB_VERSION_STR \"[ \tA-Za-z,]*([0-9]+.[0-9]+.[0-9]+).*\".*"
+      "\\1"
+      TIFF_VERSION_STRING
+      ${TIFF_H_TEXT}
     )
   endif()
 endif()
@@ -45,12 +48,8 @@ endif()
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(
   Tiff
-  VERSION_VAR
-  TIFF_VERSION_STRING
-  REQUIRED_VARS
-  TIFF_LIBRARY
-  TIFF_INCLUDE_DIR
-  TIFF_VERSION_STRING
+  VERSION_VAR TIFF_VERSION_STRING
+  REQUIRED_VARS TIFF_LIBRARY TIFF_INCLUDE_DIR TIFF_VERSION_STRING
 )
 
 if(Tiff_FOUND)
@@ -61,9 +60,10 @@ if(Tiff_FOUND)
     add_library(Tiff::Tiff UNKNOWN IMPORTED)
     set_target_properties(
       Tiff::Tiff
-      PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${TIFF_INCLUDE_DIRS}"
-                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-                 IMPORTED_LOCATION "${TIFF_LIBRARY}"
+      PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${TIFF_INCLUDE_DIRS}"
+        IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+        IMPORTED_LOCATION "${TIFF_LIBRARY}"
     )
   endif()
 elseif(${CMAKE_FIND_PACKAGE_NAME}_FIND_REQUIRED)

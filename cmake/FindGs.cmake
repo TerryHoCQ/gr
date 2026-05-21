@@ -45,12 +45,8 @@ endif()
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(
   Gs
-  VERSION_VAR
-  GS_VERSION_STRING
-  REQUIRED_VARS
-  GS_LIBRARY
-  GS_INCLUDE_DIR
-  GS_VERSION_STRING
+  VERSION_VAR GS_VERSION_STRING
+  REQUIRED_VARS GS_LIBRARY GS_INCLUDE_DIR GS_VERSION_STRING
 )
 
 if(Gs_FOUND)
@@ -61,9 +57,10 @@ if(Gs_FOUND)
     add_library(Gs::Gs UNKNOWN IMPORTED)
     set_target_properties(
       Gs::Gs
-      PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${GS_INCLUDE_DIRS}"
-                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-                 IMPORTED_LOCATION "${GS_LIBRARY}"
+      PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${GS_INCLUDE_DIRS}"
+        IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+        IMPORTED_LOCATION "${GS_LIBRARY}"
     )
     if(APPLE)
       find_package(Iconv REQUIRED)

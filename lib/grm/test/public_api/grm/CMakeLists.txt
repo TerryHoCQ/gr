@@ -1,42 +1,39 @@
 cmake_minimum_required(VERSION 3.5...4.0 FATAL_ERROR)
 
-project(
-  grm_test_public_api
-  DESCRIPTION "Test the public api of GRM"
-  LANGUAGES C CXX
-)
+project(grm_test_public_api DESCRIPTION "Test the public api of GRM" LANGUAGES C CXX)
 
-set(EXECUTABLE_SOURCES
-    bar_errorbar.c
-    barplot.cxx
-    custom_receiver.c
-    custom_sender.c
-    dom_render.cxx
-    event_handling.c
-    heatmap.c
-    histogram.c
-    hold_append.c
-    imshow.c
-    isosurface.c
-    layout.c
-    line_errorbar.c
-    merge_args.c
-    multi_plot.c
-    zoom.c
-    pie.c
-    plot.c
-    polar_histogram.c
-    polar_heatmap.cxx
-    quiver.c
-    raw.c
-    receiver.c
-    scatter_errorbar.c
-    sender.c
-    size.c
-    subplots.c
-    surface.c
-    volume.c
-    marginalheatmap.c
+set(
+  EXECUTABLE_SOURCES
+  bar_errorbar.c
+  barplot.cxx
+  custom_receiver.c
+  custom_sender.c
+  dom_render.cxx
+  event_handling.c
+  heatmap.c
+  histogram.c
+  hold_append.c
+  imshow.c
+  isosurface.c
+  layout.c
+  line_errorbar.c
+  merge_args.c
+  multi_plot.c
+  zoom.c
+  pie.c
+  plot.c
+  polar_histogram.c
+  polar_heatmap.cxx
+  quiver.c
+  raw.c
+  receiver.c
+  scatter_errorbar.c
+  sender.c
+  size.c
+  subplots.c
+  surface.c
+  volume.c
+  marginalheatmap.c
 )
 
 foreach(executable_source ${EXECUTABLE_SOURCES})
@@ -55,11 +52,12 @@ foreach(executable_source ${EXECUTABLE_SOURCES})
   target_compile_options("${PROJECT_NAME}_${executable}" PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     "${PROJECT_NAME}_${executable}"
-    PROPERTIES C_STANDARD 90
-               C_STANDARD_REQUIRED ON
-               C_EXTENSIONS OFF
-               CXX_STANDARD 17
-               CXX_STANDARD_REQUIRED ON
-               CXX_EXTENSIONS OFF
+    PROPERTIES
+      C_STANDARD 90
+      C_STANDARD_REQUIRED ON
+      C_EXTENSIONS OFF
+      CXX_STANDARD 17
+      CXX_STANDARD_REQUIRED ON
+      CXX_EXTENSIONS OFF
   )
 endforeach()

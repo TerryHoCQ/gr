@@ -13,3 +13,7 @@ e9e9f129c8a87161b9727a5b94d3414d0e33a47c
 c9a848ed891ef494e2251fb289824d04cab4ed66
 # Commit to fix gr.c formatting (2024-03-22)
 754dae1e81e9652f317d1e2eae5a01014ae0668a
+# Commit which updates `clang-format` from version `13` to `22`
+595350f26aeb0db7b3ec26aefa6d22c755796e96
+# Replace `cmake-format` with `gersemi`
+7243f93b88d55aa978055d3c8afeaf1acdaae4c5

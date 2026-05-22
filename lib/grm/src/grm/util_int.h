@@ -38,7 +38,7 @@ extern "C" {
 #define W(x) (x)
 #endif
 
-#define isStringDelimiter(char_ptr, str) ((*(char_ptr) == '"') && (((char_ptr) == (str)) || *((char_ptr)-1) != '\\'))
+#define isStringDelimiter(char_ptr, str) ((*(char_ptr) == '"') && (((char_ptr) == (str)) || *((char_ptr) - 1) != '\\'))
 
 #ifndef arraySize
 #define arraySize(a) ((sizeof(a) / sizeof(*(a))))
@@ -51,7 +51,7 @@ extern "C" {
 #define grm_isnan(x) ((x) != (x))
 #define grm_min(x, y) (((x) < (y)) ? (x) : (y))
 #define grm_max(x, y) (((x) > (y)) ? (x) : (y))
-#define grm_round(x) (((x) < 0) ? ceil((x)-.5) : floor((x) + .5))
+#define grm_round(x) (((x) < 0) ? ceil((x) - .5) : floor((x) + .5))
 #define grm_static_assert(cond, message) ((void)sizeof(char[(cond) ? 1 : -1]))
 
 /* test macros which can be used like `assert` */

@@ -23,9 +23,9 @@
 #define xFlipIf(x, scale_options, xmin, xmax) \
   ((GR_OPTION_FLIP_X & (scale_options) ? (xmin) + (xmax) : 0) + (GR_OPTION_FLIP_X & (scale_options) ? -1 : 1) * (x))
 
-#define xLin(x, scale_options, xmin, xmax, a, b)                                                                      \
-  xFlipIf((GR_OPTION_X_LOG & (scale_options) ? ((x) > 0 ? (a)*log10(x) + (b) : -FLT_MAX) : (x)), scale_options, xmin, \
-          xmax)
+#define xLin(x, scale_options, xmin, xmax, a, b)                                                                  \
+  xFlipIf((GR_OPTION_X_LOG & (scale_options) ? ((x) > 0 ? (a) * log10(x) + (b) : -FLT_MAX) : (x)), scale_options, \
+          xmin, xmax)
 
 #define xLog(x, scale_options, xmin, xmax, a, b)                                                                  \
   (GR_OPTION_X_LOG & (scale_options) ? (pow(10.0, (double)((xFlipIf(x, scale_options, xmin, xmax) - (b)) / (a)))) \

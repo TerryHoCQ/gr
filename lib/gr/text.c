@@ -169,7 +169,7 @@ static void saveFormula(formula_t **formula, formula_t *toSave, int pos, token_t
         (*formula)->next[i] = NULL;
     }
 
-  (*formula)->operator= tok;
+  (*formula)->operator = tok;
   (*formula)->string = s;
   (*formula)->font = font;
   (*formula)->prec = prec;
@@ -660,7 +660,7 @@ static bool term(formula_t **formula, int font, int prec)
             {
               (*current)->next[DENOMINATOR] = sub;
               frac_found = 0;
-              (*current)->operator= token == Mult ? Mult : None;
+              (*current)->operator = token == Mult ? Mult : None;
             }
           else
             saveFormula(current, sub, SUB_LEVEL, token == Mult ? Mult : None, NULL, font, prec);

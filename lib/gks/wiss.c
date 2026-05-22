@@ -503,7 +503,7 @@ static void interp(char *str, int segn)
           RESOLVE(dx, int, sizeof(int));
           RESOLVE(dy, int, sizeof(int));
           RESOLVE(dimx, int, sizeof(int));
-          RESOLVE(i_arr, int, *dimx **dy * sizeof(int));
+          RESOLVE(i_arr, int, *dimx * * dy * sizeof(int));
           break;
 
         case 17: /* GDP */

@@ -11,9 +11,9 @@ class BoundingObject
 {
 public:
   BoundingObject(int id, double xmin, double xmax, double ymin, double ymax, std::shared_ptr<GRM::Element> ref)
-      : id(id), x_min(xmin), x_max(xmax), y_min(ymin), y_max(ymax), ref(std::move(ref)){
+      : id(id), x_min(xmin), x_max(xmax), y_min(ymin), y_max(ymax), ref(std::move(ref)) {
 
-                                                                    };
+        };
 
   [[nodiscard]] QRectF boundingRect() const;
 

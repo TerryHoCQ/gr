@@ -64,11 +64,11 @@ typedef unsigned long uLong;
   yd = p->c * (yn) + p->d
 
 #define DC_to_NDC(xd, yd, xn, yn) \
-  xn = ((xd)-p->b) / p->a;        \
-  yn = ((yd)-p->d) / p->c
+  xn = ((xd) - p->b) / p->a;      \
+  yn = ((yd) - p->d) / p->c
 
-#define CharXform(phi, xrel, yrel, x, y)   \
-  x = cos(phi) * (xrel)-sin(phi) * (yrel); \
+#define CharXform(phi, xrel, yrel, x, y)     \
+  x = cos(phi) * (xrel) - sin(phi) * (yrel); \
   y = sin(phi) * (xrel) + cos(phi) * (yrel);
 
 #define nint(a) ((int)(a + 0.5))

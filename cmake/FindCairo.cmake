@@ -50,14 +50,8 @@ endif()
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(
   Cairo
-  VERSION_VAR
-  CAIRO_VERSION_STRING
-  REQUIRED_VARS
-  CAIRO_LIBRARY
-  CAIRO_INCLUDE_DIR
-  Pixman_FOUND
-  Libpng_FOUND
-  CAIRO_VERSION_STRING
+  VERSION_VAR CAIRO_VERSION_STRING
+  REQUIRED_VARS CAIRO_LIBRARY CAIRO_INCLUDE_DIR Pixman_FOUND Libpng_FOUND CAIRO_VERSION_STRING
 )
 
 if(Cairo_FOUND)
@@ -68,10 +62,11 @@ if(Cairo_FOUND)
     add_library(Cairo::Cairo UNKNOWN IMPORTED)
     set_target_properties(
       Cairo::Cairo
-      PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${CAIRO_INCLUDE_DIRS}"
-                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-                 IMPORTED_LOCATION "${CAIRO_LIBRARY}"
-                 INTERFACE_LINK_LIBRARIES "Pixman::Pixman;Freetype::Freetype;Libpng::Libpng"
+      PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${CAIRO_INCLUDE_DIRS}"
+        IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+        IMPORTED_LOCATION "${CAIRO_LIBRARY}"
+        INTERFACE_LINK_LIBRARIES "Pixman::Pixman;Freetype::Freetype;Libpng::Libpng"
     )
   endif()
 elseif(${CMAKE_FIND_PACKAGE_NAME}_FIND_REQUIRED)

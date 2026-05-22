@@ -35,8 +35,11 @@ endif()
 if(ZLIB_INCLUDE_DIR)
   if(NOT ZLIB_VERSION_STRING)
     file(READ ${ZLIB_INCLUDE_DIR}/zlib.h ZLIB_H_TEXT)
-    string(REGEX REPLACE ".*#define ZLIB_VERSION \"([0-9]+.[0-9]+(.[0-9]+)?)\".*" "\\1" ZLIB_VERSION_STRING
-                         ${ZLIB_H_TEXT}
+    string(
+      REGEX REPLACE ".*#define ZLIB_VERSION \"([0-9]+.[0-9]+(.[0-9]+)?)\".*"
+      "\\1"
+      ZLIB_VERSION_STRING
+      ${ZLIB_H_TEXT}
     )
   endif()
 endif()
@@ -44,12 +47,8 @@ endif()
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(
   ZLIB
-  VERSION_VAR
-  ZLIB_VERSION_STRING
-  REQUIRED_VARS
-  ZLIB_LIBRARY
-  ZLIB_INCLUDE_DIR
-  ZLIB_VERSION_STRING
+  VERSION_VAR ZLIB_VERSION_STRING
+  REQUIRED_VARS ZLIB_LIBRARY ZLIB_INCLUDE_DIR ZLIB_VERSION_STRING
 )
 
 if(ZLIB_FOUND)
@@ -60,9 +59,10 @@ if(ZLIB_FOUND)
     add_library(ZLIB::ZLIB UNKNOWN IMPORTED)
     set_target_properties(
       ZLIB::ZLIB
-      PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}"
-                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-                 IMPORTED_LOCATION "${ZLIB_LIBRARY}"
+      PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}"
+        IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+        IMPORTED_LOCATION "${ZLIB_LIBRARY}"
     )
   endif()
 elseif(${CMAKE_FIND_PACKAGE_NAME}_FIND_REQUIRED)

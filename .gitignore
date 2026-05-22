@@ -1,13 +1,13 @@
 .*
 !.clang-format
 !.clang-tidy
-!.cmake-format.py
+!.gersemirc
 !.git-blame-ignore-revs
 !.githooks/
 !.gitignore
 !.gitlab-ci
 !.gitlab-ci.yml
-!.setup_cmakeformat.sh
+!.setup_gersemi.sh
 !/lib/grm/.clang-tidy-naming
 *.a
 *.app

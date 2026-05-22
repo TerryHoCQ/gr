@@ -4,42 +4,31 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(GetVersionFromGit)
 get_version_from_git(GR_VERSION GR_VERSION_FULL)
 
-project(
-  GR
-  VERSION ${GR_VERSION}
-  LANGUAGES C CXX
-)
+project(GR VERSION ${GR_VERSION} LANGUAGES C CXX)
 
 include(GNUInstallDirs)
 include(CheckCXXCompilerFlag)
 
 check_cxx_compiler_flag("-Werror=implicit" ERROR_IMPLICIT_SUPPORTED)
 if(ERROR_IMPLICIT_SUPPORTED)
-  set(COMPILER_OPTION_ERROR_IMPLICIT
-      "-Werror=implicit"
-      CACHE INTERNAL "Compiler flag for generating errors on implicit declarations"
+  set(
+    COMPILER_OPTION_ERROR_IMPLICIT
+    "-Werror=implicit"
+    CACHE INTERNAL
+    "Compiler flag for generating errors on implicit declarations"
   )
 else()
-  set(COMPILER_OPTION_ERROR_IMPLICIT
-      ""
-      CACHE INTERNAL "Compiler flag for generating errors on implicit declarations"
-  )
+  set(COMPILER_OPTION_ERROR_IMPLICIT "" CACHE INTERNAL "Compiler flag for generating errors on implicit declarations")
 endif()
 
 if(UNIX)
   if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    set(CMAKE_INSTALL_PREFIX
-        "/usr/local/gr"
-        CACHE PATH "GR install prefix" FORCE
-    )
+    set(CMAKE_INSTALL_PREFIX "/usr/local/gr" CACHE PATH "GR install prefix" FORCE)
   endif()
 endif()
 # Force to install libraries to `lib` (avoid `lib64` on RHEL distributions)
 set(CMAKE_INSTALL_LIBDIR "lib")
-set(GR_DIRECTORY
-    "${CMAKE_INSTALL_PREFIX}"
-    CACHE STRING "Default value for GRDIR"
-)
+set(GR_DIRECTORY "${CMAKE_INSTALL_PREFIX}" CACHE STRING "Default value for GRDIR")
 option(GR_BUILD_DEMOS "Build demos for GR" OFF)
 option(GR_BUILD_GKSM "Build GKS metafile reader for GR" OFF)
 option(GR_INSTALL "Create installation target for GR" ON)
@@ -49,16 +38,11 @@ option(GR_FIND_QT5_BY_VARIABLES "Find Qt5 based on the variables Qt5_INCLUDE_DIR
 option(GR_PREFER_XCODEBUILD "Prefer xcodebuild to build macOS applications if available" ON)
 
 if(EMSCRIPTEN)
-  set(GR_DIRECTORY
-      "/"
-      CACHE STRING "Emscripten requires `/` as GRDIR" FORCE
-  )
-  set(GR_INSTALL
-      OFF
-      CACHE BOOL "Install is not supported on Emscripten" FORCE
-  )
-  set(CMAKE_C_FLAGS_DEBUG
-      "--no-heap-copy -g3 -O0 -s ASSERTIONS=2 -s SAFE_HEAP=0 -s STACK_OVERFLOW_CHECK=2 -sNO_DISABLE_EXCEPTION_CATCHING=1 -sWASM=0"
+  set(GR_DIRECTORY "/" CACHE STRING "Emscripten requires `/` as GRDIR" FORCE)
+  set(GR_INSTALL OFF CACHE BOOL "Install is not supported on Emscripten" FORCE)
+  set(
+    CMAKE_C_FLAGS_DEBUG
+    "--no-heap-copy -g3 -O0 -s ASSERTIONS=2 -s SAFE_HEAP=0 -s STACK_OVERFLOW_CHECK=2 -sNO_DISABLE_EXCEPTION_CATCHING=1 -sWASM=0"
   )
   set(CMAKE_C_FLAGS_RELEASE "--no-heap-copy -O3 -DNDEBUG")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
@@ -90,15 +74,9 @@ else()
   set(DEFAULT_SHARED_LIBRARY_SUFFIX "${GR_PLUGIN_SUFFIX}")
 endif()
 
-set(GR_SHARED_LIBRARY_SUFFIX
-    "${DEFAULT_SHARED_LIBRARY_SUFFIX}"
-    CACHE STRING "File suffix for shared libraries"
-)
+set(GR_SHARED_LIBRARY_SUFFIX "${DEFAULT_SHARED_LIBRARY_SUFFIX}" CACHE STRING "File suffix for shared libraries")
 
-set(CMAKE_FIND_PACKAGE_PREFER_CONFIG
-    TRUE
-    CACHE BOOL ""
-)
+set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE CACHE BOOL "")
 
 # Find the following packages always in system locations even if `GR_USE_BUNDLED_LIBRARIES` is set, because they are not
 # located in 3rdparty
@@ -109,22 +87,12 @@ if(NOT EMSCRIPTEN)
   if(${CMAKE_VERSION} VERSION_GREATER "3.16.0")
     find_package(
       Qt6
-      OPTIONAL_COMPONENTS
-        Widgets
-        Core
-        Network
-        Gui
-        PrintSupport
+      OPTIONAL_COMPONENTS Widgets Core Network Gui PrintSupport
     )
   endif()
   find_package(
     Qt5
-    OPTIONAL_COMPONENTS
-      Widgets
-      Core
-      Network
-      Gui
-      PrintSupport
+    OPTIONAL_COMPONENTS Widgets Core Network Gui PrintSupport
   )
   find_package(Qt4)
 endif()
@@ -178,15 +146,10 @@ else()
   set(INSTALL_RPATH "${GR_DIRECTORY}/lib/;$ORIGIN/.")
 endif()
 
-if(Qt4_FOUND
-   OR (Qt5Widgets_FOUND
-       AND Qt5Core_FOUND
-       AND Qt5Network_FOUND
-      )
-   OR (Qt6Widgets_FOUND
-       AND Qt6Core_FOUND
-       AND Qt6Network_FOUND
-      )
+if(
+  Qt4_FOUND
+  OR (Qt5Widgets_FOUND AND Qt5Core_FOUND AND Qt5Network_FOUND)
+  OR (Qt6Widgets_FOUND AND Qt6Core_FOUND AND Qt6Network_FOUND)
 )
   if(GR_MANUAL_MOC_AND_RCC)
     if(NOT QT_MOC_EXECUTABLE)
@@ -212,10 +175,7 @@ if(Qt4_FOUND)
     get_filename_component(Qt4_LIBRARY_DIR "${QT_LIBRARY_DIR}/../.." ABSOLUTE)
   endif()
 endif()
-if(Qt5Widgets_FOUND
-   AND Qt5Core_FOUND
-   AND Qt5Network_FOUND
-)
+if(Qt5Widgets_FOUND AND Qt5Core_FOUND AND Qt5Network_FOUND)
   set(QT5_MOC_INCLUDE_FLAGS "")
   foreach(DIR IN LISTS Qt5Core_INCLUDE_DIRS Qt5Gui_INCLUDE_DIRS Qt5Widgets_INCLUDE_DIRS)
     set(QT5_MOC_INCLUDE_FLAGS ${QT5_MOC_INCLUDE_FLAGS} -I${DIR})
@@ -224,10 +184,7 @@ if(Qt5Widgets_FOUND
     get_filename_component(Qt5_LIBRARY_DIR "${Qt5_DIR}/../.." ABSOLUTE)
   endif()
 endif()
-if(Qt6Widgets_FOUND
-   AND Qt6Core_FOUND
-   AND Qt6Network_FOUND
-)
+if(Qt6Widgets_FOUND AND Qt6Core_FOUND AND Qt6Network_FOUND)
   set(QT6_MOC_INCLUDE_FLAGS "")
   foreach(DIR IN LISTS Qt6Core_INCLUDE_DIRS Qt6Gui_INCLUDE_DIRS Qt6Widgets_INCLUDE_DIRS)
     set(QT6_MOC_INCLUDE_FLAGS ${QT6_MOC_INCLUDE_FLAGS} -I${DIR})
@@ -239,32 +196,26 @@ endif()
 
 if(X11_FOUND)
   # older versions of FindX11.cmake set variables but do not create targets
-  if(NOT TARGET X11::X11
-     AND X11_INCLUDE_DIR
-     AND X11_X11_LIB
-     AND X11_Xft_LIB
-  )
+  if(NOT TARGET X11::X11 AND X11_INCLUDE_DIR AND X11_X11_LIB AND X11_Xft_LIB)
     add_library(X11::X11 UNKNOWN IMPORTED)
     set_target_properties(
       X11::X11
-      PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${X11_INCLUDE_DIR}/"
-                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-                 IMPORTED_LOCATION "${X11_X11_LIB}"
-                 INTERFACE_LINK_LIBRARIES "${X11_Xft_LIB}"
+      PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${X11_INCLUDE_DIR}/"
+        IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+        IMPORTED_LOCATION "${X11_X11_LIB}"
+        INTERFACE_LINK_LIBRARIES "${X11_Xft_LIB}"
     )
   endif()
-  if(NOT TARGET X11::Xt
-     AND X11_INCLUDE_DIR
-     AND X11_Xt_LIB
-     AND TARGET X11::X11
-  )
+  if(NOT TARGET X11::Xt AND X11_INCLUDE_DIR AND X11_Xt_LIB AND TARGET X11::X11)
     add_library(X11::Xt UNKNOWN IMPORTED)
     set_target_properties(
       X11::Xt
-      PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${X11_INCLUDE_DIR}/"
-                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-                 IMPORTED_LOCATION "${X11_Xt_LIB}"
-                 INTERFACE_LINK_LIBRARIES "X11::X11"
+      PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${X11_INCLUDE_DIR}/"
+        IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+        IMPORTED_LOCATION "${X11_Xt_LIB}"
+        INTERFACE_LINK_LIBRARIES "X11::X11"
     )
   endif()
 endif()
@@ -273,30 +224,32 @@ add_library(term_util OBJECT lib/gks/term_util.c)
 target_compile_options(term_util PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
 target_include_directories(term_util PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks)
 set_target_properties(
-  term_util PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON POSITION_INDEPENDENT_CODE ON
+  term_util
+  PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON POSITION_INDEPENDENT_CODE ON
 )
 
-set(GKS_SOURCES
-    lib/gks/afm.c
-    lib/gks/font.c
-    lib/gks/socket.c
-    lib/gks/ft.c
-    lib/gks/malloc.c
-    lib/gks/util.c
-    lib/gks/compress.c
-    lib/gks/gks.c
-    lib/gks/mf.c
-    lib/gks/win.c
-    lib/gks/gksforbnd.c
-    lib/gks/pdf.c
-    lib/gks/wiss.c
-    lib/gks/dl.c
-    lib/gks/plugin.c
-    lib/gks/error.c
-    lib/gks/io.c
-    lib/gks/ps.c
-    lib/gks/resample.c
-    $<TARGET_OBJECTS:term_util>
+set(
+  GKS_SOURCES
+  lib/gks/afm.c
+  lib/gks/font.c
+  lib/gks/socket.c
+  lib/gks/ft.c
+  lib/gks/malloc.c
+  lib/gks/util.c
+  lib/gks/compress.c
+  lib/gks/gks.c
+  lib/gks/mf.c
+  lib/gks/win.c
+  lib/gks/gksforbnd.c
+  lib/gks/pdf.c
+  lib/gks/wiss.c
+  lib/gks/dl.c
+  lib/gks/plugin.c
+  lib/gks/error.c
+  lib/gks/io.c
+  lib/gks/ps.c
+  lib/gks/resample.c
+  $<TARGET_OBJECTS:term_util>
 )
 if(EMSCRIPTEN)
   list(APPEND GKS_SOURCES js/jsplugin.c)
@@ -337,18 +290,10 @@ foreach(LIBRARY IN LISTS GKS_LIBRARIES)
   if(Freetype_FOUND)
     target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} Freetype::Freetype)
   else()
-    target_compile_definitions(
-      ${LIBRARY}
-      ${GKS_LINK_MODE}
-      NO_FT
-    )
+    target_compile_definitions(${LIBRARY} ${GKS_LINK_MODE} NO_FT)
   endif()
   target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} ZLIB::ZLIB)
-  target_compile_definitions(
-    ${LIBRARY}
-    ${GKS_LINK_MODE}
-    HAVE_ZLIB
-  )
+  target_compile_definitions(${LIBRARY} ${GKS_LINK_MODE} HAVE_ZLIB)
   if(UNIX)
     target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} dl)
   elseif(WIN32)
@@ -363,20 +308,21 @@ foreach(LIBRARY IN LISTS GKS_LIBRARIES)
   endif()
   target_compile_options(${LIBRARY} PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   target_include_directories(
-    ${LIBRARY} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/>
-                      $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    ${LIBRARY}
+    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
   target_compile_definitions(${LIBRARY} PRIVATE GRDIR="${GR_DIRECTORY}")
   set_target_properties(
     ${LIBRARY}
-    PROPERTIES C_STANDARD 90
-               C_EXTENSIONS OFF
-               C_STANDARD_REQUIRED ON
-               POSITION_INDEPENDENT_CODE ON
-               PREFIX "lib"
-               IMPORT_PREFIX "lib"
-               OUTPUT_NAME GKS
-               INSTALL_RPATH "${INSTALL_RPATH}"
+    PROPERTIES
+      C_STANDARD 90
+      C_EXTENSIONS OFF
+      C_STANDARD_REQUIRED ON
+      POSITION_INDEPENDENT_CODE ON
+      PREFIX "lib"
+      IMPORT_PREFIX "lib"
+      OUTPUT_NAME GKS
+      INSTALL_RPATH "${INSTALL_RPATH}"
   )
 endforeach()
 unset(GKS_LINK_MODE)
@@ -387,33 +333,35 @@ if(NOT EMSCRIPTEN)
   set_target_properties(gks_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" EXPORT_NAME GKS)
 endif()
 add_library(GR::GKS ALIAS gks_static)
-file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/gr_version.h
-     "#ifndef GR_VERSION\n#define GR_VERSION \"${GR_VERSION_FULL}\"\n#endif\n"
+file(
+  WRITE ${CMAKE_CURRENT_BINARY_DIR}/gr_version.h
+  "#ifndef GR_VERSION\n#define GR_VERSION \"${GR_VERSION_FULL}\"\n#endif\n"
 )
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/gr_version.h PROPERTIES GENERATED TRUE)
 
-set(GR_SOURCES
-    lib/gr/boundary.c
-    lib/gr/contour.c
-    lib/gr/contourf.c
-    lib/gr/delaunay.c
-    lib/gr/gr.c
-    lib/gr/grforbnd.c
-    lib/gr/gridit.c
-    lib/gr/image.c
-    lib/gr/import.c
-    lib/gr/interp2.c
-    lib/gr/stream.c
-    lib/gr/md5.c
-    lib/gr/shade.c
-    lib/gr/spline.c
-    lib/gr/strlib.c
-    lib/gr/text.c
-    lib/gr/mathtex2.c
-    lib/gr/mathtex2_kerning.c
-    lib/gr/mathtex2.tab.c
-    lib/gr/threadpool.c
-    ${CMAKE_CURRENT_BINARY_DIR}/gr_version.h
+set(
+  GR_SOURCES
+  lib/gr/boundary.c
+  lib/gr/contour.c
+  lib/gr/contourf.c
+  lib/gr/delaunay.c
+  lib/gr/gr.c
+  lib/gr/grforbnd.c
+  lib/gr/gridit.c
+  lib/gr/image.c
+  lib/gr/import.c
+  lib/gr/interp2.c
+  lib/gr/stream.c
+  lib/gr/md5.c
+  lib/gr/shade.c
+  lib/gr/spline.c
+  lib/gr/strlib.c
+  lib/gr/text.c
+  lib/gr/mathtex2.c
+  lib/gr/mathtex2_kerning.c
+  lib/gr/mathtex2.tab.c
+  lib/gr/threadpool.c
+  ${CMAKE_CURRENT_BINARY_DIR}/gr_version.h
 )
 
 add_library(gr_static STATIC ${GR_SOURCES})
@@ -452,8 +400,8 @@ foreach(LIBRARY IN LISTS GR_LIBRARIES)
     endif()
   endif()
   target_include_directories(
-    ${LIBRARY} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/>
-                      $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    ${LIBRARY}
+    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
   target_include_directories(${LIBRARY} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
   if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
@@ -463,14 +411,15 @@ foreach(LIBRARY IN LISTS GR_LIBRARIES)
   target_compile_options(${LIBRARY} PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     ${LIBRARY}
-    PROPERTIES C_STANDARD 90
-               C_EXTENSIONS OFF
-               C_STANDARD_REQUIRED ON
-               POSITION_INDEPENDENT_CODE ON
-               INSTALL_RPATH "${INSTALL_RPATH}"
-               PREFIX "lib"
-               IMPORT_PREFIX "lib"
-               OUTPUT_NAME GR
+    PROPERTIES
+      C_STANDARD 90
+      C_EXTENSIONS OFF
+      C_STANDARD_REQUIRED ON
+      POSITION_INDEPENDENT_CODE ON
+      INSTALL_RPATH "${INSTALL_RPATH}"
+      PREFIX "lib"
+      IMPORT_PREFIX "lib"
+      OUTPUT_NAME GR
   )
 endforeach()
 unset(GR_LINK_MODE)
@@ -482,17 +431,18 @@ if(NOT EMSCRIPTEN)
   add_library(GR::GR ALIAS gr_shared)
 endif()
 
-set(GR3_SOURCES
-    lib/gr3/gr3.c
-    lib/gr3/gr3_convenience.c
-    lib/gr3/gr3_gr.c
-    lib/gr3/gr3_html.c
-    lib/gr3/gr3_jpeg.c
-    lib/gr3/gr3_mc.c
-    lib/gr3/gr3_png.c
-    lib/gr3/gr3_povray.c
-    lib/gr3/gr3_slices.c
-    lib/gr3/gr3_sr.c
+set(
+  GR3_SOURCES
+  lib/gr3/gr3.c
+  lib/gr3/gr3_convenience.c
+  lib/gr3/gr3_gr.c
+  lib/gr3/gr3_html.c
+  lib/gr3/gr3_jpeg.c
+  lib/gr3/gr3_mc.c
+  lib/gr3/gr3_png.c
+  lib/gr3/gr3_povray.c
+  lib/gr3/gr3_slices.c
+  lib/gr3/gr3_sr.c
 )
 
 add_library(gr3_static STATIC ${GR3_SOURCES})
@@ -550,19 +500,20 @@ foreach(LIBRARY IN LISTS GR3_LIBRARIES)
   endif()
   target_compile_options(${LIBRARY} PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   target_include_directories(
-    ${LIBRARY} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/gr3/>
-                      $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    ${LIBRARY}
+    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/gr3/> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
   set_target_properties(
     ${LIBRARY}
-    PROPERTIES C_STANDARD 90
-               C_EXTENSIONS OFF
-               C_STANDARD_REQUIRED ON
-               POSITION_INDEPENDENT_CODE ON
-               INSTALL_RPATH "${INSTALL_RPATH}"
-               PREFIX "lib"
-               IMPORT_PREFIX "lib"
-               OUTPUT_NAME GR3
+    PROPERTIES
+      C_STANDARD 90
+      C_EXTENSIONS OFF
+      C_STANDARD_REQUIRED ON
+      POSITION_INDEPENDENT_CODE ON
+      INSTALL_RPATH "${INSTALL_RPATH}"
+      PREFIX "lib"
+      IMPORT_PREFIX "lib"
+      OUTPUT_NAME GR3
   )
 endforeach()
 unset(GR3_LINK_MODE)
@@ -575,10 +526,7 @@ if(NOT EMSCRIPTEN)
 endif()
 
 if(UNIX AND NOT APPLE)
-  if(TARGET X11::X11
-     AND TARGET OpenGL::GLX
-     AND TARGET OpenGL::GL
-  )
+  if(TARGET X11::X11 AND TARGET OpenGL::GLX AND TARGET OpenGL::GL)
     add_library(gr3platform SHARED lib/gr3/gr3_platform_glx.c)
     target_link_libraries(gr3platform PUBLIC GR::GR)
     target_link_libraries(gr3platform PUBLIC X11::X11)
@@ -587,12 +535,13 @@ if(UNIX AND NOT APPLE)
     target_compile_options(gr3platform PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
     set_target_properties(
       gr3platform
-      PROPERTIES C_STANDARD 90
-                 C_EXTENSIONS OFF
-                 C_STANDARD_REQUIRED ON
-                 POSITION_INDEPENDENT_CODE ON
-                 INSTALL_RPATH "${INSTALL_RPATH}"
-                 OUTPUT_NAME GR3platform
+      PROPERTIES
+        C_STANDARD 90
+        C_EXTENSIONS OFF
+        C_STANDARD_REQUIRED ON
+        POSITION_INDEPENDENT_CODE ON
+        INSTALL_RPATH "${INSTALL_RPATH}"
+        OUTPUT_NAME GR3platform
     )
   else()
     target_compile_definitions(gr3_static PUBLIC -DNO_GL)
@@ -610,8 +559,11 @@ endif()
 
 if(NOT EMSCRIPTEN)
   add_library(
-    csv_plugin SHARED lib/grm/src/grm/import_plugins/csv_plugin.cxx lib/grm/src/grm/import_utils.cxx
-                      lib/grm/src/grm/utilcpp.cxx
+    csv_plugin
+    SHARED
+    lib/grm/src/grm/import_plugins/csv_plugin.cxx
+    lib/grm/src/grm/import_utils.cxx
+    lib/grm/src/grm/utilcpp.cxx
   )
   target_link_libraries(csv_plugin PUBLIC GR::GR GR::GRM)
   if(WIN32)
@@ -619,65 +571,67 @@ if(NOT EMSCRIPTEN)
   endif()
   set_target_properties(
     csv_plugin
-    PROPERTIES C_STANDARD 90
-               C_EXTENSIONS OFF
-               C_STANDARD_REQUIRED ON
-               C_VISIBILITY_PRESET hidden
-               CXX_STANDARD 17
-               CXX_EXTENSIONS OFF
-               CXX_STANDARD_REQUIRED ON
-               CXX_VISIBILITY_PRESET hidden
+    PROPERTIES
+      C_STANDARD 90
+      C_EXTENSIONS OFF
+      C_STANDARD_REQUIRED ON
+      C_VISIBILITY_PRESET hidden
+      CXX_STANDARD 17
+      CXX_EXTENSIONS OFF
+      CXX_STANDARD_REQUIRED ON
+      CXX_VISIBILITY_PRESET hidden
   )
 endif()
 
-set(GRM_SOURCES
-    lib/grm/src/grm/args.c
-    lib/grm/src/grm/backtrace.c
-    lib/grm/src/grm/base64.c
-    lib/grm/src/grm/bson.c
-    lib/grm/src/grm/dump.c
-    lib/grm/src/grm/dynamic_args_array.c
-    lib/grm/src/grm/error.c
-    lib/grm/src/grm/event.c
-    lib/grm/src/grm/import.cxx
-    lib/grm/src/grm/import_utils.cxx
-    lib/grm/src/grm/interaction.cxx
-    lib/grm/src/grm/json.c
-    lib/grm/src/grm/layout_c.cxx
-    lib/grm/src/grm/layout.cxx
-    lib/grm/src/grm/layout_error.cxx
-    lib/grm/src/grm/logging.c
-    lib/grm/src/grm/memwriter.c
-    lib/grm/src/grm/net.c
-    lib/grm/src/grm/plot.cxx
-    lib/grm/src/grm/util.c
-    lib/grm/src/grm/utilcpp.cxx
-    lib/grm/src/grm/datatype/double_map.c
-    lib/grm/src/grm/datatype/size_t_list.c
-    lib/grm/src/grm/datatype/string_array_map.c
-    lib/grm/src/grm/datatype/string_list.c
-    lib/grm/src/grm/datatype/string_map.c
-    lib/grm/src/grm/datatype/uint_map.c
-    lib/grm/src/grm/dom_render/casts.cxx
-    lib/grm/src/grm/dom_render/context.cxx
-    lib/grm/src/grm/dom_render/creator.cxx
-    lib/grm/src/grm/dom_render/render.cxx
-    lib/grm/src/grm/dom_render/drawable.cxx
-    lib/grm/src/grm/dom_render/process_attributes.cxx
-    lib/grm/src/grm/dom_render/process_elements.cxx
-    lib/grm/src/grm/dom_render/render_util.cxx
-    lib/grm/src/grm/dom_render/updater.cxx
-    lib/grm/src/grm/dom_render/graphics_tree/comment.cxx
-    lib/grm/src/grm/dom_render/graphics_tree/document.cxx
-    lib/grm/src/grm/dom_render/graphics_tree/element.cxx
-    lib/grm/src/grm/dom_render/graphics_tree/node.cxx
-    lib/grm/src/grm/dom_render/graphics_tree/value.cxx
-    lib/grm/src/grm/dom_render/graphics_tree/util.cxx
-    lib/grm/src/grm/dom_render/manage_custom_color_index.cxx
-    lib/grm/src/grm/dom_render/manage_gr_context_ids.cxx
-    lib/grm/src/grm/dom_render/manage_z_index.cxx
-    lib/grm/src/grm/import_plugins/plugin_loader.cxx
-    lib/grm/src/grm/import_plugins/vdr.cxx
+set(
+  GRM_SOURCES
+  lib/grm/src/grm/args.c
+  lib/grm/src/grm/backtrace.c
+  lib/grm/src/grm/base64.c
+  lib/grm/src/grm/bson.c
+  lib/grm/src/grm/dump.c
+  lib/grm/src/grm/dynamic_args_array.c
+  lib/grm/src/grm/error.c
+  lib/grm/src/grm/event.c
+  lib/grm/src/grm/import.cxx
+  lib/grm/src/grm/import_utils.cxx
+  lib/grm/src/grm/interaction.cxx
+  lib/grm/src/grm/json.c
+  lib/grm/src/grm/layout_c.cxx
+  lib/grm/src/grm/layout.cxx
+  lib/grm/src/grm/layout_error.cxx
+  lib/grm/src/grm/logging.c
+  lib/grm/src/grm/memwriter.c
+  lib/grm/src/grm/net.c
+  lib/grm/src/grm/plot.cxx
+  lib/grm/src/grm/util.c
+  lib/grm/src/grm/utilcpp.cxx
+  lib/grm/src/grm/datatype/double_map.c
+  lib/grm/src/grm/datatype/size_t_list.c
+  lib/grm/src/grm/datatype/string_array_map.c
+  lib/grm/src/grm/datatype/string_list.c
+  lib/grm/src/grm/datatype/string_map.c
+  lib/grm/src/grm/datatype/uint_map.c
+  lib/grm/src/grm/dom_render/casts.cxx
+  lib/grm/src/grm/dom_render/context.cxx
+  lib/grm/src/grm/dom_render/creator.cxx
+  lib/grm/src/grm/dom_render/render.cxx
+  lib/grm/src/grm/dom_render/drawable.cxx
+  lib/grm/src/grm/dom_render/process_attributes.cxx
+  lib/grm/src/grm/dom_render/process_elements.cxx
+  lib/grm/src/grm/dom_render/render_util.cxx
+  lib/grm/src/grm/dom_render/updater.cxx
+  lib/grm/src/grm/dom_render/graphics_tree/comment.cxx
+  lib/grm/src/grm/dom_render/graphics_tree/document.cxx
+  lib/grm/src/grm/dom_render/graphics_tree/element.cxx
+  lib/grm/src/grm/dom_render/graphics_tree/node.cxx
+  lib/grm/src/grm/dom_render/graphics_tree/value.cxx
+  lib/grm/src/grm/dom_render/graphics_tree/util.cxx
+  lib/grm/src/grm/dom_render/manage_custom_color_index.cxx
+  lib/grm/src/grm/dom_render/manage_gr_context_ids.cxx
+  lib/grm/src/grm/dom_render/manage_z_index.cxx
+  lib/grm/src/grm/import_plugins/plugin_loader.cxx
+  lib/grm/src/grm/import_plugins/vdr.cxx
 )
 if(EMSCRIPTEN)
   list(APPEND GRM_SOURCES lib/grm/src/grm/import_plugins/csv_plugin.cxx)
@@ -725,8 +679,10 @@ foreach(LIBRARY IN LISTS GRM_LIBRARIES)
   target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} Libpng::Libpng)
   target_include_directories(
     ${LIBRARY}
-    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/include/>
-           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/src/> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/include/>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/src/>
+      $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
   target_compile_definitions(${LIBRARY} PRIVATE BUILDING_GR)
   target_compile_definitions(${LIBRARY} PRIVATE GRDIR="${GR_DIRECTORY}")
@@ -736,17 +692,18 @@ foreach(LIBRARY IN LISTS GRM_LIBRARIES)
   endif()
   set_target_properties(
     ${LIBRARY}
-    PROPERTIES C_STANDARD 90
-               C_EXTENSIONS OFF
-               C_STANDARD_REQUIRED ON
-               CXX_STANDARD 17
-               CXX_EXTENSIONS OFF
-               CXX_STANDARD_REQUIRED ON
-               POSITION_INDEPENDENT_CODE ON
-               INSTALL_RPATH "${INSTALL_RPATH}"
-               PREFIX "lib"
-               IMPORT_PREFIX "lib"
-               OUTPUT_NAME GRM
+    PROPERTIES
+      C_STANDARD 90
+      C_EXTENSIONS OFF
+      C_STANDARD_REQUIRED ON
+      CXX_STANDARD 17
+      CXX_EXTENSIONS OFF
+      CXX_STANDARD_REQUIRED ON
+      POSITION_INDEPENDENT_CODE ON
+      INSTALL_RPATH "${INSTALL_RPATH}"
+      PREFIX "lib"
+      IMPORT_PREFIX "lib"
+      OUTPUT_NAME GRM
   )
 endforeach()
 unset(GRM_LINK_MODE)
@@ -799,11 +756,7 @@ if(NOT EMSCRIPTEN)
   target_compile_definitions(cairoplugin PRIVATE NO_X11)
   set_target_properties(
     cairoplugin
-    PROPERTIES C_STANDARD 90
-               C_EXTENSIONS OFF
-               C_STANDARD_REQUIRED ON
-               PREFIX ""
-               SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
 
   add_library(aggplugin SHARED lib/gks/plugin/aggplugin.cxx)
@@ -825,11 +778,7 @@ if(NOT EMSCRIPTEN)
   endif()
   set_target_properties(
     aggplugin
-    PROPERTIES CXX_STANDARD 11
-               CXX_EXTENSIONS OFF
-               CXX_STANDARD_REQUIRED ON
-               PREFIX ""
-               SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES CXX_STANDARD 11 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
 
   add_library(videoplugin SHARED lib/gks/plugin/gif.c lib/gks/plugin/vc.c lib/gks/plugin/videoplugin.c)
@@ -855,12 +804,13 @@ if(NOT EMSCRIPTEN)
   target_compile_options(videoplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     videoplugin
-    PROPERTIES C_STANDARD 99
-               C_EXTENSIONS OFF
-               C_STANDARD_REQUIRED ON
-               LINKER_LANGUAGE CXX
-               PREFIX ""
-               SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES
+      C_STANDARD 99
+      C_EXTENSIONS OFF
+      C_STANDARD_REQUIRED ON
+      LINKER_LANGUAGE CXX
+      PREFIX ""
+      SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
 
   add_library(pgfplugin SHARED lib/gks/plugin/pgfplugin.c)
@@ -869,11 +819,7 @@ if(NOT EMSCRIPTEN)
   target_compile_options(pgfplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     pgfplugin
-    PROPERTIES C_STANDARD 90
-               C_EXTENSIONS OFF
-               C_STANDARD_REQUIRED ON
-               PREFIX ""
-               SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
   string(APPEND GR_REPORT "- pgfplugin:\n")
   string(APPEND GR_REPORT "\tTeX output: Yes\n")
@@ -883,11 +829,7 @@ if(NOT EMSCRIPTEN)
   target_compile_options(wmfplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     wmfplugin
-    PROPERTIES C_STANDARD 90
-               C_EXTENSIONS OFF
-               C_STANDARD_REQUIRED ON
-               PREFIX ""
-               SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
   string(APPEND GR_REPORT "- wmfplugin:\n")
   string(APPEND GR_REPORT "\tWMF output: Yes\n")
@@ -912,11 +854,7 @@ if(NOT EMSCRIPTEN)
   target_compile_options(gsplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     gsplugin
-    PROPERTIES C_STANDARD 90
-               C_EXTENSIONS OFF
-               C_STANDARD_REQUIRED ON
-               PREFIX ""
-               SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
 
   add_library(svgplugin SHARED lib/gks/plugin/svgplugin.c)
@@ -925,11 +863,7 @@ if(NOT EMSCRIPTEN)
   target_compile_options(svgplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     svgplugin
-    PROPERTIES C_STANDARD 90
-               C_EXTENSIONS OFF
-               C_STANDARD_REQUIRED ON
-               PREFIX ""
-               SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
   string(APPEND GR_REPORT "- svgplugin:\n")
   string(APPEND GR_REPORT "\tSVG output: Yes\n")
@@ -954,11 +888,7 @@ if(NOT EMSCRIPTEN)
   target_compile_options(glplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     glplugin
-    PROPERTIES C_STANDARD 90
-               C_EXTENSIONS OFF
-               C_STANDARD_REQUIRED ON
-               PREFIX ""
-               SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
 
   add_library(zmqplugin SHARED lib/gks/plugin/zmqplugin.c)
@@ -973,11 +903,7 @@ if(NOT EMSCRIPTEN)
   target_compile_options(zmqplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     zmqplugin
-    PROPERTIES C_STANDARD 90
-               C_EXTENSIONS OFF
-               C_STANDARD_REQUIRED ON
-               PREFIX ""
-               SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
 
   add_library(x11plugin SHARED lib/gks/plugin/x11plugin.c)
@@ -1001,14 +927,15 @@ if(NOT EMSCRIPTEN)
   target_compile_options(x11plugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     x11plugin
-    PROPERTIES C_STANDARD 90
-               C_EXTENSIONS OFF
-               C_STANDARD_REQUIRED ON
-               CXX_STANDARD 11
-               CXX_EXTENSIONS OFF
-               CXX_STANDARD_REQUIRED ON
-               PREFIX ""
-               SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES
+      C_STANDARD 90
+      C_EXTENSIONS OFF
+      C_STANDARD_REQUIRED ON
+      CXX_STANDARD 11
+      CXX_EXTENSIONS OFF
+      CXX_STANDARD_REQUIRED ON
+      PREFIX ""
+      SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
 
   add_library(qt5plugin SHARED lib/gks/plugin/qt5plugin.cxx)
@@ -1023,11 +950,7 @@ if(NOT EMSCRIPTEN)
   target_compile_options(qt5plugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     qt5plugin
-    PROPERTIES CXX_STANDARD 11
-               CXX_EXTENSIONS OFF
-               CXX_STANDARD_REQUIRED ON
-               PREFIX ""
-               SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES CXX_STANDARD 11 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
 
   add_library(qt6plugin SHARED lib/gks/plugin/qt6plugin.cxx)
@@ -1037,11 +960,7 @@ if(NOT EMSCRIPTEN)
     target_link_libraries(qt6plugin PUBLIC Qt6::Widgets)
     set_target_properties(
       qt6plugin
-      PROPERTIES CXX_STANDARD 17
-                 CXX_EXTENSIONS OFF
-                 CXX_STANDARD_REQUIRED ON
-                 PREFIX ""
-                 SUFFIX "${GR_PLUGIN_SUFFIX}"
+      PROPERTIES CXX_STANDARD 17 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
     )
   else()
     if(${CMAKE_VERSION} VERSION_LESS "3.16.0")
@@ -1051,11 +970,7 @@ if(NOT EMSCRIPTEN)
     endif()
     set_target_properties(
       qt6plugin
-      PROPERTIES CXX_STANDARD 11
-                 CXX_EXTENSIONS OFF
-                 CXX_STANDARD_REQUIRED ON
-                 PREFIX ""
-                 SUFFIX "${GR_PLUGIN_SUFFIX}"
+      PROPERTIES CXX_STANDARD 11 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
     )
     target_compile_definitions(qt6plugin PRIVATE NO_QT6)
   endif()
@@ -1073,22 +988,14 @@ if(NOT EMSCRIPTEN)
   target_compile_options(qtplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     qtplugin
-    PROPERTIES CXX_STANDARD 11
-               CXX_EXTENSIONS OFF
-               CXX_STANDARD_REQUIRED ON
-               PREFIX ""
-               SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES CXX_STANDARD 11 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
 
   add_library(gtkplugin SHARED lib/gks/plugin/gtkplugin.c)
   target_link_libraries(gtkplugin PUBLIC gks_static)
   set_target_properties(
     gtkplugin
-    PROPERTIES C_STANDARD 90
-               C_EXTENSIONS OFF
-               C_STANDARD_REQUIRED ON
-               PREFIX ""
-               SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
   target_compile_options(gtkplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   string(APPEND GR_REPORT "- gtkplugin: No (not implemented yet)\n")
@@ -1107,11 +1014,7 @@ if(APPLE)
   target_compile_options(quartzplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     quartzplugin
-    PROPERTIES C_STANDARD 90
-               C_EXTENSIONS OFF
-               C_STANDARD_REQUIRED ON
-               PREFIX ""
-               SUFFIX "${GR_PLUGIN_SUFFIX}"
+    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON PREFIX "" SUFFIX "${GR_PLUGIN_SUFFIX}"
   )
 endif()
 
@@ -1128,8 +1031,9 @@ if(Qt4_FOUND)
     set_target_properties(qt4gr PROPERTIES AUTOMOC OFF AUTORCC OFF)
     add_custom_command(
       OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_qt4_grwidget.cxx
-      COMMAND ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${QT4_MOC_INCLUDE_FLAGS}
-              ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_qt4_grwidget.cxx
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${QT4_MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_qt4_grwidget.cxx
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.cxx
     )
     target_sources(qt4gr PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_qt4_grwidget.cxx)
@@ -1153,8 +1057,9 @@ if(Qt5Widgets_FOUND AND Qt5Core_FOUND)
     set_target_properties(qt5gr PROPERTIES AUTOMOC OFF AUTORCC OFF)
     add_custom_command(
       OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_qt5_grwidget.cxx
-      COMMAND ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${QT5_MOC_INCLUDE_FLAGS}
-              ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_qt5_grwidget.cxx
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${QT5_MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_qt5_grwidget.cxx
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.cxx
     )
     target_sources(qt5gr PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_qt5_grwidget.cxx)
@@ -1178,8 +1083,9 @@ if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
     set_target_properties(qt6gr PROPERTIES AUTOMOC OFF AUTORCC OFF)
     add_custom_command(
       OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_qt6_grwidget.cxx
-      COMMAND ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${QT6_MOC_INCLUDE_FLAGS}
-              ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_qt6_grwidget.cxx
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${QT6_MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_qt6_grwidget.cxx
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.cxx
     )
     target_sources(qt6gr PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_qt6_grwidget.cxx)
@@ -1190,12 +1096,10 @@ if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
   add_library(GR::qt6gr ALIAS qt6gr)
 endif()
 
-if(Qt6Widgets_FOUND
-   AND Qt6Core_FOUND
-   AND (NOT MINGW OR NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "i686")
-)
+if(Qt6Widgets_FOUND AND Qt6Core_FOUND AND (NOT MINGW OR NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "i686"))
   add_library(
-    grplotWidget SHARED
+    grplotWidget
+    SHARED
     lib/grm/grplot/CollapsibleSection.cxx
     lib/grm/grplot/gredit/AddElementWidget.cxx
     lib/grm/grplot/gredit/BoundingLogic.cxx
@@ -1268,29 +1172,32 @@ if(APPLE)
       endif()
     endif()
     if(GR_PREFER_XCODEBUILD AND XCODE_BUILD)
-      set(GKSTERM_SOURCES
-          lib/gks/quartz/GKSTerm.h
-          lib/gks/quartz/GKSTerm.icns
-          lib/gks/quartz/GKSTerm.m
-          lib/gks/quartz/GKSTerm_Prefix.pch
-          lib/gks/quartz/GKSView.h
-          lib/gks/quartz/GKSView.m
-          lib/gks/quartz/Info.plist
-          lib/gks/quartz/MacOSXBundleInfo.plist.in
-          lib/gks/quartz/main.m
-          lib/gks/quartz/en.lproj/InfoPlist.strings
-          lib/gks/quartz/Base.lproj/ExtendSavePanel.nib/designable.nib
-          lib/gks/quartz/Base.lproj/ExtendSavePanel.nib/keyedobjects.nib
-          lib/gks/quartz/Base.lproj/MainMenu.nib/designable.nib
-          lib/gks/quartz/Base.lproj/MainMenu.nib/keyedobjects.nib
-          lib/gks/quartz/GKSTerm.xcodeproj/project.pbxproj
-          lib/gks/quartz/GKSTerm.xcodeproj/project.xcworkspace
-          lib/gks/quartz/GKSTerm.xcodeproj/project.xcworkspace/contents.xcworkspacedata
+      set(
+        GKSTERM_SOURCES
+        lib/gks/quartz/GKSTerm.h
+        lib/gks/quartz/GKSTerm.icns
+        lib/gks/quartz/GKSTerm.m
+        lib/gks/quartz/GKSTerm_Prefix.pch
+        lib/gks/quartz/GKSView.h
+        lib/gks/quartz/GKSView.m
+        lib/gks/quartz/Info.plist
+        lib/gks/quartz/MacOSXBundleInfo.plist.in
+        lib/gks/quartz/main.m
+        lib/gks/quartz/en.lproj/InfoPlist.strings
+        lib/gks/quartz/Base.lproj/ExtendSavePanel.nib/designable.nib
+        lib/gks/quartz/Base.lproj/ExtendSavePanel.nib/keyedobjects.nib
+        lib/gks/quartz/Base.lproj/MainMenu.nib/designable.nib
+        lib/gks/quartz/Base.lproj/MainMenu.nib/keyedobjects.nib
+        lib/gks/quartz/GKSTerm.xcodeproj/project.pbxproj
+        lib/gks/quartz/GKSTerm.xcodeproj/project.xcworkspace
+        lib/gks/quartz/GKSTerm.xcodeproj/project.xcworkspace/contents.xcworkspacedata
       )
       add_custom_target(
-        GKSTerm ALL
-        COMMAND ${XCODE_BUILD} -arch ${CMAKE_SYSTEM_PROCESSOR} -project GKSTerm.xcodeproj
-                CONFIGURATION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}/GKSTerm
+        GKSTerm
+        ALL
+        COMMAND
+          ${XCODE_BUILD} -arch ${CMAKE_SYSTEM_PROCESSOR} -project GKSTerm.xcodeproj
+          CONFIGURATION_BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}/GKSTerm
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz
         DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm-build/quartz/GKSTerm.xcodeproj ZeroMQ::ZeroMQ gks_static
       )
@@ -1309,15 +1216,16 @@ if(APPLE)
       add_executable(GKSTerm MACOSX_BUNDLE lib/gks/quartz/GKSTerm.m lib/gks/quartz/GKSView.m lib/gks/quartz/main.m)
       target_link_libraries(GKSTerm PUBLIC ZeroMQ::ZeroMQ)
       target_link_libraries(
-        GKSTerm PUBLIC gks_static
-                       "-framework CoreGraphics -framework CoreFoundation -framework CoreVideo -framework Cocoa"
+        GKSTerm
+        PUBLIC gks_static "-framework CoreGraphics -framework CoreFoundation -framework CoreVideo -framework Cocoa"
       )
 
       add_custom_command(
         TARGET GKSTerm
         POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/quartz/Base.lproj
-                ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm.app/Contents/Resources/Base.lproj
+        COMMAND
+          ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/quartz/Base.lproj
+          ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm.app/Contents/Resources/Base.lproj
         BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm.app/Contents/Resources/Base.lproj
       )
       target_sources(GKSTerm PRIVATE lib/gks/quartz/GKSTerm.icns)
@@ -1325,11 +1233,12 @@ if(APPLE)
       target_compile_options(GKSTerm PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
       set_target_properties(
         GKSTerm
-        PROPERTIES MACOSX_BUNDLE_BUNDLE_NAME "GKSTerm"
-                   MACOSX_BUNDLE_GUI_IDENTIFIER "de.fz-juelich.GKSTerm"
-                   MACOSX_BUNDLE_ICON_FILE "GKSTerm"
-                   MACOSX_BUNDLE_BUNDLE_VERSION "${GR_VERSION}"
-                   MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/quartz/MacOSXBundleInfo.plist.in"
+        PROPERTIES
+          MACOSX_BUNDLE_BUNDLE_NAME "GKSTerm"
+          MACOSX_BUNDLE_GUI_IDENTIFIER "de.fz-juelich.GKSTerm"
+          MACOSX_BUNDLE_ICON_FILE "GKSTerm"
+          MACOSX_BUNDLE_BUNDLE_VERSION "${GR_VERSION}"
+          MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/quartz/MacOSXBundleInfo.plist.in"
       )
       set(GKSTerm_MACOSX_BUNDLE_SIGNATURE "GKST")
       set(GKSTerm_MACOSX_MAIN_NIB_FILE "MainMenu")
@@ -1340,29 +1249,17 @@ if(APPLE)
   endif()
 endif()
 
-if(Qt4_FOUND
-   OR (Qt5Widgets_FOUND
-       AND Qt5Core_FOUND
-       AND Qt5Network_FOUND
-      )
-   OR (Qt6Widgets_FOUND
-       AND Qt6Core_FOUND
-       AND Qt6Network_FOUND
-      )
+if(
+  Qt4_FOUND
+  OR (Qt5Widgets_FOUND AND Qt5Core_FOUND AND Qt5Network_FOUND)
+  OR (Qt6Widgets_FOUND AND Qt6Core_FOUND AND Qt6Network_FOUND)
 )
   add_executable(gksqt WIN32 MACOSX_BUNDLE lib/gks/qt/gksqt.cxx lib/gks/qt/gksserver.cxx lib/gks/qt/gkswidget.cxx)
   target_link_libraries(gksqt PUBLIC gks_static)
-  if(Qt6Widgets_FOUND
-     AND Qt6Core_FOUND
-     AND Qt6Network_FOUND
-  )
+  if(Qt6Widgets_FOUND AND Qt6Core_FOUND AND Qt6Network_FOUND)
     target_link_libraries(gksqt PUBLIC Qt6::Widgets Qt6::Core Qt6::Network)
     set(gksqt_INSTALL_RPATH "${INSTALL_RPATH};${Qt6_LIBRARY_DIR}")
-  elseif(
-    Qt5Widgets_FOUND
-    AND Qt5Core_FOUND
-    AND Qt5Network_FOUND
-  )
+  elseif(Qt5Widgets_FOUND AND Qt5Core_FOUND AND Qt5Network_FOUND)
     target_link_libraries(gksqt PUBLIC Qt5::Widgets Qt5::Core Qt5::Network)
     set(gksqt_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
   elseif(Qt4_FOUND)
@@ -1370,7 +1267,8 @@ if(Qt4_FOUND
     set(gksqt_INSTALL_RPATH "${INSTALL_RPATH};${Qt4_LIBRARY_DIR}")
   endif()
   set_target_properties(
-    gksqt PROPERTIES CXX_STANDARD 11 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH "${gksqt_INSTALL_RPATH}"
+    gksqt
+    PROPERTIES CXX_STANDARD 11 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH "${gksqt_INSTALL_RPATH}"
   )
   if(MINGW AND CMAKE_SYSTEM_PROCESSOR STREQUAL "i686")
     target_compile_options(gksqt PRIVATE -fno-exceptions)
@@ -1378,47 +1276,49 @@ if(Qt4_FOUND
   target_compile_options(gksqt PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   if(GR_MANUAL_MOC_AND_RCC)
     set_target_properties(gksqt PROPERTIES AUTOMOC OFF AUTORCC OFF)
-    if(Qt6Widgets_FOUND
-       AND Qt6Core_FOUND
-       AND Qt6Network_FOUND
-    )
+    if(Qt6Widgets_FOUND AND Qt6Core_FOUND AND Qt6Network_FOUND)
       set(MOC_INCLUDE_FLAGS ${QT6_MOC_INCLUDE_FLAGS})
-    elseif(
-      Qt5Widgets_FOUND
-      AND Qt5Core_FOUND
-      AND Qt5Network_FOUND
-    )
+    elseif(Qt5Widgets_FOUND AND Qt5Core_FOUND AND Qt5Network_FOUND)
       set(MOC_INCLUDE_FLAGS ${QT5_MOC_INCLUDE_FLAGS})
     else()
       set(MOC_INCLUDE_FLAGS ${QT4_MOC_INCLUDE_FLAGS})
     endif()
     add_custom_command(
       OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_gkswidget.cxx
-      COMMAND ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
-              ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gkswidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_gkswidget.cxx
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gkswidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_gkswidget.cxx
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gkswidget.h
     )
     add_custom_command(
       OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_gksserver.cxx
-      COMMAND ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
-              ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gksserver.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_gksserver.cxx
+      COMMAND
+        ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gksserver.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_gksserver.cxx
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gksserver.h
     )
     add_custom_command(
       OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/qrc_gksqt.cxx
-      COMMAND ${QT_RCC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gksqt.qrc -o
-              ${CMAKE_CURRENT_BINARY_DIR}/qrc_gksqt.cxx
+      COMMAND
+        ${QT_RCC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gksqt.qrc -o
+        ${CMAKE_CURRENT_BINARY_DIR}/qrc_gksqt.cxx
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gksqt.qrc
     )
     target_sources(
-      gksqt PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_gksserver.cxx ${CMAKE_CURRENT_BINARY_DIR}/moc_gkswidget.cxx
-                    ${CMAKE_CURRENT_BINARY_DIR}/qrc_gksqt.cxx
+      gksqt
+      PRIVATE
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_gksserver.cxx
+        ${CMAKE_CURRENT_BINARY_DIR}/moc_gkswidget.cxx
+        ${CMAKE_CURRENT_BINARY_DIR}/qrc_gksqt.cxx
     )
   else()
     set_target_properties(gksqt PROPERTIES AUTOMOC ON AUTORCC ON)
     target_sources(
-      gksqt PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gksserver.h
-                    ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gkswidget.h ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gksqt.qrc
+      gksqt
+      PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gksserver.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gkswidget.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gksqt.qrc
     )
   endif()
   if(APPLE)
@@ -1426,10 +1326,11 @@ if(Qt4_FOUND
     set_source_files_properties(lib/gks/qt/gksqt.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources/)
     set_target_properties(
       gksqt
-      PROPERTIES MACOSX_BUNDLE_BUNDLE_NAME "gksqt"
-                 MACOSX_BUNDLE_GUI_IDENTIFIER "de.fz-juelich.gksqt"
-                 MACOSX_BUNDLE_ICON_FILE "gksqt"
-                 MACOSX_BUNDLE_BUNDLE_VERSION "${GR_VERSION}"
+      PROPERTIES
+        MACOSX_BUNDLE_BUNDLE_NAME "gksqt"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "de.fz-juelich.gksqt"
+        MACOSX_BUNDLE_ICON_FILE "gksqt"
+        MACOSX_BUNDLE_BUNDLE_VERSION "${GR_VERSION}"
     )
     set(gksqt_MACOSX_BUNDLE_SIGNATURE "gksqt")
     set(gksqt_MACOSX_MAIN_NIB_FILE "")
@@ -1439,21 +1340,14 @@ else()
   string(APPEND GR_REPORT "- gksqt: No (Qt4 / Qt5 / Qt6 not found)\n")
 endif()
 
-if((Qt6Widgets_FOUND
-    AND Qt6Core_FOUND
-    AND Qt6Gui_FOUND
-   )
-   OR (Qt5Widgets_FOUND
-       AND Qt5Core_FOUND
-       AND Qt5Gui_FOUND
-      )
-)
+if((Qt6Widgets_FOUND AND Qt6Core_FOUND AND Qt6Gui_FOUND) OR (Qt5Widgets_FOUND AND Qt5Core_FOUND AND Qt5Gui_FOUND))
   if(NOT MINGW OR NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "i686")
     include(GenPreviewImages)
     include(ImportIconImages)
 
     add_library(
-      grplotGUI SHARED
+      grplotGUI
+      SHARED
       "${CMAKE_CURRENT_BINARY_DIR}/grplot.qrc"
       "${CMAKE_CURRENT_BINARY_DIR}/grplot_icon.qrc"
       lib/grm/grplot/CollapsibleSection.cxx
@@ -1483,25 +1377,13 @@ if((Qt6Widgets_FOUND
     if(Qt6Widgets_FOUND AND Qt6Core_FOUND)
       target_link_libraries(
         grplotGUI
-        PRIVATE GR::qt6gr
-                Qt6::Widgets
-                Qt6::Core
-                Qt6::Gui
-                grm_shared
-                gr_shared
-                gks_shared
+        PRIVATE GR::qt6gr Qt6::Widgets Qt6::Core Qt6::Gui grm_shared gr_shared gks_shared
       )
       set(grplotGUI_INSTALL_RPATH "${INSTALL_RPATH};${Qt6_LIBRARY_DIR}")
     else()
       target_link_libraries(
         grplotGUI
-        PRIVATE GR::qt5gr
-                Qt5::Widgets
-                Qt5::Core
-                Qt5::Gui
-                grm_shared
-                gr_shared
-                gks_shared
+        PRIVATE GR::qt5gr Qt5::Widgets Qt5::Core Qt5::Gui grm_shared gr_shared gks_shared
       )
       set(grplotGUI_INSTALL_RPATH "${INSTALL_RPATH};${Qt5_LIBRARY_DIR}")
     endif()
@@ -1515,8 +1397,8 @@ if((Qt6Widgets_FOUND
       target_compile_definitions(grplotGUI PRIVATE NO_XERCES_C)
     endif()
     set_target_properties(
-      grplotGUI PROPERTIES CXX_STANDARD 17 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH
-                                                                                       "${grplotGUI_INSTALL_RPATH}"
+      grplotGUI
+      PROPERTIES CXX_STANDARD 17 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH "${grplotGUI_INSTALL_RPATH}"
     )
     if(WIN32)
       if(MINGW)
@@ -1689,49 +1571,51 @@ if((Qt6Widgets_FOUND
       )
       target_sources(
         grplotGUI
-        PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_GRPlotDockWidget.cxx
-                ${CMAKE_CURRENT_BINARY_DIR}/moc_GRPlotMainWindow.cxx
-                ${CMAKE_CURRENT_BINARY_DIR}/moc_GRPlotWidget.cxx
-                ${CMAKE_CURRENT_BINARY_DIR}/moc_AddElementWidget.cxx
-                ${CMAKE_CURRENT_BINARY_DIR}/moc_BoundingLogic.cxx
-                ${CMAKE_CURRENT_BINARY_DIR}/moc_BoundingObject.cxx
-                ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomQListWidgetItem.cxx
-                ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cxx
-                ${CMAKE_CURRENT_BINARY_DIR}/moc_ColorPickerRGB.cxx
-                ${CMAKE_CURRENT_BINARY_DIR}/moc_EditElementWidget.cxx
-                ${CMAKE_CURRENT_BINARY_DIR}/moc_IconBarWidget.cxx
-                ${CMAKE_CURRENT_BINARY_DIR}/moc_PreviewTextWidget.cxx
-                ${CMAKE_CURRENT_BINARY_DIR}/moc_SelectionListWidget.cxx
-                ${CMAKE_CURRENT_BINARY_DIR}/moc_TableWidget.cxx
-                ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cxx
-                ${CMAKE_CURRENT_BINARY_DIR}/moc_ArgsWrapper.cxx
-                ${CMAKE_CURRENT_BINARY_DIR}/moc_Receiver.cxx
-                ${CMAKE_CURRENT_BINARY_DIR}/moc_CollapsibleSection.cxx
-                ${CMAKE_CURRENT_BINARY_DIR}/moc_Threadpool.cxx
+        PRIVATE
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_GRPlotDockWidget.cxx
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_GRPlotMainWindow.cxx
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_GRPlotWidget.cxx
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_AddElementWidget.cxx
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_BoundingLogic.cxx
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_BoundingObject.cxx
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomQListWidgetItem.cxx
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_CustomTreeWidgetItem.cxx
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_ColorPickerRGB.cxx
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_EditElementWidget.cxx
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_IconBarWidget.cxx
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_PreviewTextWidget.cxx
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_SelectionListWidget.cxx
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_TableWidget.cxx
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_TreeWidget.cxx
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_ArgsWrapper.cxx
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_Receiver.cxx
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_CollapsibleSection.cxx
+          ${CMAKE_CURRENT_BINARY_DIR}/moc_Threadpool.cxx
       )
     else()
       set_target_properties(grplotGUI PROPERTIES AUTOMOC ON AUTORCC ON)
       target_sources(
         grplotGUI
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/GRPlotDockWidget.hxx
-                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/GRPlotMainWindow.hxx
-                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/GRPlotWidget.hxx
-                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/AddElementWidget.hxx
-                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/BoundingLogic.hxx
-                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/BoundingObject.hxx
-                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomQListWidgetItem.hxx
-                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.hxx
-                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/ColorPickerRGB.hxx
-                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/EditElementWidget.hxx
-                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/IconBarWidget.hxx
-                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/PreviewTextWidget.hxx
-                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/SelectionListWidget.hxx
-                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TableWidget.hxx
-                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.hxx
-                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/ArgsWrapper.hxx
-                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/Receiver.hxx
-                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/CollapsibleSection.hxx
-                ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/Threadpool.hxx
+        PRIVATE
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/GRPlotDockWidget.hxx
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/GRPlotMainWindow.hxx
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/GRPlotWidget.hxx
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/AddElementWidget.hxx
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/BoundingLogic.hxx
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/BoundingObject.hxx
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomQListWidgetItem.hxx
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/CustomTreeWidgetItem.hxx
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/ColorPickerRGB.hxx
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/EditElementWidget.hxx
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/IconBarWidget.hxx
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/PreviewTextWidget.hxx
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/SelectionListWidget.hxx
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TableWidget.hxx
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/gredit/TreeWidget.hxx
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/ArgsWrapper.hxx
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/qtterm/Receiver.hxx
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/CollapsibleSection.hxx
+          ${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/grplot/Threadpool.hxx
       )
     endif()
     if(WIN32)
@@ -1755,8 +1639,11 @@ if(NOT EMSCRIPTEN AND (NOT MINGW OR NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "i686"))
   endif()
   set_target_properties(
     grplotConsole
-    PROPERTIES CXX_STANDARD 17 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH
-                                                                           "${grplotConsole_INSTALL_RPATH}"
+    PROPERTIES
+      CXX_STANDARD 17
+      CXX_EXTENSIONS OFF
+      CXX_STANDARD_REQUIRED ON
+      INSTALL_RPATH "${grplotConsole_INSTALL_RPATH}"
   )
   if(WIN32)
     if(MINGW)
@@ -1795,8 +1682,9 @@ if(NOT EMSCRIPTEN)
       set_target_properties(grplot PROPERTIES MACOSX_BUNDLE_GUI_IDENTIFIER "de.fz-juelich.grplot")
       add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/grplot
-        COMMAND ${CMAKE_COMMAND} -E create_symlink ../Applications/grplot.app/Contents/MacOS/grplot
-                ${CMAKE_CURRENT_BINARY_DIR}/grplot
+        COMMAND
+          ${CMAKE_COMMAND} -E create_symlink ../Applications/grplot.app/Contents/MacOS/grplot
+          ${CMAKE_CURRENT_BINARY_DIR}/grplot
       )
       add_custom_target(grplot_symlink DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/grplot)
       add_dependencies(grplot grplot_symlink)
@@ -1805,8 +1693,8 @@ if(NOT EMSCRIPTEN)
     set(grplot_INSTALL_RPATH "${INSTALL_RPATH}")
     target_compile_definitions(grplot PRIVATE GRDIR="${GR_DIRECTORY}")
     set_target_properties(
-      grplot PROPERTIES CXX_STANDARD 17 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH
-                                                                                    "${grplot_INSTALL_RPATH}"
+      grplot
+      PROPERTIES CXX_STANDARD 17 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON INSTALL_RPATH "${grplot_INSTALL_RPATH}"
     )
   else()
     add_executable(grplot lib/grm/grplot/GRPlot.cxx)
@@ -1825,16 +1713,22 @@ if(EMSCRIPTEN)
   add_custom_target(gr_js ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/gr.js)
   add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/gr.js
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/js/api.js ${CMAKE_CURRENT_SOURCE_DIR}/js/jsterm.js
-            ${CMAKE_CURRENT_SOURCE_DIR}/js/module.js libGR
+    DEPENDS
+      ${CMAKE_CURRENT_SOURCE_DIR}/js/api.js
+      ${CMAKE_CURRENT_SOURCE_DIR}/js/jsterm.js
+      ${CMAKE_CURRENT_SOURCE_DIR}/js/module.js
+      libGR
     COMMAND
       ${CMAKE_COMMAND} -E cat ${CMAKE_CURRENT_SOURCE_DIR}/js/module.js ${CMAKE_CURRENT_BINARY_DIR}/libGR.js
       ${CMAKE_CURRENT_SOURCE_DIR}/js/api.js ${CMAKE_CURRENT_SOURCE_DIR}/js/jsterm.js > ${CMAKE_CURRENT_BINARY_DIR}/gr.js
     VERBATIM
   )
   add_executable(
-    libGR $<TARGET_OBJECTS:gks_static> $<TARGET_OBJECTS:gr3_static> $<TARGET_OBJECTS:gr_static>
-          $<TARGET_OBJECTS:grm_static>
+    libGR
+    $<TARGET_OBJECTS:gks_static>
+    $<TARGET_OBJECTS:gr3_static>
+    $<TARGET_OBJECTS:gr_static>
+    $<TARGET_OBJECTS:grm_static>
   )
   foreach(LIBRARY gks_static gr_static gr3_static grm_static)
     get_target_property(CURRENT_LINK_LIBRARIES ${LIBRARY} INTERFACE_LINK_LIBRARIES)
@@ -1842,8 +1736,7 @@ if(EMSCRIPTEN)
   endforeach()
   list(REMOVE_DUPLICATES LIBGR_JS_DEPENDENCIES)
   list(
-    REMOVE_ITEM
-    LIBGR_JS_DEPENDENCIES
+    REMOVE_ITEM LIBGR_JS_DEPENDENCIES
     gks_static
     gr_static
     gr3_static
@@ -1864,173 +1757,175 @@ if(EMSCRIPTEN)
   target_link_options(libGR PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=1")
   target_link_options(libGR PRIVATE "SHELL:-s RESERVED_FUNCTION_POINTERS=4")
   target_link_options(libGR PRIVATE "SHELL:-s ALLOW_TABLE_GROWTH=1")
-  set(EXPORTED_RUNTIME_METHODS
-      UTF8ToString
-      addFunction
-      ccall
-      cwrap
-      getValue
-      lengthBytesUTF8
-      removeFunction
-      setValue
-      stringToUTF8
+  set(
+    EXPORTED_RUNTIME_METHODS
+    UTF8ToString
+    addFunction
+    ccall
+    cwrap
+    getValue
+    lengthBytesUTF8
+    removeFunction
+    setValue
+    stringToUTF8
   )
   list(JOIN EXPORTED_RUNTIME_METHODS "\', \'" EXPORTED_RUNTIME_METHODS)
   string(PREPEND EXPORTED_RUNTIME_METHODS "[\'")
   string(APPEND EXPORTED_RUNTIME_METHODS "\']")
   target_link_options(libGR PRIVATE "SHELL:-s \"EXPORTED_RUNTIME_METHODS=${EXPORTED_RUNTIME_METHODS}\"")
-  set(EXPORTED_FUNCTIONS
-      _free
-      _gks_get_dash_list
-      _gr_activatews
-      _gr_adjustrange
-      _gr_axes
-      _gr_axes3d
-      _gr_begingraphics
-      _gr_beginprint
-      _gr_beginprintext
-      _gr_beginselection
-      _gr_cellarray
-      _gr_clearws
-      _gr_closegks
-      _gr_closeseg
-      _gr_closews
-      _gr_colorbar
-      _gr_contour
-      _gr_copysegws
-      _gr_createseg
-      _gr_deactivatews
-      _gr_destroycontext
-      _gr_drawarc
-      _gr_drawarrow
-      _gr_drawgraphics
-      _gr_drawimage
-      _gr_drawpath
-      _gr_drawrect
-      _gr_emergencyclosegks
-      _gr_endgraphics
-      _gr_endprint
-      _gr_endselection
-      _gr_fillarc
-      _gr_fillarea
-      _gr_fillrect
-      _gr_grid
-      _gr_gridit
-      _gr_herrorbars
-      _gr_hexbin
-      _gr_hsvtorgb
-      _gr_importgraphics
-      _gr_inqbbox
-      _gr_inqbordercolorind
-      _gr_inqborderwidth
-      _gr_inqclipxform
-      _gr_inqcolor
-      _gr_inqcolorfromrgb
-      _gr_inqcolormap
-      _gr_inqdspsize
-      _gr_inqlinecolorind
-      _gr_inqlinetype
-      _gr_inqlinewidth
-      _gr_inqmarkercolorind
-      _gr_inqmarkertype
-      _gr_inqregenflags
-      _gr_inqscale
-      _gr_inqspace
-      _gr_inqtext
-      _gr_inqtextext
-      _gr_inqviewport
-      _gr_inqwindow
-      _gr_mathtex
-      _gr_moveselection
-      _gr_ndctowc
-      _gr_opengks
-      _gr_openws
-      _gr_panzoom
-      _gr_path
-      _gr_polyline
-      _gr_polyline3d
-      _gr_polymarker
-      _gr_precision
-      _gr_readimage
-      _gr_redrawsegws
-      _gr_resizeselection
-      _gr_restorestate
-      _gr_savestate
-      _gr_selectclipxform
-      _gr_selectcontext
-      _gr_selntran
-      _gr_selntran
-      _gr_setarrowstyle
-      _gr_setbordercolorind
-      _gr_setborderwidth
-      _gr_setcharexpan
-      _gr_setcharheight
-      _gr_setcharspace
-      _gr_setcharup
-      _gr_setclip
-      _gr_setcolormap
-      _gr_setcolorrep
-      _gr_setcoordxform
-      _gr_setfillcolorind
-      _gr_setfillintstyle
-      _gr_setfillstyle
-      _gr_setlinecolorind
-      _gr_setlinetype
-      _gr_setlinewidth
-      _gr_setmarkercolorind
-      _gr_setmarkersize
-      _gr_setmarkertype
-      _gr_setregenflags
-      _gr_setscale
-      _gr_setscientificformat
-      _gr_setsegtran
-      _gr_setshadow
-      _gr_setspace
-      _gr_settextalign
-      _gr_settextcolorind
-      _gr_settextencoding
-      _gr_settextfontprec
-      _gr_settextpath
-      _gr_settransparency
-      _gr_setviewport
-      _gr_setwindow
-      _gr_setwsviewport
-      _gr_setwswindow
-      _gr_shade
-      _gr_shadelines
-      _gr_shadepoints
-      _gr_spline
-      _gr_surface
-      _gr_text
-      _gr_textext
-      _gr_tick
-      _gr_titles3d
-      _gr_updategks
-      _gr_updatews
-      _gr_uselinespec
-      _gr_validaterange
-      _gr_verrorbars
-      _gr_wctondc
-      _grm_args_delete
-      _grm_args_new
-      _grm_args_push
-      _grm_dump
-      _grm_dump_json
-      _grm_dump_json_str
-      _grm_get_box
-      _grm_get_stdout
-      _grm_get_tooltip
-      _grm_input
-      _grm_is3d
-      _grm_load_from_str
-      _grm_merge
-      _grm_merge_named
-      _grm_plot
-      _grm_read
-      _grm_register
-      _grm_switch
-      _grm_unregister
-      _malloc
+  set(
+    EXPORTED_FUNCTIONS
+    _free
+    _gks_get_dash_list
+    _gr_activatews
+    _gr_adjustrange
+    _gr_axes
+    _gr_axes3d
+    _gr_begingraphics
+    _gr_beginprint
+    _gr_beginprintext
+    _gr_beginselection
+    _gr_cellarray
+    _gr_clearws
+    _gr_closegks
+    _gr_closeseg
+    _gr_closews
+    _gr_colorbar
+    _gr_contour
+    _gr_copysegws
+    _gr_createseg
+    _gr_deactivatews
+    _gr_destroycontext
+    _gr_drawarc
+    _gr_drawarrow
+    _gr_drawgraphics
+    _gr_drawimage
+    _gr_drawpath
+    _gr_drawrect
+    _gr_emergencyclosegks
+    _gr_endgraphics
+    _gr_endprint
+    _gr_endselection
+    _gr_fillarc
+    _gr_fillarea
+    _gr_fillrect
+    _gr_grid
+    _gr_gridit
+    _gr_herrorbars
+    _gr_hexbin
+    _gr_hsvtorgb
+    _gr_importgraphics
+    _gr_inqbbox
+    _gr_inqbordercolorind
+    _gr_inqborderwidth
+    _gr_inqclipxform
+    _gr_inqcolor
+    _gr_inqcolorfromrgb
+    _gr_inqcolormap
+    _gr_inqdspsize
+    _gr_inqlinecolorind
+    _gr_inqlinetype
+    _gr_inqlinewidth
+    _gr_inqmarkercolorind
+    _gr_inqmarkertype
+    _gr_inqregenflags
+    _gr_inqscale
+    _gr_inqspace
+    _gr_inqtext
+    _gr_inqtextext
+    _gr_inqviewport
+    _gr_inqwindow
+    _gr_mathtex
+    _gr_moveselection
+    _gr_ndctowc
+    _gr_opengks
+    _gr_openws
+    _gr_panzoom
+    _gr_path
+    _gr_polyline
+    _gr_polyline3d
+    _gr_polymarker
+    _gr_precision
+    _gr_readimage
+    _gr_redrawsegws
+    _gr_resizeselection
+    _gr_restorestate
+    _gr_savestate
+    _gr_selectclipxform
+    _gr_selectcontext
+    _gr_selntran
+    _gr_selntran
+    _gr_setarrowstyle
+    _gr_setbordercolorind
+    _gr_setborderwidth
+    _gr_setcharexpan
+    _gr_setcharheight
+    _gr_setcharspace
+    _gr_setcharup
+    _gr_setclip
+    _gr_setcolormap
+    _gr_setcolorrep
+    _gr_setcoordxform
+    _gr_setfillcolorind
+    _gr_setfillintstyle
+    _gr_setfillstyle
+    _gr_setlinecolorind
+    _gr_setlinetype
+    _gr_setlinewidth
+    _gr_setmarkercolorind
+    _gr_setmarkersize
+    _gr_setmarkertype
+    _gr_setregenflags
+    _gr_setscale
+    _gr_setscientificformat
+    _gr_setsegtran
+    _gr_setshadow
+    _gr_setspace
+    _gr_settextalign
+    _gr_settextcolorind
+    _gr_settextencoding
+    _gr_settextfontprec
+    _gr_settextpath
+    _gr_settransparency
+    _gr_setviewport
+    _gr_setwindow
+    _gr_setwsviewport
+    _gr_setwswindow
+    _gr_shade
+    _gr_shadelines
+    _gr_shadepoints
+    _gr_spline
+    _gr_surface
+    _gr_text
+    _gr_textext
+    _gr_tick
+    _gr_titles3d
+    _gr_updategks
+    _gr_updatews
+    _gr_uselinespec
+    _gr_validaterange
+    _gr_verrorbars
+    _gr_wctondc
+    _grm_args_delete
+    _grm_args_new
+    _grm_args_push
+    _grm_dump
+    _grm_dump_json
+    _grm_dump_json_str
+    _grm_get_box
+    _grm_get_stdout
+    _grm_get_tooltip
+    _grm_input
+    _grm_is3d
+    _grm_load_from_str
+    _grm_merge
+    _grm_merge_named
+    _grm_plot
+    _grm_read
+    _grm_register
+    _grm_switch
+    _grm_unregister
+    _malloc
   )
   list(JOIN EXPORTED_FUNCTIONS "\', \'" EXPORTED_FUNCTIONS)
   string(PREPEND EXPORTED_FUNCTIONS "[\'")
@@ -2048,8 +1943,9 @@ if(EMSCRIPTEN)
     add_custom_command(
       TARGET libGR
       PRE_LINK
-      COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/fonts/${FONT}"
-              "${CMAKE_CURRENT_BINARY_DIR}/fonts/${FONT}"
+      COMMAND
+        ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/fonts/${FONT}"
+        "${CMAKE_CURRENT_BINARY_DIR}/fonts/${FONT}"
       BYPRODUCTS "${CMAKE_CURRENT_BINARY_DIR}/fonts/${FONT}"
     )
     target_link_options(libGR PRIVATE "SHELL:--embed-file fonts/${FONT}")
@@ -2060,13 +1956,19 @@ if(GR_BUILD_DEMOS)
   add_executable(gksdemo lib/gks/demo.c)
   target_link_libraries(gksdemo PUBLIC gks_static)
   target_compile_options(gksdemo PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
-  set_target_properties(gksdemo PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
+  set_target_properties(
+    gksdemo
+    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON
+  )
 
   add_executable(grdemo lib/gr/demo.c)
   target_link_libraries(grdemo PUBLIC GR::GR)
   target_link_libraries(grdemo PUBLIC GR::GKS)
   target_compile_options(grdemo PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
-  set_target_properties(grdemo PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
+  set_target_properties(
+    grdemo
+    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON
+  )
 
   add_subdirectory(lib/grm/test/public_api/grm grm_test_public_api)
   add_subdirectory(lib/grm/test/internal_api/grm grm_test_internal_api)
@@ -2076,7 +1978,10 @@ if(GR_BUILD_GKSM)
   add_executable(gksm lib/gks/gksm.c)
   target_link_libraries(gksm PUBLIC gks_static)
   target_compile_options(gksm PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
-  set_target_properties(gksm PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
+  set_target_properties(
+    gksm
+    PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON
+  )
 endif()
 
 if(GR_INSTALL)
@@ -2093,15 +1998,18 @@ if(GR_INSTALL)
   )
   include(CMakePackageConfigHelpers)
   configure_package_config_file(
-    "cmake/Config.cmake.in" "GRConfig.cmake" INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/GR"
+    "cmake/Config.cmake.in"
+    "GRConfig.cmake"
+    INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/GR"
   )
   write_basic_package_version_file(
     ${CMAKE_CURRENT_BINARY_DIR}/GRConfigVersion.cmake
     VERSION ${GR_VERSION}
     COMPATIBILITY SameMajorVersion
   )
-  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/GRConfig.cmake" "${CMAKE_CURRENT_BINARY_DIR}/GRConfigVersion.cmake"
-          DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/GR"
+  install(
+    FILES "${CMAKE_CURRENT_BINARY_DIR}/GRConfig.cmake" "${CMAKE_CURRENT_BINARY_DIR}/GRConfigVersion.cmake"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/GR"
   )
   install(
     TARGETS gks_shared gr_shared gr3_shared grm_shared
@@ -2164,44 +2072,37 @@ if(GR_INSTALL)
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
   endif()
-  install(
-    EXPORT GRTargets
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/GR"
-    NAMESPACE GR::
-  )
+  install(EXPORT GRTargets DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/GR" NAMESPACE GR::)
   foreach(PACKAGE gr gr3 gks grm)
     configure_file("${PACKAGE}.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE}.pc" @ONLY)
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE}.pc" DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig/")
   endforeach()
   install(
-    TARGETS gks_static
-            gr_static
-            gr3_static
-            grm_static
-            aggplugin
-            cairoplugin
-            glplugin
-            gsplugin
-            gtkplugin
-            pgfplugin
-            svgplugin
-            videoplugin
-            wmfplugin
-            x11plugin
-            zmqplugin
-            qtplugin
-            qt5plugin
-            qt6plugin
+    TARGETS
+      gks_static
+      gr_static
+      gr3_static
+      grm_static
+      aggplugin
+      cairoplugin
+      glplugin
+      gsplugin
+      gtkplugin
+      pgfplugin
+      svgplugin
+      videoplugin
+      wmfplugin
+      x11plugin
+      zmqplugin
+      qtplugin
+      qt5plugin
+      qt6plugin
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   )
   if(TARGET gr3platform)
-    install(
-      TARGETS gr3platform
-      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    )
+    install(TARGETS gr3platform LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   endif()
   if(TARGET qt4gr)
     install(
@@ -2237,86 +2138,48 @@ if(GR_INSTALL)
   endif()
   if(TARGET GKSTerm)
     if(XCODE_BUILD)
-      install(
-        DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm/GKSTerm.app
-        DESTINATION Applications
-        USE_SOURCE_PERMISSIONS
-      )
+      install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm/GKSTerm.app DESTINATION Applications USE_SOURCE_PERMISSIONS)
     else()
       install(TARGETS GKSTerm BUNDLE DESTINATION Applications)
     endif()
   endif()
   if(TARGET gksqt)
-    install(
-      TARGETS gksqt
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-      BUNDLE DESTINATION Applications
-    )
+    install(TARGETS gksqt RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} BUNDLE DESTINATION Applications)
   endif()
   if(TARGET grplotWidget)
-    install(
-      TARGETS grplotWidget
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-      BUNDLE DESTINATION Applications
-    )
+    install(TARGETS grplotWidget RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} BUNDLE DESTINATION Applications)
   endif()
   if(TARGET grplotGUI)
-    install(
-      TARGETS grplotGUI
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-      BUNDLE DESTINATION Applications
-    )
+    install(TARGETS grplotGUI RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} BUNDLE DESTINATION Applications)
   endif()
   if(TARGET grplotConsole)
-    install(
-      TARGETS grplotConsole
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-      BUNDLE DESTINATION Applications
-    )
+    install(TARGETS grplotConsole RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} BUNDLE DESTINATION Applications)
   endif()
   if(TARGET grplot)
-    install(
-      TARGETS grplot
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-      BUNDLE DESTINATION Applications
-    )
-    install(
-      FILES lib/grm/grplot/README.md
-      DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/grplot
-      RENAME grplot.man.md
-    )
+    install(TARGETS grplot RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} BUNDLE DESTINATION Applications)
+    install(FILES lib/grm/grplot/README.md DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/grplot RENAME grplot.man.md)
     if(APPLE)
       install(FILES ${CMAKE_CURRENT_BINARY_DIR}/grplot DESTINATION ${CMAKE_INSTALL_BINDIR})
     endif()
   endif()
   install(FILES lib/gr/gr.h lib/gks/gks.h lib/gr3/gr3.h lib/grm/include/grm.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
   install(DIRECTORY lib/grm/include/grm DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
-  if(TARGET qt4gr
-     OR TARGET qt5gr
-     OR TARGET qt6gr
-  )
+  if(TARGET qt4gr OR TARGET qt5gr OR TARGET qt6gr)
     install(FILES lib/gr/qtgr/grwidget.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
   endif()
   if(TARGET grplotWidget)
-    install(FILES lib/grm/grplot/GRPlotWidget.hxx lib/grm/grplot/Util.hxx
-            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/grplotWidget
+    install(
+      FILES lib/grm/grplot/GRPlotWidget.hxx lib/grm/grplot/Util.hxx
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/grplotWidget
     )
     file(GLOB GREDIT_HEADERS "lib/grm/grplot/gredit/*.h")
     install(FILES ${GREDIT_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/grplotWidget/gredit)
     file(GLOB QTTERM_HEADERS "lib/grm/grplot/qtterm/*.h")
     install(FILES ${QTTERM_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/grplotWidget/qtterm)
   endif()
-  install(
-    DIRECTORY lib/gks/fonts
-    DESTINATION ./
-    USE_SOURCE_PERMISSIONS
-  )
+  install(DIRECTORY lib/gks/fonts DESTINATION ./ USE_SOURCE_PERMISSIONS)
   if(TARGET csv_plugin)
-    install(
-      TARGETS csv_plugin
-      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    )
+    install(TARGETS csv_plugin LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   endif()
 endif()
 

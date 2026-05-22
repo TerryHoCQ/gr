@@ -13,7 +13,7 @@
 #define M_PI (3.141592653589793)
 #endif
 #ifndef round
-#define round(x) ((x) < 0 ? ceil((x)-.5) : floor((x) + .5))
+#define round(x) ((x) < 0 ? ceil((x) - .5) : floor((x) + .5))
 #endif
 
 static double lanczos(double x, int a)

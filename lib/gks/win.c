@@ -41,11 +41,11 @@
   yd = (int)(p->c * (yn) + p->d + 0.5)
 
 #define DC_to_NDC(xd, yd, xn, yn) \
-  xn = ((xd)-p->b) / p->a;        \
-  yn = ((yd)-p->d) / p->c
+  xn = ((xd) - p->b) / p->a;      \
+  yn = ((yd) - p->d) / p->c
 
-#define CharXform(xrel, yrel, x, y)                    \
-  x = cos_f[p->path] * (xrel)-sin_f[p->path] * (yrel); \
+#define CharXform(xrel, yrel, x, y)                      \
+  x = cos_f[p->path] * (xrel) - sin_f[p->path] * (yrel); \
   y = sin_f[p->path] * (xrel) + cos_f[p->path] * (yrel);
 
 #define nint(a) ((int)(a + 0.5))
@@ -1148,7 +1148,7 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
             {
               alpha = ((ind >> 24) & 0xff) / 255.0;
               pix[j * width + i] = RGB((int)(((ind >> 16) & 0xff) * alpha), (int)(((ind >> 8) & 0xff) * alpha),
-                                       (int)(((ind)&0xff) * alpha)) +
+                                       (int)(((ind) & 0xff) * alpha)) +
                                    (ind & 0xff000000);
             }
           else

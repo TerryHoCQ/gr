@@ -1047,15 +1047,15 @@ int gr3_createtubemesh(int *mesh, int n, const float *points, const float *color
   int num_points = n;
   int i;
   int num_new_points = 0;
-  float(*points2)[3];
-  float(*colors2)[3];
+  float (*points2)[3];
+  float (*colors2)[3];
   float *radii2;
-  double(*directions)[3];
-  double(*tangents)[3];
-  double(*normals)[3];
-  double(*binormals)[3];
-  float(*points_filtered)[3];
-  float(*colors_filtered)[3];
+  double (*directions)[3];
+  double (*tangents)[3];
+  double (*normals)[3];
+  double (*binormals)[3];
+  float (*points_filtered)[3];
+  float (*colors_filtered)[3];
   float *radii_filtered;
 
   double longest_direction_cross[3] = {0, 0, 0};
@@ -1084,8 +1084,8 @@ int gr3_createtubemesh(int *mesh, int n, const float *points, const float *color
       free(filtered_indices);
       return gr3_createmesh(mesh, 3, (float *)v, (float *)v, (float *)v);
     };
-  points_filtered = (float(*)[3])malloc(sizeof(float) * 3 * num_points);
-  colors_filtered = (float(*)[3])malloc(sizeof(float) * 3 * num_points);
+  points_filtered = (float (*)[3])malloc(sizeof(float) * 3 * num_points);
+  colors_filtered = (float (*)[3])malloc(sizeof(float) * 3 * num_points);
   radii_filtered = (float *)malloc(sizeof(float) * num_points);
   assert(points_filtered);
   assert(colors_filtered);
@@ -1103,11 +1103,11 @@ int gr3_createtubemesh(int *mesh, int n, const float *points, const float *color
     }
   free(filtered_indices);
 
-  points2 = (float(*)[3])cubic_interp_nd((float *)points_filtered, 3, num_points, num_steps, &num_new_points);
-  colors2 = (float(*)[3])linear_interp_nd((float *)colors_filtered, 3, num_points, num_steps, NULL);
+  points2 = (float (*)[3])cubic_interp_nd((float *)points_filtered, 3, num_points, num_steps, &num_new_points);
+  colors2 = (float (*)[3])linear_interp_nd((float *)colors_filtered, 3, num_points, num_steps, NULL);
   radii2 = linear_interp_nd(radii_filtered, 1, num_points, num_steps, NULL);
-  directions = (double(*)[3])malloc(sizeof(double) * 3 * num_new_points);
-  tangents = (double(*)[3])malloc(sizeof(double) * 3 * num_new_points);
+  directions = (double (*)[3])malloc(sizeof(double) * 3 * num_new_points);
+  tangents = (double (*)[3])malloc(sizeof(double) * 3 * num_new_points);
   /* aliases to avoid two useless allocations */
   normals = directions;
   binormals = tangents;
@@ -1201,10 +1201,10 @@ int gr3_createtubemesh(int *mesh, int n, const float *points, const float *color
     }
 
   {
-    double(*vertices_2d)[2] = (double(*)[2])malloc(sizeof(double) * 2 * num_segments);
-    float(*vertices_3d)[3] = (float(*)[3])malloc(sizeof(float) * 3 * 6 * num_segments * num_new_points);
-    float(*normals_3d)[3] = (float(*)[3])malloc(sizeof(float) * 3 * 6 * num_segments * num_new_points);
-    float(*colors_3d)[3] = (float(*)[3])malloc(sizeof(float) * 3 * 6 * num_segments * num_new_points);
+    double (*vertices_2d)[2] = (double (*)[2])malloc(sizeof(double) * 2 * num_segments);
+    float (*vertices_3d)[3] = (float (*)[3])malloc(sizeof(float) * 3 * 6 * num_segments * num_new_points);
+    float (*normals_3d)[3] = (float (*)[3])malloc(sizeof(float) * 3 * 6 * num_segments * num_new_points);
+    float (*colors_3d)[3] = (float (*)[3])malloc(sizeof(float) * 3 * 6 * num_segments * num_new_points);
     for (i = 0; i < num_segments; i++)
       {
         vertices_2d[i][0] = cos(i * 2 * 3.1415 / num_segments);

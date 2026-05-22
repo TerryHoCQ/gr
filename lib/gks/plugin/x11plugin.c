@@ -123,8 +123,8 @@ DLLEXPORT void gks_x11plugin(int fctid, int dx, int dy, int dimx, int *i_arr, in
   yn = c[tnr] * (yw)
 
 #define NDC_to_WC(xn, yn, tnr, xw, yw) \
-  xw = ((xn)-b[tnr]) / a[tnr];         \
-  yw = ((yn)-d[tnr]) / c[tnr]
+  xw = ((xn) - b[tnr]) / a[tnr];       \
+  yw = ((yn) - d[tnr]) / c[tnr]
 
 #define NDC_to_DC(xn, yn, xd, yd)      \
   xd = sint(p->a * (xn) + p->b + 0.5); \
@@ -132,11 +132,11 @@ DLLEXPORT void gks_x11plugin(int fctid, int dx, int dy, int dimx, int *i_arr, in
   update_bbox(xd, yd)
 
 #define DC_to_NDC(xd, yd, xn, yn) \
-  xn = ((xd)-p->b) / p->a;        \
-  yn = ((yd)-p->d) / p->c;
+  xn = ((xd) - p->b) / p->a;      \
+  yn = ((yd) - p->d) / p->c;
 
-#define CharXform(xrel, yrel, x, y)                    \
-  x = cos_f[p->path] * (xrel)-sin_f[p->path] * (yrel); \
+#define CharXform(xrel, yrel, x, y)                      \
+  x = cos_f[p->path] * (xrel) - sin_f[p->path] * (yrel); \
   y = sin_f[p->path] * (xrel) + cos_f[p->path] * (yrel);
 
 static int idle = False;
@@ -808,8 +808,7 @@ static int highbit(unsigned long ul)
   unsigned long hb;
   hb = 0x8000;
   hb = (hb << 16); /* hb = 0x80000000UL */
-  for (i = 31; ((ul & hb) == 0) && i >= 0; i--, ul <<= 1)
-    ;
+  for (i = 31; ((ul & hb) == 0) && i >= 0; i--, ul <<= 1);
   return i;
 }
 
@@ -1501,8 +1500,7 @@ static void wait_for_expose(void)
     {
       do XWindowEvent(p->dpy, p->win, StructureNotifyMask, &event);
       while (event.xany.type != MapNotify && event.xany.type != ConfigureNotify);
-      while (XCheckTypedWindowEvent(p->dpy, p->win, Expose, &event))
-        ;
+      while (XCheckTypedWindowEvent(p->dpy, p->win, Expose, &event));
     }
 }
 
@@ -3583,8 +3581,7 @@ static void get_pointer(int *n, double *x, double *y, int *state, int *term)
 
   if (p->new_win)
     {
-      while (XCheckTypedWindowEvent(p->dpy, p->win, ConfigureNotify, &event))
-        ;
+      while (XCheckTypedWindowEvent(p->dpy, p->win, ConfigureNotify, &event));
     }
 
   np = 0;
@@ -3611,8 +3608,7 @@ static void get_pointer(int *n, double *x, double *y, int *state, int *term)
       if (p->wstype == 212)
         {
           struct timespec delay = {0, 200000000}; /* 200 ms */
-          while (nanosleep(&delay, &delay) == -1)
-            ;
+          while (nanosleep(&delay, &delay) == -1);
         }
 #endif
 
@@ -3964,8 +3960,7 @@ static void *event_loop(void *arg)
     {
       {
         struct timespec delay = {0, 10000000}; /* 10 ms */
-        while (nanosleep(&delay, &delay) == -1)
-          ;
+        while (nanosleep(&delay, &delay) == -1);
       }
 
       if (idle && p->run)
@@ -4202,8 +4197,7 @@ void gks_x11plugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
                   p->run = 0;
                   {
                     struct timespec delay = {0, 10000000}; /* 10 ms */
-                    while (nanosleep(&delay, &delay) == -1)
-                      ;
+                    while (nanosleep(&delay, &delay) == -1);
                   }
                 }
             }

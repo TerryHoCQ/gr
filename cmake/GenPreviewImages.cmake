@@ -5,291 +5,297 @@ function(zero_pad width number padded_number)
   if(pad_length GREATER 0)
     string(REPEAT "0" ${pad_length} pad)
   endif()
-  set(${padded_number}
-      "${pad}${number}"
-      PARENT_SCOPE
-  )
+  set(${padded_number} "${pad}${number}" PARENT_SCOPE)
 endfunction()
 
-set(GR_COLORMAPS
-    uniform
-    temperature
-    grayscale
-    glowing
-    rainbowlike
-    geologic
-    greenscale
-    cyanscale
-    bluescale
-    magentascale
-    redscale
-    flame
-    brownscale
-    pilatus
-    autumn
-    bone
-    cool
-    copper
-    gray
-    hot
-    hsv
-    jet
-    pink
-    spectral
-    spring
-    summer
-    winter
-    gist_earth
-    gist_heat
-    gist_ncar
-    gist_rainbow
-    gist_stern
-    afmhot
-    brg
-    bwr
-    coolwarm
-    cmrmap
-    cubehelix
-    gnuplot
-    gnuplot2
-    ocean
-    rainbow
-    seismic
-    terrain
-    viridis
-    inferno
-    plasma
-    magma
+set(
+  GR_COLORMAPS
+  uniform
+  temperature
+  grayscale
+  glowing
+  rainbowlike
+  geologic
+  greenscale
+  cyanscale
+  bluescale
+  magentascale
+  redscale
+  flame
+  brownscale
+  pilatus
+  autumn
+  bone
+  cool
+  copper
+  gray
+  hot
+  hsv
+  jet
+  pink
+  spectral
+  spring
+  summer
+  winter
+  gist_earth
+  gist_heat
+  gist_ncar
+  gist_rainbow
+  gist_stern
+  afmhot
+  brg
+  bwr
+  coolwarm
+  cmrmap
+  cubehelix
+  gnuplot
+  gnuplot2
+  ocean
+  rainbow
+  seismic
+  terrain
+  viridis
+  inferno
+  plasma
+  magma
 )
-set(GR_FONTS
-    times_roman
-    times_italic
-    times_bold
-    times_bolditalic
-    helvetica
-    helvetica_oblique
-    helvetica_bold
-    helvetica_boldoblique
-    courier
-    courier_oblique
-    courier_bold
-    courier_boldoblique
-    symbol
-    bookman_light
-    bookman_lightitalic
-    bookman_demi
-    bookman_demiitalic
-    newcenturyschlbk_roman
-    newcenturyschlbk_italic
-    newcenturyschlbk_bold
-    newcenturyschlbk_bolditalic
-    avantgarde_book
-    avantgarde_bookoblique
-    avantgarde_demi
-    avantgarde_demioblique
-    palantino_roman
-    palantino_italic
-    palantino_bold
-    palantino_bolditalic
-    zapfchancery_mediumitalic
-    zapfdingbats
-    computermodern
-    dejavusans
-    stix_two_math
+set(
+  GR_FONTS
+  times_roman
+  times_italic
+  times_bold
+  times_bolditalic
+  helvetica
+  helvetica_oblique
+  helvetica_bold
+  helvetica_boldoblique
+  courier
+  courier_oblique
+  courier_bold
+  courier_boldoblique
+  symbol
+  bookman_light
+  bookman_lightitalic
+  bookman_demi
+  bookman_demiitalic
+  newcenturyschlbk_roman
+  newcenturyschlbk_italic
+  newcenturyschlbk_bold
+  newcenturyschlbk_bolditalic
+  avantgarde_book
+  avantgarde_bookoblique
+  avantgarde_demi
+  avantgarde_demioblique
+  palantino_roman
+  palantino_italic
+  palantino_bold
+  palantino_bolditalic
+  zapfchancery_mediumitalic
+  zapfdingbats
+  computermodern
+  dejavusans
+  stix_two_math
 )
-set(GR_FONTS_DARK
-    times_roman_dark
-    times_italic_dark
-    times_bold_dark
-    times_bolditalic_dark
-    helvetica_dark
-    helvetica_oblique_dark
-    helvetica_bold_dark
-    helvetica_boldoblique_dark
-    courier_dark
-    courier_oblique_dark
-    courier_bold_dark
-    courier_boldoblique_dark
-    symbol_dark
-    bookman_light_dark
-    bookman_lightitalic_dark
-    bookman_demi_dark
-    bookman_demiitalic_dark
-    newcenturyschlbk_roman_dark
-    newcenturyschlbk_italic_dark
-    newcenturyschlbk_bold_dark
-    newcenturyschlbk_bolditalic_dark
-    avantgarde_book_dark
-    avantgarde_bookoblique_dark
-    avantgarde_demi_dark
-    avantgarde_demioblique_dark
-    palantino_roman_dark
-    palantino_italic_dark
-    palantino_bold_dark
-    palantino_bolditalic_dark
-    zapfchancery_mediumitalic_dark
-    zapfdingbats_dark
-    computermodern_dark
-    dejavusans_dark
-    stix_two_math_dark
+set(
+  GR_FONTS_DARK
+  times_roman_dark
+  times_italic_dark
+  times_bold_dark
+  times_bolditalic_dark
+  helvetica_dark
+  helvetica_oblique_dark
+  helvetica_bold_dark
+  helvetica_boldoblique_dark
+  courier_dark
+  courier_oblique_dark
+  courier_bold_dark
+  courier_boldoblique_dark
+  symbol_dark
+  bookman_light_dark
+  bookman_lightitalic_dark
+  bookman_demi_dark
+  bookman_demiitalic_dark
+  newcenturyschlbk_roman_dark
+  newcenturyschlbk_italic_dark
+  newcenturyschlbk_bold_dark
+  newcenturyschlbk_bolditalic_dark
+  avantgarde_book_dark
+  avantgarde_bookoblique_dark
+  avantgarde_demi_dark
+  avantgarde_demioblique_dark
+  palantino_roman_dark
+  palantino_italic_dark
+  palantino_bold_dark
+  palantino_bolditalic_dark
+  zapfchancery_mediumitalic_dark
+  zapfdingbats_dark
+  computermodern_dark
+  dejavusans_dark
+  stix_two_math_dark
 )
-set(GR_FONT_INDICES
-    101
-    102
-    103
-    104
-    105
-    106
-    107
-    108
-    109
-    110
-    111
-    112
-    113
-    114
-    115
-    116
-    117
-    118
-    119
-    120
-    121
-    122
-    123
-    124
-    125
-    126
-    127
-    128
-    129
-    130
-    131
-    232
-    233
-    234
+set(
+  GR_FONT_INDICES
+  101
+  102
+  103
+  104
+  105
+  106
+  107
+  108
+  109
+  110
+  111
+  112
+  113
+  114
+  115
+  116
+  117
+  118
+  119
+  120
+  121
+  122
+  123
+  124
+  125
+  126
+  127
+  128
+  129
+  130
+  131
+  232
+  233
+  234
 )
 set(GR_FONT_PRECISIONS string char stroke outline)
 set(GR_FONT_PRECISIONS_DARK string_dark char_dark stroke_dark outline_dark)
-set(GR_LINE_TYPES
-    solid
-    dashed
-    dotted
-    dashed_dotted
-    dash_2_dot
-    dash_3_dot
-    long_dash
-    long_short_dash
-    spaced_dash
-    spaced_dot
-    double_dot
-    triple_dot
+set(
+  GR_LINE_TYPES
+  solid
+  dashed
+  dotted
+  dashed_dotted
+  dash_2_dot
+  dash_3_dot
+  long_dash
+  long_short_dash
+  spaced_dash
+  spaced_dot
+  double_dot
+  triple_dot
 )
-set(GR_LINE_TYPES_DARK
-    solid_dark
-    dashed_dark
-    dotted_dark
-    dashed_dotted_dark
-    dash_2_dot_dark
-    dash_3_dot_dark
-    long_dash_dark
-    long_short_dash_dark
-    spaced_dash_dark
-    spaced_dot_dark
-    double_dot_dark
-    triple_dot_dark
+set(
+  GR_LINE_TYPES_DARK
+  solid_dark
+  dashed_dark
+  dotted_dark
+  dashed_dotted_dark
+  dash_2_dot_dark
+  dash_3_dot_dark
+  long_dash_dark
+  long_short_dash_dark
+  spaced_dash_dark
+  spaced_dot_dark
+  double_dot_dark
+  triple_dot_dark
 )
-set(GR_LINE_TYPE_INDICES
-    1
-    2
-    3
-    4
-    -1
-    -2
-    -3
-    -4
-    -5
-    -6
-    -7
-    -8
+set(
+  GR_LINE_TYPE_INDICES
+  1
+  2
+  3
+  4
+  -1
+  -2
+  -3
+  -4
+  -5
+  -6
+  -7
+  -8
 )
-set(GR_MARKER_TYPES
-    dot
-    plus
-    asterisk
-    circle
-    diagonal_cross
-    solid_circle
-    triangle_up
-    solid_tri_up
-    triangle_down
-    solid_tri_down
-    square
-    solid_square
-    bowtie
-    solid_bowtie
-    hglass
-    solid_hglass
-    diamond
-    solid_diamond
-    star
-    solid_star
-    tri_up_down
-    solid_tri_right
-    solid_tri_left
-    hollow_plus
-    solid_plus
-    pentagon
-    hexagon
-    heptagon
-    octagon
-    star_4
-    star_5
-    star_6
-    star_7
-    star_8
-    vline
-    hline
-    omark
+set(
+  GR_MARKER_TYPES
+  dot
+  plus
+  asterisk
+  circle
+  diagonal_cross
+  solid_circle
+  triangle_up
+  solid_tri_up
+  triangle_down
+  solid_tri_down
+  square
+  solid_square
+  bowtie
+  solid_bowtie
+  hglass
+  solid_hglass
+  diamond
+  solid_diamond
+  star
+  solid_star
+  tri_up_down
+  solid_tri_right
+  solid_tri_left
+  hollow_plus
+  solid_plus
+  pentagon
+  hexagon
+  heptagon
+  octagon
+  star_4
+  star_5
+  star_6
+  star_7
+  star_8
+  vline
+  hline
+  omark
 )
-set(GR_MARKER_TYPE_INDICES
-    1
-    2
-    3
-    4
-    5
-    -1
-    -2
-    -3
-    -4
-    -5
-    -6
-    -7
-    -8
-    -9
-    -10
-    -11
-    -12
-    -13
-    -14
-    -15
-    -16
-    -17
-    -18
-    -19
-    -20
-    -21
-    -22
-    -23
-    -24
-    -25
-    -26
-    -27
-    -28
-    -29
-    -30
-    -31
-    -32
+set(
+  GR_MARKER_TYPE_INDICES
+  1
+  2
+  3
+  4
+  5
+  -1
+  -2
+  -3
+  -4
+  -5
+  -6
+  -7
+  -8
+  -9
+  -10
+  -11
+  -12
+  -13
+  -14
+  -15
+  -16
+  -17
+  -18
+  -19
+  -20
+  -21
+  -22
+  -23
+  -24
+  -25
+  -26
+  -27
+  -28
+  -29
+  -30
+  -31
+  -32
 )
 set(GRPLOT_QRC "<RCC>\n    <qresource prefix=\"/\">\n")
 foreach(colormap IN LISTS GR_COLORMAPS)
@@ -335,8 +341,9 @@ endforeach()
 string(APPEND GRPLOT_QRC "   </qresource>\n</RCC>")
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/grplot.qrc" "${GRPLOT_QRC}")
 
-set(GEN_PREVIEWS_SRC
-    "\
+set(
+  GEN_PREVIEWS_SRC
+  "\
 #ifdef __unix__\n\
 #define _XOPEN_SOURCE 500\n\
 #define _POSIX_C_SOURCE 200112L\n\
@@ -392,8 +399,7 @@ foreach(colormap IN LISTS GR_COLORMAPS)
   math(EXPR colormap_index "${colormap_index} + 1")
 endforeach()
 string(
-  APPEND
-  GEN_PREVIEWS_SRC
+  APPEND GEN_PREVIEWS_SRC
   "\
   {NULL, 0},\n\
 };\n\
@@ -401,19 +407,11 @@ string(
 static entry_t FONTS[] = {\n\
 "
 )
-foreach(
-  font_index
-  font
-  IN
-  ZIP_LISTS
-  GR_FONT_INDICES
-  GR_FONTS
-)
+foreach(font_index font IN ZIP_LISTS GR_FONT_INDICES GR_FONTS)
   string(APPEND GEN_PREVIEWS_SRC "  {\"${font}\", ${font_index}},\n")
 endforeach()
 string(
-  APPEND
-  GEN_PREVIEWS_SRC
+  APPEND GEN_PREVIEWS_SRC
   "\
   {NULL, 0},\n\
 };\n\
@@ -427,8 +425,7 @@ foreach(font_precision IN LISTS GR_FONT_PRECISIONS)
   math(EXPR font_precision_index "${font_precision_index} + 1")
 endforeach()
 string(
-  APPEND
-  GEN_PREVIEWS_SRC
+  APPEND GEN_PREVIEWS_SRC
   "\
   {NULL, 0},\n\
 };\n\
@@ -436,19 +433,11 @@ string(
 static entry_t LINE_TYPES[] = {\n\
 "
 )
-foreach(
-  line_type_index
-  line_type
-  IN
-  ZIP_LISTS
-  GR_LINE_TYPE_INDICES
-  GR_LINE_TYPES
-)
+foreach(line_type_index line_type IN ZIP_LISTS GR_LINE_TYPE_INDICES GR_LINE_TYPES)
   string(APPEND GEN_PREVIEWS_SRC "  {\"${line_type}\", ${line_type_index}},\n")
 endforeach()
 string(
-  APPEND
-  GEN_PREVIEWS_SRC
+  APPEND GEN_PREVIEWS_SRC
   "\
   {NULL, 0},\n\
 };\n\
@@ -456,19 +445,11 @@ string(
 static entry_t MARKER_TYPES[] = {\n\
 "
 )
-foreach(
-  marker_type_index
-  marker_type
-  IN
-  ZIP_LISTS
-  GR_MARKER_TYPE_INDICES
-  GR_MARKER_TYPES
-)
+foreach(marker_type_index marker_type IN ZIP_LISTS GR_MARKER_TYPE_INDICES GR_MARKER_TYPES)
   string(APPEND GEN_PREVIEWS_SRC "  {\"${marker_type}\", ${marker_type_index}},\n")
 endforeach()
 string(
-  APPEND
-  GEN_PREVIEWS_SRC
+  APPEND GEN_PREVIEWS_SRC
   "\
   {NULL, 0},\n\
 };\n\
@@ -872,8 +853,9 @@ PROPERTIES\n\
 )\n\
 "
     )
-    set(GR_GEN_PREVIEW_IMAGES_EXECUTABLE
-        "${CMAKE_CURRENT_BINARY_DIR}/host/gen_preview_images${CMAKE_HOST_EXECUTABLE_SUFFIX}"
+    set(
+      GR_GEN_PREVIEW_IMAGES_EXECUTABLE
+      "${CMAKE_CURRENT_BINARY_DIR}/host/gen_preview_images${CMAKE_HOST_EXECUTABLE_SUFFIX}"
     )
     add_custom_target(gen_preview_images DEPENDS ${GR_GEN_PREVIEW_IMAGES_EXECUTABLE})
     add_custom_command(
@@ -889,7 +871,7 @@ PROPERTIES\n\
   else()
     message(
       WARNING
-        "GR_HOST_DIRECTORY is not set. GRPlot preview images will be taken from the source code tree and could differ \
+      "GR_HOST_DIRECTORY is not set. GRPlot preview images will be taken from the source code tree and could differ \
 from the version of GRPlot that you are building."
     )
   endif()
@@ -932,36 +914,40 @@ list(TRANSFORM GR_FILL_STYLE_IMAGES APPEND ".png")
 
 add_custom_target(
   grplot_preview_images
-  DEPENDS ${GR_COLORMAP_IMAGES}
-          ${GR_FONT_IMAGES}
-          ${GR_FONT_PRECISION_IMAGES}
-          ${GR_LINE_TYPE_IMAGES}
-          ${GR_MARKER_TYPE_IMAGES}
-          ${GR_FILL_STYLE_IMAGES}
+  DEPENDS
+    ${GR_COLORMAP_IMAGES}
+    ${GR_FONT_IMAGES}
+    ${GR_FONT_PRECISION_IMAGES}
+    ${GR_LINE_TYPE_IMAGES}
+    ${GR_MARKER_TYPE_IMAGES}
+    ${GR_FILL_STYLE_IMAGES}
 )
 # Make sure the cairoplugin is built before generating the preview images, otherwise PNGs cannot be created
 add_dependencies(grplot_preview_images cairoplugin)
 if(NOT CMAKE_CROSSCOMPILING OR GR_HOST_DIRECTORY)
   add_custom_command(
-    OUTPUT ${GR_COLORMAP_IMAGES}
-           ${GR_FONT_IMAGES}
-           ${GR_FONT_PRECISION_IMAGES}
-           ${GR_LINE_TYPE_IMAGES}
-           ${GR_MARKER_TYPE_IMAGES}
-           ${GR_FILL_STYLE_IMAGES}
-    COMMAND "${CMAKE_COMMAND}" -E env GKS_FONTPATH="${CMAKE_CURRENT_LIST_DIR}/../lib/gks"
-            ${GR_GEN_PREVIEW_IMAGES_EXECUTABLE}
+    OUTPUT
+      ${GR_COLORMAP_IMAGES}
+      ${GR_FONT_IMAGES}
+      ${GR_FONT_PRECISION_IMAGES}
+      ${GR_LINE_TYPE_IMAGES}
+      ${GR_MARKER_TYPE_IMAGES}
+      ${GR_FILL_STYLE_IMAGES}
+    COMMAND
+      "${CMAKE_COMMAND}" -E env GKS_FONTPATH="${CMAKE_CURRENT_LIST_DIR}/../lib/gks" ${GR_GEN_PREVIEW_IMAGES_EXECUTABLE}
     DEPENDS ${GR_GEN_PREVIEW_IMAGES_EXECUTABLE}
   )
 else()
   add_custom_command(
-    OUTPUT ${GR_COLORMAP_IMAGES}
-           ${GR_FONT_IMAGES}
-           ${GR_FONT_PRECISION_IMAGES}
-           ${GR_LINE_TYPE_IMAGES}
-           ${GR_MARKER_TYPE_IMAGES}
-           ${GR_FILL_STYLE_IMAGES}
-    COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_CURRENT_LIST_DIR}/../lib/grm/grplot/preview_images"
-            "${CMAKE_CURRENT_BINARY_DIR}/preview_images"
+    OUTPUT
+      ${GR_COLORMAP_IMAGES}
+      ${GR_FONT_IMAGES}
+      ${GR_FONT_PRECISION_IMAGES}
+      ${GR_LINE_TYPE_IMAGES}
+      ${GR_MARKER_TYPE_IMAGES}
+      ${GR_FILL_STYLE_IMAGES}
+    COMMAND
+      "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_CURRENT_LIST_DIR}/../lib/grm/grplot/preview_images"
+      "${CMAKE_CURRENT_BINARY_DIR}/preview_images"
   )
 endif()

@@ -184,8 +184,8 @@ int gr3_initGL_GLX_(void)
     gr3_glEnable = (void (*)(GLenum))platform->getProcAddress("glEnable");
     gr3_glEnd = (void (*)(void))platform->getProcAddress("glEnd");
     gr3_glEndList = (void (*)(void))platform->getProcAddress("glEndList");
-    gr3_glGenLists = (GLuint(*)(GLsizei))platform->getProcAddress("glGenLists");
-    gr3_glGetError = (GLenum(*)(void))platform->getProcAddress("glGetError");
+    gr3_glGenLists = (GLuint (*)(GLsizei))platform->getProcAddress("glGenLists");
+    gr3_glGetError = (GLenum (*)(void))platform->getProcAddress("glGetError");
     gr3_glGetBooleanv = (void (*)(GLenum, GLboolean *))platform->getProcAddress("glGetBooleanv");
     gr3_glGetFloatv = (void (*)(GLenum, GLfloat *))platform->getProcAddress("glGetFloatv");
     gr3_glGetIntegerv = (void (*)(GLenum, GLint *))platform->getProcAddress("glGetIntegerv");

@@ -53,9 +53,9 @@
   xn = gkss->a[tnr] * (xw) + gkss->b[tnr]; \
   yn = gkss->c[tnr] * (yw) + gkss->d[tnr]
 
-#define NDC_to_WC(xn, yn, tnr, xw, yw)     \
-  xw = ((xn)-gkss->b[tnr]) / gkss->a[tnr]; \
-  yw = ((yn)-gkss->d[tnr]) / gkss->c[tnr]
+#define NDC_to_WC(xn, yn, tnr, xw, yw)       \
+  xw = ((xn) - gkss->b[tnr]) / gkss->a[tnr]; \
+  yw = ((yn) - gkss->d[tnr]) / gkss->c[tnr]
 
 #define WC_to_NDC_rel(xw, yw, tnr, xn, yn) \
   xn = gkss->a[tnr] * (xw);                \

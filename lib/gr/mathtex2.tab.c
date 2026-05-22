@@ -501,7 +501,7 @@ void *malloc(YYSIZE_T); /* INFRINGES ON USER NAME SPACE */
 #ifndef YYFREE
 #define YYFREE free
 #if !defined free && !defined EXIT_SUCCESS
-void free(void *);      /* INFRINGES ON USER NAME SPACE */
+void free(void *); /* INFRINGES ON USER NAME SPACE */
 #endif
 #endif
 #endif
@@ -1485,7 +1485,7 @@ yyreduce:
         yyval = yyvsp[0];
         yyval.index = 0;
         yyval.type = NT_SUBSUPER;
-        yyval.u.subsuper.operator= '\'';
+        yyval.u.subsuper.operator = '\'';
         yyval.u.subsuper.token = 0;
       }
 #line 1576 "mathtex2.tab.c"
@@ -1498,7 +1498,7 @@ yyreduce:
         yyval.index = 0;
         yyval.length += yyvsp[0].length;
         yyval.type = NT_SUBSUPER;
-        yyval.u.subsuper.operator= yyvsp[-1].source[0];
+        yyval.u.subsuper.operator = yyvsp[-1].source[0];
         yyval.u.subsuper.token = copy_parser_node(yyvsp[0]);
       }
 #line 1589 "mathtex2.tab.c"

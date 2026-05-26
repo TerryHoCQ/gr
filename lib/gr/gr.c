@@ -5797,6 +5797,7 @@ void gr_axis(const char *spec, axis_t *axis)
 static void draw_axis(char which, axis_t *axis, int pass)
 {
   int errind, tnr, halign, valign;
+  double chux, chuy;
   double wn[4], vp[4];
   double tick, minor_tick, major_tick;
   int i;
@@ -5870,15 +5871,48 @@ static void draw_axis(char which, axis_t *axis, int pass)
         {
           if (axis->num_tick_labels > 0)
             {
+              bool rotate_labels = false;
+
+              if (which == 'X')
+                {
+                  double width = 0;
+
+                  for (i = 0; i < axis->num_tick_labels; i++)
+                    {
+                      double tbx[4], tby[4];
+                      gr_inqtext(0, 0, axis->tick_labels[i].label, tbx, tby);
+                      width += tbx[2] - tbx[0];
+                    }
+
+                  if (width > 0.8 * (vp[1] - vp[0]))
+                    {
+                      /* save text character-up vector */
+                      gks_inq_text_upvec(&errind, &chux, &chuy);
+
+                      gks_set_text_upvec(-1, 1);
+                      rotate_labels = true;
+                    }
+                }
+
               /* save text alignment */
               gks_inq_text_align(&errind, &halign, &valign);
 
               if (which == 'X')
                 {
-                  if ((axis->position <= wn[2] && axis->label_orientation == 0) || axis->label_orientation < 0)
-                    gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+                  if (rotate_labels)
+                    {
+                      if ((axis->position <= wn[2] && axis->label_orientation == 0) || axis->label_orientation < 0)
+                        gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_TOP);
+                      else
+                        gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_BOTTOM);
+                    }
                   else
-                    gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
+                    {
+                      if ((axis->position <= wn[2] && axis->label_orientation == 0) || axis->label_orientation < 0)
+                        gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+                      else
+                        gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
+                    }
                 }
               else
                 {
@@ -5894,6 +5928,9 @@ static void draw_axis(char which, axis_t *axis, int pass)
                   else
                     text2d(axis->label_position, axis->tick_labels[i].tick, axis->tick_labels[i].label);
                 }
+
+              if (rotate_labels) /* restore text character-up vector */
+                gks_set_text_upvec(chux, chuy);
 
               /* restore text alignment */
               gks_set_text_align(halign, valign);

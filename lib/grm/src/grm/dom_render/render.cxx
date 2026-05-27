@@ -955,6 +955,7 @@ std::vector<std::string> GRM::Render::getDefaultAndTooltip(const std::shared_ptr
            "None", "The vertical text alignment. Defines where the vertical anker point of the test is placed"}},
       {std::string("text_color_ind"), std::vector<std::string>{"None", "The index of the text color"}},
       {std::string("text_encoding"), std::vector<std::string>{"utf8", "The internal text encoding"}},
+      {std::string("text_scale"), std::vector<std::string>{"1.0", "A scaling factor that gets applied to each text"}},
       {std::string("text_x0"), std::vector<std::string>{"None", "The left x position of the text"}},
       {std::string("text_y0"), std::vector<std::string>{"None", "The left y position of the text"}},
       {std::string("theta"), std::vector<std::string>{"None", "References the theta-values stored in the context"}},

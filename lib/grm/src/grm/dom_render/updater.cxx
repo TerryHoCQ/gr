@@ -243,6 +243,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
   };
   std::vector<std::string> figure_critical_attributes{
       "consecutive_colorbars",
+      "text_scale",
   };
   bool automatic_update;
   auto global_creator = grm_get_creator();
@@ -1505,23 +1506,26 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
                    std::find(figure_critical_attributes.begin(), figure_critical_attributes.end(), attr) !=
                        figure_critical_attributes.end())
             {
-              for (const auto &colorbar : element->querySelectorsAll("colorbar"))
+              if (attr == "consecutive_colorbars")
                 {
-                  colorbar->setAttribute("_update_required", true);
-                  colorbar->setAttribute("_delete_children", 2);
-                }
-              for (const auto &plot : element->querySelectorsAll("plot"))
-                {
-                  auto central_region = plot->querySelectors("central_region");
-                  for (const auto &series : central_region->children())
+                  for (const auto &colorbar : element->querySelectorsAll("colorbar"))
                     {
-                      if (!startsWith(series->localName(), "series_")) continue;
-                      auto series_kind = static_cast<std::string>(series->getAttribute("kind"));
-                      if (strEqualsAny(series_kind, "heatmap", "contour", "contourf", "polar_heatmap", "tricontour",
-                                       "hexbin", "quiver", "surface", "trisurface", "volume"))
+                      colorbar->setAttribute("_update_required", true);
+                      colorbar->setAttribute("_delete_children", 2);
+                    }
+                  for (const auto &plot : element->querySelectorsAll("plot"))
+                    {
+                      auto central_region = plot->querySelectors("central_region");
+                      for (const auto &series : central_region->children())
                         {
-                          series->setAttribute("_update_required", true);
-                          series->setAttribute("_delete_children", 2);
+                          if (!startsWith(series->localName(), "series_")) continue;
+                          auto series_kind = static_cast<std::string>(series->getAttribute("kind"));
+                          if (strEqualsAny(series_kind, "heatmap", "contour", "contourf", "polar_heatmap", "tricontour",
+                                           "hexbin", "quiver", "surface", "trisurface", "volume"))
+                            {
+                              series->setAttribute("_update_required", true);
+                              series->setAttribute("_delete_children", 2);
+                            }
                         }
                     }
                 }

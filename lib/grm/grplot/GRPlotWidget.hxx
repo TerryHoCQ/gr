@@ -216,6 +216,7 @@ public:
   QAction *getUpdateEditElementTitleAct();
   QAction *getConsecutiveColorbarsAct();
   QAction *getFlipLayoutAct();
+  QAction *getTextScaleAct();
   QWidget *getEditElementWidget();
   QWidget *getTreeWidget();
   QWidget *getTableWidget();
@@ -331,6 +332,7 @@ private slots:
   void possibleElementsMenuSlot();
   void disableGridSlot();
   void highlightMoveToPlotSlot(int index);
+  void textScaleSlot();
 
 private:
   struct MouseState
@@ -478,7 +480,8 @@ private:
       *hide_multiplot_sub_menu_act, *show_multiplot_sub_menu_act;
   QAction *x_flip_act, *y_flip_act, *z_flip_act, *theta_flip_act;
   QAction *x_log_act, *y_log_act, *z_log_act, *r_log_act;
-  QAction *use_gr3_act, *polar_with_pan_act, *keep_window_act, *colormap_act, *text_color_ind_act, *disable_grid_act;
+  QAction *use_gr3_act, *polar_with_pan_act, *keep_window_act, *colormap_act, *text_color_ind_act, *disable_grid_act,
+      *text_scale_act;
   QAction *keep_aspect_ratio_act, *only_square_aspect_ratio_act;
   QAction *vertical_orientation_act, *horizontal_orientation_act;
   QAction *legend_act, *colorbar_act, *left_axis_act, *right_axis_act, *bottom_axis_act, *top_axis_act,

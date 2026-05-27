@@ -548,8 +548,10 @@ GRPlotWidget::GRPlotWidget(QMainWindow *parent, int argc, char **argv, bool list
   auto colormap = QPixmap(":/preview_images/colormaps/viridis.png");
   colormap_act->setIcon(colormap.scaled(20, 20));
   connect(colormap_act, &QAction::triggered, this, &GRPlotWidget::colormapSlot);
-  text_color_ind_act = new QAction(tr(""), this);
+  text_color_ind_act = new QAction(tr("Text Color Ind"), this);
   connect(text_color_ind_act, &QAction::triggered, this, &GRPlotWidget::colorIndexSlot);
+  text_scale_act = new QAction(tr("Text Scale"), this);
+  connect(text_scale_act, &QAction::triggered, this, &GRPlotWidget::textScaleSlot);
   disable_grid_act = new QAction(tr(""), this);
   connect(disable_grid_act, &QAction::triggered, this, &GRPlotWidget::disableGridSlot);
   consecutive_colorbars_act = new QAction(tr("&Consecutive Colorbars"), this);
@@ -6014,6 +6016,46 @@ void GRPlotWidget::colorIndexSlot()
   colorIndexPopUp("text_color_ind", index, plot_elem);
 }
 
+void GRPlotWidget::textScaleSlot()
+{
+  auto render = grm_get_render();
+  const auto global_root = grm_get_document_root();
+  const auto figure_elem = global_root->querySelectors("figure[active=1]");
+  if (figure_elem == nullptr) return;
+
+  QList<QLineEdit *> fields;
+  QDialog dialog(this);
+  dialog.setWindowTitle("Set Text Scale:");
+  auto form = new QFormLayout;
+
+  auto text_scale_label = new QLabel(QString("Text Scale:"));
+  auto line_edit = new QLineEdit();
+  if (figure_elem->hasAttribute("text_scale"))
+    line_edit->setText(static_cast<std::string>(figure_elem->getAttribute("text_scale")).c_str());
+  else
+    line_edit->setText("1.0");
+  form->addRow(text_scale_label, line_edit);
+  fields << line_edit;
+
+  QDialogButtonBox button_box(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, &dialog);
+  form->addRow(&button_box);
+  QObject::connect(&button_box, SIGNAL(accepted()), &dialog, SLOT(accept()));
+  QObject::connect(&button_box, SIGNAL(rejected()), &dialog, SLOT(reject()));
+
+  dialog.setLayout(form);
+
+  if (dialog.exec() == QDialog::Accepted)
+    {
+      std::shared_ptr<GRM::Context> context = grm_get_render()->getContext();
+
+      if (enable_editor) createHistoryElement();
+
+      if (fields[0]->isModified()) figure_elem->setAttribute("text_scale", std::stod(fields[0]->text().toStdString()));
+    }
+
+  redraw();
+}
+
 void GRPlotWidget::sizeCallback(const grm_event_t *new_size_object)
 {
   // TODO: Get Plot ID
@@ -7423,6 +7465,11 @@ QAction *GRPlotWidget::getConsecutiveColorbarsAct()
 QAction *GRPlotWidget::getFlipLayoutAct()
 {
   return flip_layout_act;
+}
+
+QAction *GRPlotWidget::getTextScaleAct()
+{
+  return text_scale_act;
 }
 
 QWidget *GRPlotWidget::getEditElementWidget()

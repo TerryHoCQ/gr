@@ -243,20 +243,24 @@ IconBarWidget::IconBarWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(pa
   colormap_act->setToolTip("Colormap");
   colormap_tool_button->setDefaultAction(colormap_act);
 
-  text_color_ind_button = new QToolButton(this);
-  text_color_ind_button->setIconSize(QSize(ICON_SIZE, ICON_SIZE));
-  text_color_ind_button->setContentsMargins(0, 0, 0, 0);
-  text_color_ind_button->setFixedSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-  text_color_ind_button->setStyleSheet("QToolButton {border:none;} :hover {background: lightgray;}");
-  text_color_ind_button->setToolTip("Text Color Index");
-  text_color_ind_button->setMinimumWidth(0);
-
-  auto text_color_ind_act = grplot_widget->getTextColorIndAct();
-  text_color_ind_act->setToolTip("Text Color Index");
-  text_color_ind_button->setDefaultAction(text_color_ind_act);
+  text_button = new QToolButton(this);
   name = (grplot_widget->isDarkMode() ? "text_color_ind_dark" : "text_color_ind");
   auto text_color_ind = QPixmap((":/icons/" + name + ".png").c_str());
-  text_color_ind_act->setIcon(text_color_ind);
+  text_button->setIcon(text_color_ind);
+  text_button->setIconSize(QSize(ICON_SIZE, ICON_SIZE));
+  text_button->setContentsMargins(0, 0, 0, 0);
+  text_button->setFixedSize(BUTTON_WIDTH, BUTTON_HEIGHT);
+  text_button->setPopupMode(QToolButton::InstantPopup);
+  text_button->setStyleSheet(" QToolButton {border:none;} :hover {background: lightgray;} "
+                             "QToolButton::menu-indicator { width:5px; height:3px; padding:2px;}");
+  text_button->setToolTip("Text Color Index And Scale");
+  text_button->setMinimumWidth(0);
+
+  text_sub_menu = new QMenu(this);
+  text_sub_menu->addAction(grplot_widget->getTextColorIndAct());
+  text_sub_menu->addAction(grplot_widget->getTextScaleAct());
+  text_sub_menu->menuAction()->setVisible(true);
+  text_button->setMenu(text_sub_menu);
 
   marginal_sub_menu->menuAction()->setVisible(false);
   algo_sub_menu->menuAction()->setVisible(false);
@@ -335,7 +339,7 @@ IconBarWidget::IconBarWidget(GRPlotWidget *widget, QWidget *parent) : QWidget(pa
   h_box_layout->addWidget(use_gr3_tool_button);
   h_box_layout->addWidget(polar_with_pan_tool_button);
   h_box_layout->addWidget(colormap_tool_button);
-  h_box_layout->addWidget(text_color_ind_button);
+  h_box_layout->addWidget(text_button);
   h_box_layout->addWidget(disable_grid_button);
   h_box_layout->addWidget(multiplot_tool_button);
 

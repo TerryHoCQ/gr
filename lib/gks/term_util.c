@@ -512,6 +512,38 @@ int term_size(int *rows, int *cols, int *width, int *height)
   return read_term_size;
 }
 
+/*!
+ * \brief Query the terminal for its size, calcuate the cell size and cache the result for later queries.
+ *
+ * \param[out] cell_width
+ * \param[out] cell_height
+ * \return if the query was successful
+ */
+int term_cell_size(double *cell_width, double *cell_height)
+{
+  static double cell_width_ = -1, cell_height_ = -1;
+
+  if (cell_width_ < 0 || cell_height_ < 0)
+    {
+      int rows, cols, width, height;
+      term_size(&rows, &cols, &height, &width);
+      if (rows > 0 && cols > 0 && width > 0 && height > 0)
+        {
+          cell_width_ = (double)width / cols;
+          cell_height_ = (double)height / rows;
+        }
+    }
+
+  if (cell_width_ >= 0 || cell_height_ >= 0)
+    {
+      if (cell_width != NULL) *cell_width = cell_width_;
+      if (cell_height != NULL) *cell_height = cell_height_;
+      return 1;
+    }
+
+  return 0;
+}
+
 int term_background_color(int *r, int *g, int *b)
 {
   char *resp;

@@ -406,6 +406,54 @@ static void resize(int width, int height)
   init_norm_xform();
 }
 
+static void resizeToTermSize()
+{
+#ifndef _WIN32
+  if (p->wtype < 151 || p->wtype > 153) return;
+
+  {
+    double aspect_ratio, cell_width, cell_height, rendered_image_height, rendered_image_width;
+    int image_height_in_cells = p->inline_options.height, image_width_in_cells;
+
+    if (!term_cell_size(&cell_width, &cell_height))
+      {
+        fprintf(stderr, "GKS: Failed to query terminal cell size.\n");
+        return;
+      }
+    rendered_image_height = cell_height * image_height_in_cells;
+    rendered_image_width = 0;
+    aspect_ratio = (p->width > 0 && p->height > 0) ? ((double)p->width / p->height) : ((double)p->w / p->h);
+    if (p->inline_options.width > 0)
+      {
+        rendered_image_width = cell_width * p->inline_options.width;
+        if (rendered_image_width / rendered_image_height < aspect_ratio)
+          {
+            rendered_image_height = rendered_image_width / aspect_ratio;
+            image_height_in_cells = ceil(rendered_image_height / cell_height);
+            rendered_image_height = image_height_in_cells * cell_height;
+          }
+        else
+          {
+            rendered_image_width = 0;
+          }
+      }
+    if (rendered_image_width == 0) rendered_image_width = rendered_image_height * aspect_ratio;
+    image_width_in_cells = ceil(rendered_image_width / cell_width);
+
+    p->width = rendered_image_width;
+    p->height = rendered_image_height;
+    p->window[0] = p->window[2] = 0.0;
+    p->window[1] = p->window[3] = 1.0;
+    p->viewport[0] = p->viewport[2] = 0;
+    p->viewport[1] = (double)p->width * p->mw / p->w;
+    p->viewport[3] = (double)p->height * p->mh / p->h;
+  }
+
+  set_xform();
+  init_norm_xform();
+#endif
+}
+
 static void set_color_rep(int color, double red, double green, double blue)
 {
   if (color >= 0 && color < MAX_COLOR)
@@ -1831,35 +1879,16 @@ static void write_page(void)
       long size, b64_size;
       unsigned char *string;
       char *b64_string;
-      int term_height_in_cells, term_width_in_cells, term_height_in_pixels, term_width_in_pixels;
-      int image_height_in_cells = p->inline_options.height, image_width_in_cells;
-      if (!term_size(&term_height_in_cells, &term_width_in_cells, &term_height_in_pixels, &term_width_in_pixels))
+      double cell_width, cell_height;
+      int image_width_in_cells, image_height_in_cells;
+
+      if (!term_cell_size(&cell_width, &cell_height))
         {
           fprintf(stderr, "GKS: Failed to query terminal size.\n");
           return;
         }
-      {
-        double cell_height = (double)term_height_in_pixels / term_height_in_cells;
-        double cell_width = (double)term_width_in_pixels / term_width_in_cells;
-        double rendered_image_height = cell_height * image_height_in_cells;
-        double rendered_image_width = 0;
-        if (p->inline_options.width > 0)
-          {
-            rendered_image_width = cell_width * p->inline_options.width;
-            if (rendered_image_width / rendered_image_height < (double)p->width / p->height)
-              {
-                rendered_image_height = rendered_image_width / p->width * p->height;
-                image_height_in_cells = ceil(rendered_image_height / cell_height);
-                rendered_image_height = image_height_in_cells * cell_height;
-              }
-            else
-              {
-                rendered_image_width = 0;
-              }
-          }
-        if (rendered_image_width == 0) rendered_image_width = rendered_image_height * p->width / p->height;
-        image_width_in_cells = ceil(rendered_image_width / cell_width);
-      }
+      image_width_in_cells = ceil(p->width / cell_width);
+      image_height_in_cells = ceil(p->height / cell_height);
 
       gks_filepath(path, p->path, "png", p->page_counter, 0);
       cairo_surface_write_to_png(p->surface, path);
@@ -2494,8 +2523,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
 #endif
       p->mem = NULL;
 
-      if (p->wtype == 140 || p->wtype == 144 || p->wtype == 145 || p->wtype == 146 || p->wtype == 151 ||
-          p->wtype == 152 || p->wtype == 153)
+      if (p->wtype == 140 || p->wtype == 144 || p->wtype == 145 || p->wtype == 146)
         {
           p->mw = 0.28575;
           p->mh = 0.19685;
@@ -2578,6 +2606,20 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           p->nominal_size = 400 / 500.0;
           if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
         }
+#ifndef _WIN32
+      else if (p->wtype >= 151 && p->wtype <= 153)
+        {
+          p->mw = 0.25400;
+          p->mh = 0.19050;
+          p->w = 1024;
+          p->h = 768;
+          p->dpi = 100;
+          p->width = p->height = -1;
+          resizeToTermSize();
+          p->nominal_size = min(p->width, p->height) / 500.0;
+          if (gkss->nominal_size > 0) p->nominal_size = gkss->nominal_size;
+        }
+#endif
       else
         {
           p->mw = 0.25400;
@@ -2869,6 +2911,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
               p->nominal_size = min(p->width, p->height) / 500.0;
               if (gkss->nominal_size > 0) p->nominal_size *= gkss->nominal_size;
             }
+          resizeToTermSize();
           close_page();
           open_page();
 

@@ -75,6 +75,7 @@ HIDDEN enum tmux_state_t have_tmux(void);
 HIDDEN int is_dark_term(void);
 HIDDEN struct inline_options_t parse_inline_env_var(void);
 HIDDEN int term_size(int *rows, int *cols, int *width, int *height);
+HIDDEN int term_cell_size(double *cell_width, double *cell_height);
 HIDDEN int term_background_color(int *r, int *g, int *b);
 
 #undef HIDDEN

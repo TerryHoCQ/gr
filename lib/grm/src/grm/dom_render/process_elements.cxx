@@ -1269,6 +1269,13 @@ void processAxis(const std::shared_ptr<GRM::Element> &element, const std::shared
   processTextEncoding(active_figure);
   processScale(plot_parent);
 
+  bool timestamp = false;
+  if (element->parentElement()->localName() == "coordinate_system")
+    {
+      timestamp = element->parentElement()->hasAttribute("_time_axis") &&
+                  static_cast<int>(element->parentElement()->getAttribute("_time_axis"));
+    }
+
   if (axis_elem->hasAttribute("location")) location = static_cast<std::string>(axis_elem->getAttribute("location"));
   axis_type = static_cast<std::string>(element->getAttribute("axis_type"));
   if (plot_parent->hasAttribute("x_log")) x_log = static_cast<int>(plot_parent->getAttribute("x_log"));
@@ -1450,7 +1457,7 @@ void processAxis(const std::shared_ptr<GRM::Element> &element, const std::shared
       tick = x_tick;
       pos = window[2];
       if (strEqualsAny(location, "top", "twin_x")) pos = window[3];
-      major_count = x_major;
+      major_count = timestamp ? TIME_AXIS_DEFAULT_MAJOR_COUNT : x_major;
     }
   else if (axis_type == "y")
     {
@@ -1542,9 +1549,16 @@ void processAxis(const std::shared_ptr<GRM::Element> &element, const std::shared
   axis_t axis = {min_val, max_val,   tick, org,     pos, major_count, 0,
                  nullptr, tick_size, 0,    nullptr, NAN, 1,           label_orientation};
   if (axis_type == "x")
-    gr_axis("X", &axis);
+    {
+      if (timestamp)
+        gr_axis("TIMESTAMP", &axis);
+      else
+        gr_axis("X", &axis);
+    }
   else if (axis_type == "y")
-    gr_axis("Y", &axis);
+    {
+      gr_axis("Y", &axis);
+    }
   tick_orientation = axis.tick_size < 0 ? -1 : 1;
 
   if (element->hasAttribute("_min_value_set_by_user"))
@@ -3797,13 +3811,7 @@ void processLegend(const std::shared_ptr<GRM::Element> &element, const std::shar
                                 "series_scatter", "series_stairs", "series_stem", "series_line3", "series_scatter3"))
                 continue;
               if (!series->hasAttribute("label")) continue;
-              for (const auto &child : series->children())
-                {
-                  if (child->localName() != "polyline" && child->localName() != "polymarker" &&
-                      child->localName() != "polyline_3d" && child->localName() != "polymarker_3d")
-                    continue;
-                  legend_elems += 1;
-                }
+              if (series->hasChildNodes()) legend_elems += 1;
             }
         }
       if (element->hasAttribute("_legend_elems"))
@@ -5297,7 +5305,7 @@ void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element, const
 {
   int child_id = 0;
   DelValues del = DelValues::UPDATE_WITHOUT_DEFAULT;
-  std::shared_ptr<GRM::Element> axis, grid_3d, axes_3d, titles_3d;
+  std::shared_ptr<GRM::Element> axis, grid_3d, axes_3d, titles_3d, polyline;
   std::string type;
   auto plot_parent = element->parentElement();
   getPlotParent(plot_parent);
@@ -5640,6 +5648,35 @@ void processCoordinateSystem(const std::shared_ptr<GRM::Element> &element, const
                   axis->setAttribute("name", "twin-x-axis");
                   axis->setAttribute("location", "twin_x");
                 }
+            }
+
+          // special line for timestamp tooltips and shift pressed
+          if (element->hasAttribute("x_ind"))
+            {
+              auto x = static_cast<double>(element->getAttribute("x_ind"));
+              auto y0 = static_cast<double>(element->parentElement()->getAttribute("window_y_min"));
+              auto y1 = static_cast<double>(element->parentElement()->getAttribute("window_y_max"));
+
+              if (element->querySelectors("polyline[_child_id=" + std::to_string(child_id) + "]") == nullptr)
+                {
+                  polyline = global_creator->createPolyline(x, x, y0, y1, 1, 1, 167);
+                  polyline->setAttribute("_child_id", child_id++);
+                  element->append(polyline);
+                }
+              else
+                {
+                  polyline = element->querySelectors("polyline[_child_id=" + std::to_string(child_id++) + "]");
+                  if (polyline != nullptr) polyline = global_creator->createPolyline(x, x, y0, y1, 1, 1, 167, polyline);
+                }
+              if (polyline)
+                {
+                  polyline->setAttribute("z_index", 0);
+                  polyline->setAttribute("name", "shift_line");
+                }
+            }
+          else if (element->querySelectors("polyline[_child_id=" + std::to_string(child_id) + "]") != nullptr)
+            {
+              element->querySelectors("polyline[_child_id=" + std::to_string(child_id) + "]")->remove();
             }
         }
     }
@@ -6093,7 +6130,6 @@ void processText(const std::shared_ptr<GRM::Element> &element, const std::shared
   processTextEncoding(active_figure);
   processPrivateTransparency(element);
   if (element->hasAttribute("transparency")) processTransparency(element);
-  if (element->hasAttribute("char_height")) processCharHeight(element);
 
   if (world_coordinates == CoordinateSpace::WC) gr_wctondc(&x, &y);
   if (element->hasAttribute("width") && element->hasAttribute("height"))
@@ -6130,6 +6166,8 @@ void processText(const std::shared_ptr<GRM::Element> &element, const std::shared
 
   if (element->parentElement()->localName() == "label") processCharHeight(element->parentElement());
   if (element->parentElement()->localName() == "overlay_element") processCharHeight(element);
+  if (element->hasAttribute("char_height")) processCharHeight(element);
+
   if (text_fits && redraw_ws && scientific_format == 2)
     {
       gr_settextcolorind(text_color_ind); // needed to have a visible text after update

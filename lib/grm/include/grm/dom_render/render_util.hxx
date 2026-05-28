@@ -110,6 +110,7 @@ extern "C" {
 #define CENTRAL_REGION_VP_AXIS_MARGIN_POLAR 0.025
 #define CENTRAL_REGION_VP_AXIS_MARGIN_PIE_BBOX 0.1
 #define CENTRAL_REGION_VP_AXIS_MARGIN_PIE 0.05
+#define TIME_AXIS_DEFAULT_MAJOR_COUNT 2
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -294,9 +295,9 @@ namespace GRM
 {
 void GRM_EXPORT getFigureSize(int *pixel_width, int *pixel_height, double *metric_width, double *metric_height);
 void GRM_EXPORT calculateCharHeight(const std::shared_ptr<GRM::Element> &element);
+void GRM_EXPORT getPlotParent(std::shared_ptr<GRM::Element> &element);
 } // namespace GRM
 
-void getPlotParent(std::shared_ptr<GRM::Element> &element);
 bool isUniformData(const std::shared_ptr<GRM::Element> &element, const std::shared_ptr<GRM::Context> &context);
 double getMaxViewport(const std::shared_ptr<GRM::Element> &element, bool x);
 double getMinViewport(const std::shared_ptr<GRM::Element> &element, bool x);

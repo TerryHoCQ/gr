@@ -45,7 +45,8 @@ grm_error_t readDataFile(const std::string &path, std::vector<std::vector<std::v
                          std::vector<int> &x_data, std::vector<int> &y_data, std::vector<int> &error_data,
                          std::vector<std::string> &labels, grm_args_t *args, const char *colms, const char *x_colms,
                          const char *y_colms, const char *e_colms, PlotRange *ranges,
-                         grm_special_axis_series_t *special_axis_series, InputFlags &input_flags)
+                         grm_special_axis_series_t *special_axis_series, InputFlags &input_flags,
+                         std::vector<int> &timestamps)
 {
   if (!reader)
     {
@@ -56,7 +57,7 @@ grm_error_t readDataFile(const std::string &path, std::vector<std::vector<std::v
   if (source)
     {
       return source->readDataFile(path, data, x_data, y_data, error_data, labels, args, colms, x_colms, y_colms,
-                                  e_colms, ranges, special_axis_series, input_flags);
+                                  e_colms, ranges, special_axis_series, input_flags, timestamps);
     }
   return GRM_ERROR_DATAREADER_UNKNOWN_FILETYPE;
 }
@@ -166,6 +167,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
   grm_file_args_t *file_args = grm_file_args_new();
   grm_special_axis_series_t *special_axis_series = grm_special_axis_series_new();
   InputFlags input_flags;
+  std::vector<int> timestamps;
 
   for (int i = 1; i < argc; i++)
     {
@@ -189,6 +191,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
   std::vector<grm_args_t *> plot(plot_num);
   for (int plot_i = 0; plot_i < plot_num; plot_i++)
     {
+      timestamps.clear();
       input_flags.reset();
 
       std::vector<std::string> labels;
@@ -241,7 +244,7 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
       if (readDataFile(file_args->file_path, file_data, x_data, y_data, error_data, labels, plot[plot_i],
                        file_args->file_columns.c_str(), file_args->file_x_columns.c_str(),
                        file_args->file_y_columns.c_str(), file_args->file_error_columns.c_str(), &ranges,
-                       special_axis_series, input_flags))
+                       special_axis_series, input_flags, timestamps))
         {
           return 0;
         }
@@ -648,6 +651,15 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                 }
               else
                 {
+                  bool timestamp = true, keep_aspect_ratio;
+                  for (const auto x_col : x_data)
+                    {
+                      if (std::find(timestamps.begin(), timestamps.end(), x_col - 1) == timestamps.end())
+                        timestamp = false;
+                    }
+                  grm_args_push(plot[plot_i], "timestamp", "i", timestamp);
+                  if (timestamp && !grm_args_values(plot[plot_i], "keep_aspect_ratio", "i", &keep_aspect_ratio))
+                    grm_args_push(plot[plot_i], "keep_aspect_ratio", "i", 0);
                   if (std::find(x_data.begin(), x_data.end(), col + 1) != x_data.end())
                     {
                       int error_bar_style;
@@ -671,6 +683,8 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                         grm_args_push(series[y_cnt], "label", "s", labels[col].c_str());
                       if (grm_args_values(plot[plot_i], "line_spec", "s", &spec))
                         grm_args_push(series[y_cnt], "line_spec", "s", spec);
+                      else if (timestamp && strcmp(kind, "line") == 0)
+                        grm_args_push(series[y_cnt], "line_spec", "s", "-+");
                       y_cnt += 1;
                     }
                   else if (!input_flags.equal_up_and_down_error && error != nullptr &&
@@ -1123,6 +1137,15 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                 }
               else
                 {
+                  bool timestamp = true, keep_aspect_ratio;
+                  for (const auto x_col : x_data)
+                    {
+                      if (std::find(timestamps.begin(), timestamps.end(), x_col - 1) == timestamps.end())
+                        timestamp = false;
+                    }
+                  grm_args_push(plot[plot_i], "timestamp", "i", timestamp);
+                  if (timestamp && !grm_args_values(plot[plot_i], "keep_aspect_ratio", "i", &keep_aspect_ratio))
+                    grm_args_push(plot[plot_i], "keep_aspect_ratio", "i", 0);
                   if (std::find(x_data.begin(), x_data.end(), col + 1) != x_data.end())
                     {
                       int error_bar_style;
@@ -1490,6 +1513,15 @@ int grm_interactive_plot_from_file(grm_args_t *args, int argc, char **argv)
                 }
               else
                 {
+                  bool timestamp = true, keep_aspect_ratio;
+                  for (const auto x_col : x_data)
+                    {
+                      if (std::find(timestamps.begin(), timestamps.end(), x_col - 1) == timestamps.end())
+                        timestamp = false;
+                    }
+                  grm_args_push(plot[plot_i], "timestamp", "i", timestamp);
+                  if (timestamp && !grm_args_values(plot[plot_i], "keep_aspect_ratio", "i", &keep_aspect_ratio))
+                    grm_args_push(plot[plot_i], "keep_aspect_ratio", "i", 0);
                   if (std::find(x_data.begin(), x_data.end(), col + 1) != x_data.end())
                     {
                       int error_bar_style;
@@ -1753,9 +1785,10 @@ int grm_context_data_from_file(const std::shared_ptr<GRM::Context> &context, con
   std::shared_ptr<GRM::Element> root = grm_get_document_root();
   grm_special_axis_series_t *special_axis_series = grm_special_axis_series_new();
   InputFlags input_flags;
+  std::vector<int> timestamps;
 
   if (readDataFile(path, file_data, x_data, y_data, error_data, labels, nullptr, "", "", "", "", &ranges,
-                   special_axis_series, input_flags))
+                   special_axis_series, input_flags, timestamps))
     return 0;
 
   if (!file_data.empty())

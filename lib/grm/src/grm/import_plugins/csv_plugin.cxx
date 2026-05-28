@@ -9,6 +9,8 @@
 #include <iostream>
 #include <clocale>
 
+#include <time.h>
+
 #include "csv_plugin.hxx"
 #include "grm/import_int.hxx"
 #include "grm/error.h"
@@ -34,7 +36,8 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
                                     std::vector<int> &x_data, std::vector<int> &y_data, std::vector<int> &error_data,
                                     std::vector<std::string> &labels, grm_args_t *args, const char *colms,
                                     const char *x_colms, const char *y_colms, const char *e_colms, PlotRange *ranges,
-                                    grm_special_axis_series_t *special_axis_series, InputFlags &input_flags)
+                                    grm_special_axis_series_t *special_axis_series, InputFlags &input_flags,
+                                    std::vector<int> &timestamps)
 {
   std::string line;
   std::string token;
@@ -55,6 +58,17 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
   if ((error = parseColumns(&x_columns, x_colms)) != GRM_ERROR_NONE) return error;
   if ((error = parseColumns(&y_columns, y_colms)) != GRM_ERROR_NONE) return error;
   if ((error = parseColumns(&e_columns, e_colms)) != GRM_ERROR_NONE) return error;
+
+  // auto determine whats the data delimiter
+  FILE *f = fopen(path.c_str(), "r");
+  char lines[100][MAX_LEN];
+  int n = 0;
+  while (n < 100 && fgets(lines[n], MAX_LEN, f))
+    {
+      n++;
+    }
+  fclose(f);
+  auto delim = detectDelimiter(lines, n);
 
   std::istream &file = (path == "-") ? cin_path : file_path;
   /* read the lines from the file */
@@ -158,7 +172,7 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
             break;
           else
             labels.clear();
-          for (size_t col = 0; std::getline(line_ss, token, '\t') && token.length(); col++)
+          for (size_t col = 0; std::getline(line_ss, token, delim) && token.length(); col++)
             {
               if (!legend_line && isNumber(token) && !input_flags.use_bins) continue;
               if (std::find(columns.begin(), columns.end(), col + 1) != columns.end() || columns.empty())
@@ -198,7 +212,7 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
       skip_first_getline = false;
       std::istringstream line_ss(normalizeLine(line));
       int cnt = 0, start_with_nan = 0;
-      char det = '\t';
+      char det = delim;
       size_t col;
       if (line.empty())
         {
@@ -246,7 +260,44 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
                     }
                   else
                     {
-                      data[depth][cnt].push_back(std::stod(token));
+                      // TODO: Put time parsing into a utility function
+#ifdef _WIN32
+                      struct tm timestamp_tm = {0};
+                      int year, month, day, hour, minute, second;
+
+                      if (sscanf(token.c_str(), "%d-%d-%dT%d:%d:%d", &year, &month, &day, &hour, &minute, &second))
+                        {
+                          timestamp_tm.tm_year = year - 1900;
+                          timestamp_tm.tm_mon = month - 1;
+                          timestamp_tm.tm_mday = day;
+                          timestamp_tm.tm_hour = hour;
+                          timestamp_tm.tm_min = minute;
+                          timestamp_tm.tm_sec = second;
+#else
+                      struct tm timestamp_tm;
+                      if (strptime(token.c_str(), "%Y-%m-%dT%H:%M:%S", &timestamp_tm) != nullptr)
+                        {
+#endif
+                          data[depth][cnt].push_back(mktime(&timestamp_tm));
+                          timestamps.emplace_back(col);
+                          x_columns.emplace_back(col + 1);
+                        }
+                      else
+                        {
+                          try
+                            {
+                              data[depth][cnt].push_back(std::stod(token));
+                            }
+                          catch (const std::out_of_range e)
+                            {
+                              fprintf(stderr,
+                                      "Invalid entry found. Check ur data if there are more than 1 delimiter or if "
+                                      "there is another mistake inside of the file. Row:%lu, detected value:\"%s\"\n",
+                                      row + linecount + 1, token.c_str());
+                              return GRM_ERROR_PLOT_MISSING_DATA;
+                            }
+                          if (!timestamps.empty()) y_columns.emplace_back(col + 1);
+                        }
                     }
                 }
               catch (std::invalid_argument &e)

@@ -5,9 +5,12 @@
 #include <map>
 #include <sstream>
 #include <vector>
+#include <time.h>
+
 
 #include "utilcpp_int.hxx"
 #include "import_utils_int.hxx"
+#include "grm/dom_render/graphics_tree/util.hxx"
 
 /* ========================= static variables ======================================================================= */
 
@@ -126,6 +129,61 @@ static std::map<std::string, const char *> container_to_types{
 bool isValidKind(const std::string &kind)
 {
   return std::find(kind_types.begin(), kind_types.end(), kind) != kind_types.end();
+}
+
+static std::string normalizeLine(const std::string &str)
+{
+  std::string s, item;
+  std::istringstream ss(str);
+
+  s = "";
+  while (ss >> item)
+    {
+      if (item[0] == '#') break;
+      if (!s.empty()) s += '\t';
+      s += item;
+    }
+  return s;
+}
+
+char detectDelimiter(char lines[][MAX_LEN], int n_lines)
+{
+  std::vector<char> candidates = {',', ';', '|', '\t', ' '};
+  auto best = candidates[0];
+  double best_score = -1.0;
+
+  for (int c = 0; c < candidates.size(); c++)
+    {
+      char delim = candidates[c];
+      double sum = 0.0, sum_sq = 0.0;
+      int skip_lines = 0;
+
+      for (int i = 0; i < n_lines; i++)
+        {
+          int fields = 0;
+          std::istringstream line_ss(normalizeLine(lines[i]));
+          std::string token;
+          for (int col = 0; std::getline(line_ss, token, delim) && token.length(); col++)
+            {
+              fields++;
+            }
+          if (fields == 0) skip_lines += 1;
+          sum += fields;
+          sum_sq += fields * fields;
+        }
+
+      double mean = sum / (n_lines - skip_lines);
+      double variance = sum_sq / (n_lines - skip_lines) - mean * mean;
+      double score = mean - variance;
+
+      if (score > best_score && mean > 1.0)
+        {
+          best_score = score;
+          best = delim;
+        }
+    }
+
+  return best;
 }
 
 grm_error_t parseColumns(std::list<int> *columns, const char *colms)
@@ -308,21 +366,6 @@ int parseParameterND(std::string *input, const std::string *key, std::vector<dou
       return 0;
     }
   return 1;
-}
-
-static std::string normalizeLine(const std::string &str)
-{
-  std::string s, item;
-  std::istringstream ss(str);
-
-  s = "";
-  while (ss >> item)
-    {
-      if (item[0] == '#') break;
-      if (!s.empty()) s += '\t';
-      s += item;
-    }
-  return s;
 }
 
 static bool kindOfSameGroup(std::string new_kind, std::vector<std::string> kinds)
@@ -511,14 +554,81 @@ std::vector<std::string> singleTokenConverter(std::string token, grm_args_t *arg
                                 }
                               else if (strcmp(search->second, "dd") == 0)
                                 {
+                                  // not 100% correct since the dataset could be normal but it`s a rare case that u use
+                                  // a timestamp as limit or range on a non timestamp dataset so it`s ignored for now
                                   std::string x, y;
                                   parseParameterDD(&value, &search->first, &x, &y);
-                                  grm_args_push(args, search->first.c_str(), search->second, std::stod(x),
-                                                std::stod(y));
+
+#ifdef _WIN32
+                                  int x_year, y_year, x_month, y_month, x_day, y_day, x_hour, y_hour, x_minute,
+                                      y_minute;
+                                  struct tm timestamp_x_tm = {0}, timestamp_y_tm = {0};
+                                  if ((search->first == "x_range" || search->first == "x_lim") &&
+                                      sscanf(x.c_str(), "%d-%d-%dT%d:%d", &x_year, &x_month, &x_day, &x_hour,
+                                             &x_minute) &&
+                                      sscanf(y.c_str(), "%d-%d-%dT%d:%d", &y_year, &y_month, &y_day, &y_hour,
+                                             &y_minute))
+                                    {
+                                      timestamp_x_tm.tm_year = x_year - 1900;
+                                      timestamp_x_tm.tm_mon = x_month - 1;
+                                      timestamp_x_tm.tm_mday = x_day;
+                                      timestamp_x_tm.tm_hour = x_hour;
+                                      timestamp_x_tm.tm_min = x_minute;
+                                      timestamp_y_tm.tm_year = y_year - 1900;
+                                      timestamp_y_tm.tm_mon = y_month - 1;
+                                      timestamp_y_tm.tm_mday = y_day;
+                                      timestamp_y_tm.tm_hour = y_hour;
+                                      timestamp_y_tm.tm_min = y_minute;
+#else
+                                  struct tm timestamp_x_tm, timestamp_y_tm;
+                                  if ((search->first == "x_range" || search->first == "x_lim") &&
+                                      strptime(x.c_str(), "%Y-%m-%dT%H:%M:%S", &timestamp_x_tm) != nullptr &&
+                                      strptime(y.c_str(), "%Y-%m-%dT%H:%M:%S", &timestamp_y_tm) != nullptr)
+                                    {
+#endif
+                                      grm_args_push(args, search->first.c_str(), search->second,
+                                                    (int)mktime(&timestamp_x_tm), (int)mktime(&timestamp_y_tm));
+                                    }
+                                  else
+                                    {
+                                      grm_args_push(args, search->first.c_str(), search->second, std::stod(x),
+                                                    std::stod(y));
+                                    }
                                   if (search->first == "x_range")
                                     {
-                                      ranges->xmin = std::stod(x);
-                                      ranges->xmax = std::stod(y);
+#ifdef _WIN32
+                                      int year, month, day, hour, minute;
+                                      if (sscanf(x.c_str(), "%d-%d-%dT%d:%d", &year, &month, &day, &hour, &minute))
+                                        {
+                                          timestamp_x_tm.tm_year = year - 1900;
+                                          timestamp_x_tm.tm_mon = month - 1;
+                                          timestamp_x_tm.tm_mday = day;
+                                          timestamp_x_tm.tm_hour = hour;
+                                          timestamp_x_tm.tm_min = minute;
+#else
+                                      if (strptime(x.c_str(), "%Y-%m-%dT%H:%M:%S", &timestamp_x_tm) != nullptr)
+                                        {
+#endif
+                                          ranges->xmin = (int)mktime(&timestamp_x_tm);
+                                        }
+                                      else
+                                        ranges->xmin = std::stod(x);
+#ifdef _WIN32
+                                      if (sscanf(y.c_str(), "%d-%d-%dT%d:%d", &year, &month, &day, &hour, &minute))
+                                        {
+                                          timestamp_y_tm.tm_year = year - 1900;
+                                          timestamp_y_tm.tm_mon = month - 1;
+                                          timestamp_y_tm.tm_mday = day;
+                                          timestamp_y_tm.tm_hour = hour;
+                                          timestamp_y_tm.tm_min = minute;
+#else
+                                      if (strptime(y.c_str(), "%Y-%m-%dT%H:%M:%S", &timestamp_x_tm) != nullptr)
+                                        {
+#endif
+                                          ranges->xmax = (int)mktime(&timestamp_y_tm);
+                                        }
+                                      else
+                                        ranges->xmax = std::stod(y);
                                     }
                                   else if (search->first == "y_range")
                                     {
@@ -667,11 +777,74 @@ std::vector<std::string> singleTokenConverter(std::string token, grm_args_t *arg
                       parseParameterDD(&value, &search->first, &x, &y);
                       if (!grm_args_values(args, search->first.c_str(), search->second, &tmp1, &tmp2))
                         {
-                          grm_args_push(args, search->first.c_str(), search->second, std::stod(x), std::stod(y));
+                          // not 100% correct since the dataset could be normal but it`s a rare case that u use a
+                          // timestamp as limit or range on a non timestamp dataset so it`s ignored for now
+#ifdef _WIN32
+                          int x_year, y_year, x_month, y_month, x_day, y_day, x_hour, y_hour, x_minute, y_minute;
+                          struct tm timestamp_x_tm = {0}, timestamp_y_tm = {0};
+                          if ((search->first == "x_range" || search->first == "x_lim") &&
+                              sscanf(x.c_str(), "%d-%d-%dT%d:%d", &x_year, &x_month, &x_day, &x_hour, &x_minute) &&
+                              sscanf(y.c_str(), "%d-%d-%dT%d:%d", &y_year, &y_month, &y_day, &y_hour, &y_minute))
+                            {
+                              timestamp_x_tm.tm_year = x_year - 1900;
+                              timestamp_x_tm.tm_mon = x_month - 1;
+                              timestamp_x_tm.tm_mday = x_day;
+                              timestamp_x_tm.tm_hour = x_hour;
+                              timestamp_x_tm.tm_min = x_minute;
+                              timestamp_y_tm.tm_year = y_year - 1900;
+                              timestamp_y_tm.tm_mon = y_month - 1;
+                              timestamp_y_tm.tm_mday = y_day;
+                              timestamp_y_tm.tm_hour = y_hour;
+                              timestamp_y_tm.tm_min = y_minute;
+#else
+                          struct tm timestamp_x_tm, timestamp_y_tm;
+                          if ((search->first == "x_range" || search->first == "x_lim") &&
+                              strptime(x.c_str(), "%Y-%m-%dT%H:%M:%S", &timestamp_x_tm) != nullptr &&
+                              strptime(y.c_str(), "%Y-%m-%dT%H:%M:%S", &timestamp_y_tm) != nullptr)
+                            {
+#endif
+                              grm_args_push(args, search->first.c_str(), search->second, (int)mktime(&timestamp_x_tm),
+                                            (int)mktime(&timestamp_y_tm));
+                            }
+                          else
+                            {
+                              grm_args_push(args, search->first.c_str(), search->second, std::stod(x), std::stod(y));
+                            }
                           if (search->first == "x_range")
                             {
-                              ranges->xmin = std::stod(x);
-                              ranges->xmax = std::stod(y);
+#ifdef _WIN32
+                              int year, month, day, hour, minute;
+                              if (sscanf(x.c_str(), "%d-%d-%dT%d:%d", &year, &month, &day, &hour, &minute))
+                                {
+                                  timestamp_x_tm.tm_year = year - 1900;
+                                  timestamp_x_tm.tm_mon = month - 1;
+                                  timestamp_x_tm.tm_mday = day;
+                                  timestamp_x_tm.tm_hour = hour;
+                                  timestamp_x_tm.tm_min = minute;
+#else
+                              if (strptime(x.c_str(), "%Y-%m-%dT%H:%M:%S", &timestamp_x_tm) != nullptr)
+                                {
+#endif
+                                  ranges->xmin = (int)mktime(&timestamp_x_tm);
+                                }
+                              else
+                                ranges->xmin = std::stod(x);
+#ifdef _WIN32
+                              if (sscanf(y.c_str(), "%d-%d-%dT%d:%d", &year, &month, &day, &hour, &minute))
+                                {
+                                  timestamp_y_tm.tm_year = year - 1900;
+                                  timestamp_y_tm.tm_mon = month - 1;
+                                  timestamp_y_tm.tm_mday = day;
+                                  timestamp_y_tm.tm_hour = hour;
+                                  timestamp_y_tm.tm_min = minute;
+#else
+                              if (strptime(y.c_str(), "%Y-%m-%dT%H:%M:%S", &timestamp_x_tm) != nullptr)
+                                {
+#endif
+                                  ranges->xmax = (int)mktime(&timestamp_y_tm);
+                                }
+                              else
+                                ranges->xmax = std::stod(y);
                             }
                           else if (search->first == "y_range")
                             {

@@ -5612,17 +5612,27 @@ void gr_axis(const char *spec, axis_t *axis)
 
       if (ticks)
         {
+          /*
+           * Label every second tick by default. This is a difference to non-time axes which disable
+           * labels if no major count is specified.
+           */
+          if (axis->major_count <= 0) axis->major_count = 2;
           axis->ticks = (tick_t *)xcalloc(axis->num_ticks, sizeof(tick_t));
-          axis->num_tick_labels = axis->num_ticks;
+          axis->num_tick_labels =
+              axis->num_ticks / axis->major_count + ((axis->num_ticks % axis->major_count != 0) ? 1 : 0);
           axis->tick_labels = (tick_label_t *)xcalloc(axis->num_tick_labels, sizeof(tick_label_t));
-          for (i = 0; i < axis->num_tick_labels; ++i)
+          for (i = 0, j = 0; i < axis->num_ticks; ++i)
             {
               axis->ticks[i].value = ticks[i].value;
-              axis->ticks[i].is_major = true;
-              axis->tick_labels[i].tick = ticks[i].value;
-              axis->tick_labels[i].label = strdup(ticks[i].label);
-              gr_inqtext(0, 0, axis->tick_labels[i].label, tbx, tby);
-              axis->tick_labels[i].width = tbx[2] - tbx[0];
+              axis->ticks[i].is_major = (i % axis->major_count == 0);
+              if (axis->ticks[i].is_major)
+                {
+                  axis->tick_labels[j].tick = ticks[i].value;
+                  axis->tick_labels[j].label = strdup(ticks[i].label);
+                  gr_inqtext(0, 0, axis->tick_labels[j].label, tbx, tby);
+                  axis->tick_labels[j].width = tbx[2] - tbx[0];
+                  ++j;
+                }
             }
           free(ticks);
         }

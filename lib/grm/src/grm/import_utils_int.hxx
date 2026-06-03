@@ -11,6 +11,8 @@
 
 /* ######################### internal interface ##################################################################### */
 
+#define MAX_LEN 4096
+
 /* ========================= datatypes ============================================================================== */
 
 /* ------------------------- argument container --------------------------------------------------------------------- */
@@ -82,6 +84,7 @@ struct InputFlags
 /* ------------------------- import --------------------------------------------------------------------------------- */
 
 bool isValidKind(const std::string &kind);
+char detectDelimiter(char lines[][MAX_LEN], int n_lines);
 grm_error_t parseColumns(std::list<int> *columns, const char *colms);
 void parseParameterDD(std::string *input, const std::string *key, std::string *x, std::string *y);
 void parseParameterDDD(std::string *input, const std::string *key, std::string *r, std::string *g, std::string *b);

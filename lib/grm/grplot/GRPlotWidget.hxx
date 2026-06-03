@@ -407,6 +407,11 @@ private:
       return std::visit([](const auto *tooltip) { return tooltip->x; }, tooltip_);
     };
 
+    char *xTime() const
+    {
+      return std::visit([](const auto *tooltip) { return tooltip->x_time; }, tooltip_);
+    };
+
     int xPx() const
     {
       return std::visit([](const auto *tooltip) { return tooltip->x_px; }, tooltip_);

@@ -9,10 +9,34 @@
 #include <iostream>
 #include <clocale>
 
+#include <time.h>
+
 #include "csv_plugin.hxx"
 #include "grm/import_int.hxx"
 #include "grm/error.h"
 #include "grm/utilcpp_int.hxx"
+
+
+char detectDelimiter(const std::string &line)
+{
+  std::vector<char> candidates = {',', ';', '|', '\t', ' '};
+  unsigned int max_occurences = 0;
+  char best = candidates[0];
+
+  std::cerr << "Line: \"" << line << "\"" << std::endl;
+  for (char c : candidates)
+    {
+      auto occurences = std::count(line.begin(), line.end(), c);
+      std::cerr << c << ": " << occurences << std::endl;
+      if (occurences > max_occurences)
+        {
+          max_occurences = occurences;
+          best = c;
+        }
+    }
+  std::cerr << "Detected delimiter: \"" << best << "\"" << std::endl;
+  return best;
+}
 
 
 std::string CsvSource::normalizeLine(const std::string &str)
@@ -34,7 +58,8 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
                                     std::vector<int> &x_data, std::vector<int> &y_data, std::vector<int> &error_data,
                                     std::vector<std::string> &labels, grm_args_t *args, const char *colms,
                                     const char *x_colms, const char *y_colms, const char *e_colms, PlotRange *ranges,
-                                    grm_special_axis_series_t *special_axis_series, InputFlags &input_flags)
+                                    grm_special_axis_series_t *special_axis_series, InputFlags &input_flags,
+                                    std::vector<int> &timestamps)
 {
   std::string line;
   std::string token;
@@ -152,13 +177,15 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
         }
       else /* the line contains the labels for the plot */
         {
-          std::istringstream line_ss(normalizeLine(line));
+          auto normalized_line = normalizeLine(line);
+          auto delim = detectDelimiter(normalized_line);
+          std::istringstream line_ss(normalized_line);
           std::string split_label;
           if (skip_legend_line)
             break;
           else
             labels.clear();
-          for (size_t col = 0; std::getline(line_ss, token, '\t') && token.length(); col++)
+          for (size_t col = 0; std::getline(line_ss, token, delim) && token.length(); col++)
             {
               if (!legend_line && isNumber(token) && !input_flags.use_bins) continue;
               if (std::find(columns.begin(), columns.end(), col + 1) != columns.end() || columns.empty())
@@ -193,12 +220,13 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
   int skipped = 0;
   // Skip the first line read if the current `line` is not a legend line -> it already contains data
   bool skip_first_getline = !legend_line;
+  char delim = '\0';
   for (size_t row = 0; skip_first_getline ? true : static_cast<bool>(std::getline(file, line)); row++)
     {
       skip_first_getline = false;
-      std::istringstream line_ss(normalizeLine(line));
+      auto normalized_line = normalizeLine(line);
+      std::istringstream line_ss(normalized_line);
       int cnt = 0, start_with_nan = 0;
-      char det = '\t';
       size_t col;
       if (line.empty())
         {
@@ -210,13 +238,14 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
           if (row == 0) skipped = 1;
           continue;
         }
+      if (delim == '\0') delim = detectDelimiter(normalized_line);
       if (std::find(line.begin(), line.end(), ',') != line.end())
         {
-          det = ',';
+          delim = ',';
           std::string tmp = ",";
           if (startsWith(trim(line), tmp)) start_with_nan = 1;
         }
-      for (col = 0; std::getline(line_ss, token, det) && (token.length() || start_with_nan); col++)
+      for (col = 0; std::getline(line_ss, token, delim) && (token.length() || start_with_nan); col++)
         {
           if ((!columns.empty() && std::find(columns.begin(), columns.end(), col + 1) != columns.end()) ||
               (columns.empty() && labels.empty() && (!input_flags.use_bins || col > 0)) ||
@@ -240,13 +269,50 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
                 {
                   trim(token);
                   token.erase(std::remove(token.begin(), token.end(), '\t'), token.end());
-                  if (token.empty() && det == ',')
+                  if (token.empty() && delim == ',')
                     {
                       data[depth][cnt].push_back(NAN);
                     }
                   else
                     {
-                      data[depth][cnt].push_back(std::stod(token));
+                      // TODO: Put time parsing into a utility function
+#ifdef _WIN32
+                      struct tm timestamp_tm = {0};
+                      int year, month, day, hour, minute, second;
+
+                      if (sscanf(token.c_str(), "%d-%d-%dT%d:%d:%d", &year, &month, &day, &hour, &minute, &second))
+                        {
+                          timestamp_tm.tm_year = year - 1900;
+                          timestamp_tm.tm_mon = month - 1;
+                          timestamp_tm.tm_mday = day;
+                          timestamp_tm.tm_hour = hour;
+                          timestamp_tm.tm_min = minute;
+                          timestamp_tm.tm_sec = second;
+#else
+                      struct tm timestamp_tm;
+                      if (strptime(token.c_str(), "%Y-%m-%dT%H:%M:%S", &timestamp_tm) != nullptr)
+                        {
+#endif
+                          data[depth][cnt].push_back(mktime(&timestamp_tm));
+                          timestamps.emplace_back(col);
+                          x_columns.emplace_back(col + 1);
+                        }
+                      else
+                        {
+                          try
+                            {
+                              data[depth][cnt].push_back(std::stod(token));
+                            }
+                          catch (const std::out_of_range e)
+                            {
+                              fprintf(stderr,
+                                      "Invalid entry found. Check ur data if there are more than 1 delimiter or if "
+                                      "there is another mistake inside of the file. Row:%lu, detected value:\"%s\"\n",
+                                      row + linecount + 1, token.c_str());
+                              return GRM_ERROR_PLOT_MISSING_DATA;
+                            }
+                          if (!timestamps.empty()) y_columns.emplace_back(col + 1);
+                        }
                     }
                 }
               catch (std::invalid_argument &e)

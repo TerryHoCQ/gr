@@ -16,7 +16,8 @@ public:
                                    std::vector<int> &x_data, std::vector<int> &y_data, std::vector<int> &error_data,
                                    std::vector<std::string> &labels, grm_args_t *args, const char *colms,
                                    const char *x_colms, const char *y_colms, const char *e_colms, PlotRange *ranges,
-                                   grm_special_axis_series_t *special_axis_series, InputFlags &input_flags) = 0;
+                                   grm_special_axis_series_t *special_axis_series, InputFlags &input_flags,
+                                   std::vector<int> &timestamps) = 0;
 };
 
 class Plugin

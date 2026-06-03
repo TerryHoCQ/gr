@@ -20,7 +20,7 @@ StringMap *grm_fmt_map = stringMapNewWithData(std::size(kind_to_fmt), kind_to_fm
 static bool bounding_boxes = !getenv("GRDISPLAY") || (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "view") != 0);
 static std::map<int, std::map<double, std::map<std::string, GRM::Value>>> tick_modification_map;
 
-void getPlotParent(std::shared_ptr<GRM::Element> &element)
+void GRM::getPlotParent(std::shared_ptr<GRM::Element> &element)
 {
   auto plot_parent = element;
   if (strEqualsAny(plot_parent->localName(), "root", "figure", "layout_grid", "layout_grid_element", "draw_graphics",
@@ -3082,6 +3082,7 @@ void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group, int ch
   bool x_flip, y_flip, text_is_empty_or_number = true;
   double metric_width, metric_height;
   double aspect_ratio_ws_metric;
+  bool rotate_labels = false;
   auto global_creator = grm_get_creator();
 
   GRM::getFigureSize(nullptr, nullptr, &metric_width, &metric_height);
@@ -3151,7 +3152,94 @@ void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group, int ch
       if (child->localName() == "text" && child->hasAttribute("_child_id")) cur_child_count += 1;
     }
 
-  if (isNumber(text))
+  if (axis_type == "x" && tick_group->parentElement()->parentElement()->hasAttribute("_time_axis") &&
+      static_cast<int>(tick_group->parentElement()->parentElement()->getAttribute("_time_axis")) && !text.empty())
+    {
+      double tbx[4], tby[4];
+      char text_c[256];
+      double viewport[4];
+
+      snprintf(text_c, 256, "%s", text.c_str());
+      gr_inqtext(x, y, text_c, tbx, tby);
+
+      if (!GRM::Render::getViewport(tick_group->parentElement(), &viewport[0], &viewport[1], &viewport[2],
+                                    &viewport[3]))
+        throw NotFoundError(tick_group->parentElement()->localName() + " doesn't have a viewport but it should.\n");
+
+      width = tbx[1] - tbx[0];
+      auto total_available_width = (viewport[1] - viewport[0]);
+      auto single_available_width =
+          total_available_width / static_cast<int>(tick_group->parentElement()->getAttribute("num_tick_labels"));
+
+      if (auto break_pos = std::find(text.begin(), text.end(), ' '); break_pos != text.end())
+        {
+          const char *label = text.c_str();
+          for (i = 0; i == 0 || label[i - 1] != '\0'; ++i)
+            {
+              if (label[i] == ' ')
+                {
+                  /* calculate width of the next part of the label to be drawn */
+                  new_label[i] = '\0';
+
+                  if ((del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT) ||
+                      cur_child_count + child_id_org < child_id)
+                    {
+                      text_elem = global_creator->createText(x, y, new_label + cur_start, CoordinateSpace::NDC);
+                      tick_group->append(text_elem);
+                      text_elem->setAttribute("_child_id", child_id++);
+                    }
+                  else
+                    {
+                      text_elem = tick_group->querySelectors("text[_child_id=" + std::to_string(child_id++) + "]");
+                      if (text_elem != nullptr)
+                        text_elem =
+                            global_creator->createText(x, y, new_label + cur_start, CoordinateSpace::NDC, text_elem);
+                    }
+                  if (text_elem != nullptr)
+                    {
+                      if (!text_elem->hasAttribute("text_color_ind")) text_elem->setAttribute("text_color_ind", 1);
+                      int label_orientation = 0;
+                      if (tick_group->parentElement()->hasAttribute("label_orientation"))
+                        label_orientation =
+                            static_cast<int>(tick_group->parentElement()->getAttribute("label_orientation"));
+                      text_elem->setAttribute("text_align_horizontal", GKS_K_TEXT_HALIGN_CENTER);
+                      if (((pos <= 0.5 * (window[2] + window[3]) ||
+                            ((scale & GR_OPTION_FLIP_Y || y_flip) && pos > 0.5 * (window[2] + window[3]))) &&
+                           label_orientation == 0) ||
+                          label_orientation < 0)
+                        {
+                          text_elem->setAttribute("text_align_vertical", GKS_K_TEXT_VALIGN_TOP);
+                        }
+                      else
+                        {
+                          text_elem->setAttribute("text_align_vertical", GKS_K_TEXT_VALIGN_BOTTOM);
+                        }
+
+                      text_elem->setAttribute("scientific_format", scientific_format);
+                    }
+                  cur_start = i + 1;
+                  y -= 1.1 * char_height;
+                }
+              else
+                {
+                  new_label[i] = label[i];
+                }
+            }
+          text = new_label + cur_start;
+
+          if (text.empty() && (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT))
+            del = DelValues::UPDATE_WITHOUT_DEFAULT;
+          if (i >= cur_start && text != " " && text != "\0" && !text.empty() &&
+              cur_child_count + child_id_org < child_id)
+            text_is_empty_or_number = false;
+          if (i < cur_start && !text_is_empty_or_number) child_id_org += 1;
+        }
+      else if (width > 0.8 * single_available_width)
+        {
+          rotate_labels = true;
+        }
+    }
+  else if (isNumber(text))
     {
       if (text.size() > 7)
         {
@@ -3334,17 +3422,35 @@ void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group, int ch
               int label_orientation = 0;
               if (tick_group->parentElement()->hasAttribute("label_orientation"))
                 label_orientation = static_cast<int>(tick_group->parentElement()->getAttribute("label_orientation"));
-              text_elem->setAttribute("text_align_horizontal", GKS_K_TEXT_HALIGN_CENTER);
-              if ((((pos <= 0.5 * (window[2] + window[3]) && !(scale & GR_OPTION_FLIP_Y || y_flip)) ||
-                    ((scale & GR_OPTION_FLIP_Y || y_flip) && pos > 0.5 * (window[2] + window[3]))) &&
-                   label_orientation == 0) ||
-                  label_orientation < 0)
+              if (rotate_labels)
                 {
-                  text_elem->setAttribute("text_align_vertical", GKS_K_TEXT_VALIGN_TOP);
+                  text_elem->setAttribute("char_up_x", -0.5);
+                  text_elem->setAttribute("char_up_y", 1);
+                  if ((label_pos <= window[2] && label_orientation == 0) || label_orientation < 0)
+                    {
+                      text_elem->setAttribute("text_align_horizontal", GKS_K_TEXT_HALIGN_RIGHT);
+                      text_elem->setAttribute("text_align_vertical", GKS_K_TEXT_VALIGN_TOP);
+                    }
+                  else
+                    {
+                      text_elem->setAttribute("text_align_horizontal", GKS_K_TEXT_HALIGN_LEFT);
+                      text_elem->setAttribute("text_align_vertical", GKS_K_TEXT_VALIGN_BOTTOM);
+                    }
                 }
               else
                 {
-                  text_elem->setAttribute("text_align_vertical", GKS_K_TEXT_VALIGN_BOTTOM);
+                  text_elem->setAttribute("text_align_horizontal", GKS_K_TEXT_HALIGN_CENTER);
+                  if ((((pos <= 0.5 * (window[2] + window[3]) && !(scale & GR_OPTION_FLIP_Y || y_flip)) ||
+                        ((scale & GR_OPTION_FLIP_Y || y_flip) && pos > 0.5 * (window[2] + window[3]))) &&
+                       label_orientation == 0) ||
+                      label_orientation < 0)
+                    {
+                      text_elem->setAttribute("text_align_vertical", GKS_K_TEXT_VALIGN_TOP);
+                    }
+                  else
+                    {
+                      text_elem->setAttribute("text_align_vertical", GKS_K_TEXT_VALIGN_BOTTOM);
+                    }
                 }
             }
           else if (axis_type == "y")

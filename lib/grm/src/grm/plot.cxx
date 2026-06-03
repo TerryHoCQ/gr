@@ -314,6 +314,7 @@ const char *valid_subplot_keys[] = {"abs_height",
                                     "theta_lim",
                                     "theta_log",
                                     "tilt",
+                                    "timestamp",
                                     "title",
                                     "transformation",
                                     "use_gr3",
@@ -486,6 +487,7 @@ static StringMapEntry key_to_formats[] = {{"a", "A"},
                                           {"theta_lim", "D"},
                                           {"theta_range", "D"},
                                           {"tilt", "d"},
+                                          {"timestamp", "i"},
                                           {"title", "s"},
                                           {"transformation", "i"},
                                           {"transparency", "d"},
@@ -3978,6 +3980,7 @@ grm_error_t plotDrawAxes(grm_args_t *args, unsigned int pass)
   char *x_label, *y_label, *z_label;
   std::shared_ptr<GRM::Element> group;
   std::string type = "2d";
+  int timestamp;
 
   auto current_central_region_element_locked = current_central_region_element.lock();
 
@@ -4007,6 +4010,8 @@ grm_error_t plotDrawAxes(grm_args_t *args, unsigned int pass)
 
   group->setAttribute("x_grid", x_grid);
   group->setAttribute("y_grid", y_grid);
+
+  if (grm_args_values(args, "timestamp", "i", &timestamp) && timestamp) group->setAttribute("_time_axis", timestamp);
 
   if (strEqualsAny(kind, "wireframe", "surface", "line3", "scatter3", "trisurface", "volume", "isosurface"))
     {

@@ -36,6 +36,8 @@
 #include <grm/dom_render/render_util.hxx>
 
 #include <gks.h>
+#include <time.h>
+
 
 #ifndef GR_UNUSED
 #define GR_UNUSED(x) (void)(x)
@@ -1917,16 +1919,28 @@ void GRPlotWidget::redraw(bool full_redraw, bool update_tree)
 void GRPlotWidget::collectTooltips()
 {
   QPoint mouse_pos = this->mapFromGlobal(QCursor::pos());
-
   if (Qt::KeyboardModifiers keyboard_modifiers = GRPlotWidget::queryKeyboardModifiers();
       keyboard_modifiers == Qt::ShiftModifier)
     {
       auto accumulated_tooltip = grm_get_accumulated_tooltip_x(mouse_pos.x(), mouse_pos.y());
       tooltips.clear();
       if (accumulated_tooltip != nullptr) tooltips.emplace_back(accumulated_tooltip);
+      redraw();
     }
   else
     {
+      auto root = grm_get_document_root();
+      bool removed = false;
+      for (const auto &coordinate_system : root->querySelectorsAll("coordinate_system"))
+        {
+          if (coordinate_system->hasAttribute("x_ind"))
+            {
+              coordinate_system->removeAttribute("x_ind");
+              removed = true;
+            }
+        }
+      if (removed) redraw();
+
       if (keyboard_modifiers != Qt::AltModifier) tooltips.clear();
       if (auto current_tooltip = grm_get_tooltip(mouse_pos.x(), mouse_pos.y()); current_tooltip != nullptr)
         {
@@ -1964,9 +1978,20 @@ static const std::string TOOLTIP_TEMPLATE{"\
     <span class=\"gr-label\">%s: </span>\n\
     <span class=\"gr-value\">%.14g</span>"};
 
+static const std::string TIME_TOOLTIP_TEMPLATE{"\
+    <span class=\"gr-label\">%s</span><br>\n\
+    <span class=\"gr-label\">%s: </span>\n\
+    <span class=\"gr-value\">%s</span><br>\n\
+    <span class=\"gr-label\">%s: </span>\n\
+    <span class=\"gr-value\">%.14g</span>"};
+
 static const std::string ACCUMULATED_TOOLTIP_TEMPLATE{"\
     <span class=\"gr-label\">%s: </span>\n\
     <span class=\"gr-value\">%.14g</span>"};
+
+static const std::string ACCUMULATED_TIME_TOOLTIP_TEMPLATE{"\
+    <span class=\"gr-label\">%s: </span>\n\
+    <span class=\"gr-value\">%s</span>"};
 
 void GRPlotWidget::paintEvent(QPaintEvent *event)
 {
@@ -2174,8 +2199,25 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
               QColor background(224, 224, 224, 128);
               QPainterPath triangle;
               std::string info, x_label = tooltip.xLabel();
+              std::shared_ptr<GRM::Element> coordinate_system = nullptr;
 
               if (util::startsWith(x_label, "$") && util::endsWith(x_label, "$")) x_label = "x";
+
+              if (auto global_root = grm_get_document_root();
+                  (global_root->querySelectors("layout_grid") == nullptr ||
+                   global_root->querySelectorsAll("layout_grid_element").size() <= 1))
+                {
+                  auto plot_elem = global_root->querySelectors("figure[active=1]")->querySelectors("plot");
+                  if (plot_elem != nullptr) coordinate_system = plot_elem->querySelectors("coordinate_system");
+                }
+              else
+                {
+                  auto plot_elem =
+                      global_root->querySelectors("figure[active=1]")->querySelectors("plot[_selected_for_menu=1]");
+                  if (plot_elem != nullptr) coordinate_system = plot_elem->querySelectors("coordinate_system");
+                }
+              bool timestamp = coordinate_system != nullptr && coordinate_system->hasAttribute("_time_axis") &&
+                               static_cast<int>(coordinate_system->getAttribute("_time_axis"));
 
               if (tooltip.holdsAlternative<grm_tooltip_info_t>())
                 {
@@ -2183,8 +2225,17 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
                   std::string y_label = single_tooltip->y_label;
 
                   if (util::startsWith(y_label, "$") && util::endsWith(y_label, "$")) y_label = "y";
-                  info = util::stringFormat(TOOLTIP_TEMPLATE, single_tooltip->label, x_label.c_str(), single_tooltip->x,
-                                            y_label.c_str(), single_tooltip->y);
+
+                  if (timestamp)
+                    {
+                      info = util::stringFormat(TIME_TOOLTIP_TEMPLATE, single_tooltip->label, x_label.c_str(),
+                                                single_tooltip->x_time, y_label.c_str(), single_tooltip->y);
+                    }
+                  else
+                    {
+                      info = util::stringFormat(TOOLTIP_TEMPLATE, single_tooltip->label, x_label.c_str(),
+                                                single_tooltip->x, y_label.c_str(), single_tooltip->y);
+                    }
                 }
               else
                 {
@@ -2193,8 +2244,16 @@ void GRPlotWidget::paint(QPaintDevice *paint_device)
                                                     accumulated_tooltip->y_labels + accumulated_tooltip->n);
 
                   std::vector<std::string> info_parts;
-                  info_parts.push_back(
-                      util::stringFormat(ACCUMULATED_TOOLTIP_TEMPLATE, x_label.c_str(), accumulated_tooltip->x));
+                  if (timestamp)
+                    {
+                      info_parts.push_back(util::stringFormat(ACCUMULATED_TIME_TOOLTIP_TEMPLATE, x_label.c_str(),
+                                                              accumulated_tooltip->x_time));
+                    }
+                  else
+                    {
+                      info_parts.push_back(
+                          util::stringFormat(ACCUMULATED_TOOLTIP_TEMPLATE, x_label.c_str(), accumulated_tooltip->x));
+                    }
                   for (int i = 0; i < y_labels.size(); ++i)
                     {
                       auto &y = accumulated_tooltip->y[i];
@@ -4123,6 +4182,9 @@ void GRPlotWidget::xLimSlot()
       plot_elem = plot_elems[0];
     }
   if (plot_elem == nullptr) return;
+  const auto coordinate_system = plot_elem->querySelectors("coordinate_system");
+  bool timestamp = coordinate_system != nullptr && coordinate_system->hasAttribute("_time_axis") &&
+                   static_cast<int>(coordinate_system->getAttribute("_time_axis"));
 
   QList<QLineEdit *> fields;
   QDialog dialog(this);
@@ -4132,14 +4194,36 @@ void GRPlotWidget::xLimSlot()
   auto lim_min_label = new QLabel(QString("Min:"));
   auto line_edit = new QLineEdit();
   if (plot_elem->hasAttribute("x_lim_min"))
-    line_edit->setText(static_cast<std::string>(plot_elem->getAttribute("x_lim_min")).c_str());
+    {
+      auto lim_min_text = static_cast<std::string>(plot_elem->getAttribute("x_lim_min"));
+      if (timestamp)
+        {
+          time_t t = std::stoi(lim_min_text);
+          struct tm tm = *localtime(&t);
+          char out[50];
+          strftime(out, 50, "%Y-%m-%dT%H:%M:%S", &tm);
+          lim_min_text = out;
+        }
+      line_edit->setText(lim_min_text.c_str());
+    }
   form->addRow(lim_min_label, line_edit);
   fields << line_edit;
 
   auto lim_max_label = new QLabel(QString("Max:"));
   line_edit = new QLineEdit();
   if (plot_elem->hasAttribute("x_lim_max"))
-    line_edit->setText(static_cast<std::string>(plot_elem->getAttribute("x_lim_max")).c_str());
+    {
+      auto lim_max_text = static_cast<std::string>(plot_elem->getAttribute("x_lim_max"));
+      if (timestamp)
+        {
+          time_t t = std::stoi(lim_max_text);
+          struct tm tm = *localtime(&t);
+          char out[50];
+          strftime(out, 50, "%Y-%m-%dT%H:%M:%S", &tm);
+          lim_max_text = out;
+        }
+      line_edit->setText(lim_max_text.c_str());
+    }
   form->addRow(lim_max_label, line_edit);
   fields << line_edit;
 
@@ -4159,14 +4243,68 @@ void GRPlotWidget::xLimSlot()
       if (fields[0]->isModified())
         {
           if (!fields[0]->text().isEmpty())
-            plot_elem->setAttribute("x_lim_min", std::stod(fields[0]->text().toStdString()));
+            {
+              if (timestamp)
+                {
+                  // TODO: Put time parsing into a utility function
+#ifdef _WIN32
+                  struct tm timestamp_tm = {0};
+                  int year, month, day, hour, minute, second;
+
+                  if (sscanf(fields[0]->text().toStdString().c_str(), "%d-%d-%dT%d:%d:%d", &year, &month, &day, &hour,
+                             &minute, &second))
+                    {
+                      timestamp_tm.tm_year = year - 1900;
+                      timestamp_tm.tm_mon = month - 1;
+                      timestamp_tm.tm_mday = day;
+                      timestamp_tm.tm_hour = hour;
+                      timestamp_tm.tm_min = minute;
+                      timestamp_tm.tm_sec = second;
+#else
+                  struct tm timestamp_tm;
+                  if (strptime(fields[0]->text().toStdString().c_str(), "%Y-%m-%dT%H:%M:%S", &timestamp_tm) != nullptr)
+                    {
+#endif
+                      plot_elem->setAttribute("x_lim_min", (int)mktime(&timestamp_tm));
+                    }
+                }
+              else
+                plot_elem->setAttribute("x_lim_min", std::stod(fields[0]->text().toStdString()));
+            }
           else if (plot_elem->hasAttribute("x_lim_min"))
             plot_elem->removeAttribute("x_lim_min");
         }
       if (fields[1]->isModified())
         {
           if (!fields[1]->text().isEmpty())
-            plot_elem->setAttribute("x_lim_max", std::stod(fields[1]->text().toStdString()));
+            {
+              if (timestamp)
+                {
+                  // TODO: Put time parsing into a utility function
+#ifdef _WIN32
+                  struct tm timestamp_tm = {0};
+                  int year, month, day, hour, minute, second;
+
+                  if (sscanf(fields[1]->text().toStdString().c_str(), "%d-%d-%dT%d:%d:%d", &year, &month, &day, &hour,
+                             &minute, &second))
+                    {
+                      timestamp_tm.tm_year = year - 1900;
+                      timestamp_tm.tm_mon = month - 1;
+                      timestamp_tm.tm_mday = day;
+                      timestamp_tm.tm_hour = hour;
+                      timestamp_tm.tm_min = minute;
+                      timestamp_tm.tm_sec = second;
+#else
+                  struct tm timestamp_tm;
+                  if (strptime(fields[1]->text().toStdString().c_str(), "%Y-%m-%dT%H:%M:%S", &timestamp_tm) != nullptr)
+                    {
+#endif
+                      plot_elem->setAttribute("x_lim_max", (int)mktime(&timestamp_tm));
+                    }
+                }
+              else
+                plot_elem->setAttribute("x_lim_max", std::stod(fields[1]->text().toStdString()));
+            }
           else if (plot_elem->hasAttribute("x_lim_max"))
             plot_elem->removeAttribute("x_lim_max");
         }
@@ -6466,6 +6604,8 @@ void GRPlotWidget::editElementAccepted(bool highlight_location)
   current_selection = nullptr;
   mouse_move_selections.clear();
   clicked.clear();
+  mask_highlights_cache.clear();
+  referred_elements_highlights_cache.clear();
 
   for (const auto &selection : current_selections)
     {
@@ -6499,6 +6639,10 @@ void GRPlotWidget::editElementAccepted(bool highlight_location)
           plot->removeAttribute("_active_through_update");
         }
     }
+
+  // needed for some reason to fix strange behaviour after editElementAccepted where the prev element couldn't be
+  // selected again
+  redraw();
 }
 
 void GRPlotWidget::editElementRejected()

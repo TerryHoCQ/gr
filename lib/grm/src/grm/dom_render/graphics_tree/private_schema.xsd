@@ -262,6 +262,7 @@
             <xs:attributeGroup ref="_viewport"/>
             <xs:attribute name="_char_height_set_by_user" type="xs:integer"/>
             <xs:attribute name="_default_diag_factor" type="xs:double"/>
+            <xs:attribute name="_time_axis" type="xs:integer"/>
         </xs:complexType>
         <xs:unique name="axisidisunique">
             <xs:selector xpath="axis"/>

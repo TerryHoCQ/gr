@@ -180,7 +180,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
       "y",
       "z",
   };
-  std::vector<std::string> coordinate_system_element{"theta_flip", "x_grid", "y_grid", "z_grid", "plot_type"};
+  std::vector<std::string> coordinate_system_element{"theta_flip", "x_grid", "x_ind", "y_grid", "z_grid", "plot_type"};
   std::vector<std::string> tick_group{
       "line_color_ind",
       "line_color_rgb",
@@ -250,7 +250,7 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
   auto global_render = grm_get_render();
   auto global_root = grm_get_document_root();
   auto active_figure = global_render->getActiveFigure();
-  auto tick_modification_map = *getTickModificationMap();
+  auto tick_modification_map = getTickModificationMap();
 
   GRM::Render::getAutoUpdate(&automatic_update);
   // only do updates when there is a change made
@@ -1882,39 +1882,39 @@ void GRM::updateFilter(const std::shared_ptr<GRM::Element> &element, const std::
             {
               auto val = static_cast<double>(element->getAttribute("value"));
               if (auto map_idx = static_cast<int>(element->parentElement()->getAttribute("_axis_id"));
-                  tick_modification_map[map_idx][val].count(attr) > 0)
+                  (*tick_modification_map)[map_idx][val].count(attr) > 0)
                 {
-                  tick_modification_map[map_idx][val][attr] = element->getAttribute(attr);
+                  (*tick_modification_map)[map_idx][val][attr] = element->getAttribute(attr);
                 }
               else
                 {
-                  tick_modification_map[map_idx][val].emplace(attr, element->getAttribute(attr));
+                  (*tick_modification_map)[map_idx][val].emplace(attr, element->getAttribute(attr));
                 }
             }
           else if (element->localName() == "text" && element->parentElement()->localName() == "tick_group")
             {
               auto val = static_cast<double>(element->parentElement()->getAttribute("value"));
               if (auto map_idx = static_cast<int>(element->parentElement()->parentElement()->getAttribute("_axis_id"));
-                  tick_modification_map[map_idx][val].count(attr) > 0)
+                  (*tick_modification_map)[map_idx][val].count(attr) > 0)
                 {
-                  tick_modification_map[map_idx][val][attr] = element->getAttribute(attr);
+                  (*tick_modification_map)[map_idx][val][attr] = element->getAttribute(attr);
                 }
               else
                 {
-                  tick_modification_map[map_idx][val].emplace(attr, element->getAttribute(attr));
+                  (*tick_modification_map)[map_idx][val].emplace(attr, element->getAttribute(attr));
                 }
             }
           else if (element->localName() == "tick" && element->parentElement()->localName() == "tick_group")
             {
               auto val = static_cast<double>(element->getAttribute("value"));
               if (auto map_idx = static_cast<int>(element->parentElement()->parentElement()->getAttribute("_axis_id"));
-                  tick_modification_map[map_idx][val].count(attr) > 0)
+                  (*tick_modification_map)[map_idx][val].count(attr) > 0)
                 {
-                  tick_modification_map[map_idx][val][attr] = element->getAttribute(attr);
+                  (*tick_modification_map)[map_idx][val][attr] = element->getAttribute(attr);
                 }
               else
                 {
-                  tick_modification_map[map_idx][val].emplace(attr, element->getAttribute(attr));
+                  (*tick_modification_map)[map_idx][val].emplace(attr, element->getAttribute(attr));
                 }
             }
           else if (attr == "tick_size")

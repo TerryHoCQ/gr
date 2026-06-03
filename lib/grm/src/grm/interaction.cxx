@@ -5,6 +5,8 @@
 #include <cfloat>
 #include <climits>
 
+#include <time.h>
+
 #include "args_int.h"
 #include "interaction_int.h"
 #include "plot_int.h"
@@ -1380,6 +1382,14 @@ grm_accumulated_tooltip_info_t *grm_get_accumulated_tooltip_x(int mouse_x, int m
   grm_tooltip_info_t *nearest_tooltip = nullptr;
   TooltipReflistNode *tooltip_reflist_node = nullptr;
   grm_accumulated_tooltip_info_t *accumulated_tooltip = nullptr;
+  int width = 0, height = 0;
+
+  GRM::getFigureSize(&width, &height, nullptr, nullptr);
+  auto max_width_height = grm_max(width, height);
+  auto ndc_x = static_cast<double>(mouse_x) / max_width_height;
+  auto ndc_y = static_cast<double>(height - mouse_y) / max_width_height;
+  auto subplot_element = grm_get_subplot_from_ndc_points_using_dom(1, &ndc_x, &ndc_y);
+  auto coordinate_system = subplot_element == nullptr ? nullptr : subplot_element->querySelectors("coordinate_system");
 
   tooltip_list = tooltipReflistNew();
   errorCleanupIf(tooltip_list == nullptr);
@@ -1417,11 +1427,40 @@ grm_accumulated_tooltip_info_t *grm_get_accumulated_tooltip_x(int mouse_x, int m
   errorCleanupIf(accumulated_tooltip == nullptr);
   accumulated_tooltip->n = tooltip_list->size;
   accumulated_tooltip->x = nearest_tooltip->x;
+  accumulated_tooltip->x_time = nearest_tooltip->x_time;
   accumulated_tooltip->x_px = nearest_tooltip->x_px;
   accumulated_tooltip->x_label = nearest_tooltip->x_label;
   accumulated_tooltip->y = y;
   accumulated_tooltip->y_px = nearest_tooltip->y_px;
   accumulated_tooltip->y_labels = ylabels;
+
+  // timestamp dataset + shift should show a vertical line
+  if (coordinate_system != nullptr && coordinate_system->hasAttribute("_time_axis") &&
+      static_cast<int>(coordinate_system->getAttribute("_time_axis")))
+    {
+      double x_double = ndc_x, y_double = ndc_y;
+      gr_ndctowc(&x_double, &y_double);
+      struct tm timestamp_x_tm;
+#ifdef _WIN32
+      int year, month, day, hour, minute, second;
+
+      if (sscanf(accumulated_tooltip->x_time, "%d-%d-%dT%d:%d:%d", &year, &month, &day, &hour, &minute, &second))
+        {
+          timestamp_x_tm.tm_year = year - 1900;
+          timestamp_x_tm.tm_mon = month - 1;
+          timestamp_x_tm.tm_mday = day;
+          timestamp_x_tm.tm_hour = hour;
+          timestamp_x_tm.tm_min = minute;
+          timestamp_x_tm.tm_sec = second;
+#else
+      if (strptime(accumulated_tooltip->x_time, "%Y-%m-%dT%H:%M:%S", &timestamp_x_tm) != nullptr)
+        {
+#endif
+          coordinate_system->setAttribute("x_ind", (int)mktime(&timestamp_x_tm));
+        }
+      else
+        coordinate_system->removeAttribute("x_ind");
+    }
 
   if (tooltip_list != nullptr)
     {
@@ -1465,12 +1504,15 @@ grm_error_t getTooltipsImpl(int mouse_x, int mouse_y, grm_error_t (*tooltip_call
   std::string kind, orientation = PLOT_DEFAULT_ORIENTATION;
   unsigned int x_length, y_length, series_i = 0, i;
   static std::vector<std::string> labels;
+  static std::vector<std::string> x_texts;
 
+  labels.clear();
   auto info = static_cast<grm_tooltip_info_t *>(malloc(sizeof(grm_tooltip_info_t)));
   returnErrorIf(info == nullptr, GRM_ERROR_MALLOC);
   info->x_px = -1;
   info->y_px = -1;
   info->x = 0;
+  info->x_time = (char *)" ";
   info->y = 0;
   info->x_label = (char *)"x";
   info->y_label = (char *)"y";
@@ -1616,6 +1658,7 @@ grm_error_t getTooltipsImpl(int mouse_x, int mouse_y, grm_error_t (*tooltip_call
         {
           mindiff = 0;
           info->x = 0;
+          info->x_time = (char *)" ";
           info->y = 0;
           info->x_px = mouse_x;
           info->y_px = mouse_y;
@@ -1638,9 +1681,23 @@ grm_error_t getTooltipsImpl(int mouse_x, int mouse_y, grm_error_t (*tooltip_call
             }
           else
             {
-              for (const auto &current_series_group_child : current_series_group->children())
+              if (strEqualsAny(kind, "stem"))
                 {
-                  current_series_vec.push_back(current_series_group_child);
+                  for (const auto &current_series_group_child : current_series_group->children())
+                    {
+                      if (current_series_group_child->localName() == "polymarker")
+                        {
+                          current_series_vec.push_back(current_series_group_child);
+                          break;
+                        }
+                    }
+                }
+              else
+                {
+                  // should be enough in general since all childs should have all the data points from the parents and
+                  // should overlap. In strange cases were f.e. the first half is a line and the rest polymarkers the
+                  // following leads to missing tooltips
+                  current_series_vec.push_back(current_series_group->children()[0]);
                 }
             }
 
@@ -1740,9 +1797,24 @@ grm_error_t getTooltipsImpl(int mouse_x, int mouse_y, grm_error_t (*tooltip_call
                   if (accumulated) diff = sqrt(pow(x_px - mouse_x, 2));
                   if (diff < mindiff && diff <= MAX_MOUSE_DIST)
                     {
+                      char x_text[50];
                       mindiff = diff;
+                      snprintf(x_text, 50, "%f", x_series_vec[i]);
+                      x_texts.push_back(x_text);
                       info->x = x_series_vec[i];
                       info->y = y_series_vec[i];
+
+                      auto coordinate_system = central_region->querySelectors("coordinate_system");
+                      if (coordinate_system->hasAttribute("_time_axis") &&
+                          static_cast<int>(coordinate_system->getAttribute("_time_axis")))
+                        {
+                          time_t timestamp = x_series_vec[i];
+                          struct tm tm = *localtime(&timestamp);
+                          char out[32];
+                          strftime(out, 32, "%Y-%m-%dT%H:%M:%S", &tm);
+                          x_texts.push_back(out);
+                          info->x_time = (char *)x_texts[x_texts.size() - 1].c_str();
+                        }
                       info->x_px = static_cast<int>(x_px);
                       info->y_px = height - static_cast<int>(y_px);
                       if (current_series->parentElement()->hasAttribute("label"))
@@ -1883,10 +1955,16 @@ grm_error_t getTooltipsImpl(int mouse_x, int mouse_y, grm_error_t (*tooltip_call
               mindiff = DBL_MAX;
               break;
             }
+          char x_text[50];
           if (kind == "quiver")
             {
+              snprintf(x_text, 50, "%f",
+                       u_series[static_cast<int>(y_series_idx) * x_length + static_cast<int>(x_series_idx)]);
+              info->y = v_series[static_cast<int>(y_series_idx) * x_length + static_cast<int>(x_series_idx)];
+
               info->x_label = (char *)"u";
               info->y_label = (char *)"v";
+              info->x = u_series[static_cast<int>(y_series_idx) * x_length + static_cast<int>(x_series_idx)];
               if (orientation == "vertical")
                 {
                   auto tmp = y_series_idx;
@@ -1894,14 +1972,15 @@ grm_error_t getTooltipsImpl(int mouse_x, int mouse_y, grm_error_t (*tooltip_call
                   x_series_idx = tmp;
                   x_length = y_length;
                 }
-              info->x = u_series[static_cast<int>(y_series_idx) * x_length + static_cast<int>(x_series_idx)];
-              info->y = v_series[static_cast<int>(y_series_idx) * x_length + static_cast<int>(x_series_idx)];
             }
           else
             {
+              snprintf(x_text, 50, "%f", x_series_vec[static_cast<int>(x_series_idx)]);
               info->x = x_series_vec[static_cast<int>(x_series_idx)];
               info->y = y_series_vec[static_cast<int>(y_series_idx)];
             }
+          x_texts.push_back(x_text);
+          info->x_time = (char *)x_texts[x_texts.size() - 1].c_str();
           info->x_px = mouse_x;
           info->y_px = mouse_y;
 

@@ -229,8 +229,6 @@ static void forward_message(void *input_socket, void *output_socket)
           forward_message(backend, frontend);
         }
     }
-  zmq_close(frontend);
-  zmq_close(backend);
 }
 @end
 
@@ -250,7 +248,6 @@ static void forward_message(void *input_socket, void *output_socket)
           handle_message(gksterm, worker);
         }
     }
-  zmq_close(worker);
 }
 @end
 
@@ -299,8 +296,8 @@ static bool initialized = NO;
       NSRect screenFrame = [[[NSScreen screens] objectAtIndex:0] frame];
       window[win] =
           [[NSWindow alloc] initWithContentRect:NSMakeRect(NSMinX(screenFrame), NSMaxY(screenFrame) - 500, 500, 500)
-                                      styleMask:NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask |
-                                                NSResizableWindowMask
+                                      styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
+                                                NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable
                                         backing:NSBackingStoreBuffered
                                           defer:NO];
       [window[win] setBackgroundColor:[NSColor colorWithCalibratedWhite:1 alpha:1]];
@@ -410,7 +407,7 @@ static bool initialized = NO;
       CGSize size = view[win].bounds.size;
       locator.x = (cursor_position.x - origin.x) / size.width;
       locator.y = (cursor_position.y - origin.y) / size.height;
-      locator.status = [NSEvent pressedMouseButtons];
+      locator.status = (int)[NSEvent pressedMouseButtons];
     }
   else
     {
@@ -454,8 +451,7 @@ static bool initialized = NO;
 {
   /* Search unused window */
   int unused_win_id;
-  for (unused_win_id = 0; unused_win_id < MAX_WINDOWS && window[unused_win_id]; unused_win_id++)
-    ;
+  for (unused_win_id = 0; unused_win_id < MAX_WINDOWS && window[unused_win_id]; unused_win_id++);
 
   /* Either return the index of an unused window or MAX_WINDOWS */
   return unused_win_id;

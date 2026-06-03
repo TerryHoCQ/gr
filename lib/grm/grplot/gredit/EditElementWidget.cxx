@@ -1,9 +1,12 @@
 #include "EditElementWidget.hxx"
 #include "../CollapsibleSection.hxx"
 #include "PreviewTextWidget.hxx"
+
+#include <grm/dom_render/render_util.hxx>
 #include <grm/dom_render/casts.hxx>
 
 #include <gks.h>
+#include <time.h>
 #include <cmath>
 #include <QDial>
 
@@ -336,8 +339,36 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                 }
               line_edit = new QLineEdit(this);
               if (multiple_selections.empty() && plot_elem->hasAttribute(attr_name))
-                static_cast<QLineEdit *>(line_edit)->setText(
-                    static_cast<std::string>(plot_elem->getAttribute(attr_name)).c_str());
+                {
+                  if (attr_name == "x_lim_min" || attr_name == "x_lim_max")
+                    {
+                      auto coordinate_system = plot_elem->querySelectors("coordinate_system");
+                      if (coordinate_system->hasAttribute("_time_axis") &&
+                          static_cast<int>(coordinate_system->getAttribute("_time_axis")))
+                        {
+                          time_t t = std::stoi(static_cast<std::string>(plot_elem->getAttribute(attr_name)));
+                          struct tm tm;
+#ifdef _WIN32
+                          localtime_s(&tm, &t);
+#else
+                          localtime_r(&t, &tm);
+#endif
+                          char out[50];
+                          strftime(out, 50, "%Y-%m-%dT%H:%M:%S", &tm);
+                          static_cast<QLineEdit *>(line_edit)->setText(out);
+                        }
+                      else
+                        {
+                          static_cast<QLineEdit *>(line_edit)->setText(
+                              static_cast<std::string>(plot_elem->getAttribute(attr_name)).c_str());
+                        }
+                    }
+                  else
+                    {
+                      static_cast<QLineEdit *>(line_edit)->setText(
+                          static_cast<std::string>(plot_elem->getAttribute(attr_name)).c_str());
+                    }
+                }
               line_edit->setToolTip(tooltip_string);
             }
 
@@ -615,8 +646,36 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
             }
           line_edit = new QLineEdit(this);
           if (multiple_selections.empty())
-            static_cast<QLineEdit *>(line_edit)->setText(
-                static_cast<std::string>((*current_selection)->getRef()->getAttribute(cur_attr_name)).c_str());
+            {
+              if (cur_attr_name == "x_lim_min" || cur_attr_name == "x_lim_max" || cur_attr_name == "x_range_min" ||
+                  cur_attr_name == "x_range_max")
+                {
+                  auto plot_elem = (*current_selection)->getRef();
+                  GRM::getPlotParent(plot_elem);
+                  auto coordinate_system = plot_elem->querySelectors("coordinate_system");
+                  if (coordinate_system->hasAttribute("_time_axis") &&
+                      static_cast<int>(coordinate_system->getAttribute("_time_axis")))
+                    {
+                      time_t t = std::stoi(
+                          static_cast<std::string>((*current_selection)->getRef()->getAttribute(cur_attr_name)));
+                      struct tm tm = *localtime(&t);
+                      char out[50];
+                      strftime(out, 50, "%Y-%m-%dT%H:%M:%S", &tm);
+                      static_cast<QLineEdit *>(line_edit)->setText(out);
+                    }
+                  else
+                    {
+                      static_cast<QLineEdit *>(line_edit)->setText(
+                          static_cast<std::string>((*current_selection)->getRef()->getAttribute(cur_attr_name))
+                              .c_str());
+                    }
+                }
+              else
+                {
+                  static_cast<QLineEdit *>(line_edit)->setText(
+                      static_cast<std::string>((*current_selection)->getRef()->getAttribute(cur_attr_name)).c_str());
+                }
+            }
           line_edit->setToolTip(tooltip_string);
         }
 
@@ -748,11 +807,8 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
               form->addRow(viewport);
               viewport_added = true;
             }
-          if (!advanced_editor)
-            {
-              was_added = false;
-              if (viewport_added) viewport_form->addRow(label, line_edit);
-            }
+          if (viewport_added) viewport_form->addRow(label, line_edit);
+          if (!advanced_editor) was_added = false;
         }
       else if (cur_attr_name == "viewport_normalized_x_min" || cur_attr_name == "viewport_normalized_x_max" ||
                cur_attr_name == "viewport_normalized_y_min" || cur_attr_name == "viewport_normalized_y_max")
@@ -803,11 +859,8 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
             double val = static_cast<QLineEdit *>(line_edit)->text().toDouble();
             slider->setValue(val * 100.0);
           });
-          if (!advanced_editor)
-            {
-              was_added = false;
-              if (viewport_normalized_added) viewport_normalized_form->addRow(label, widget);
-            }
+          if (viewport_normalized_added) viewport_normalized_form->addRow(label, widget);
+          if (!advanced_editor) was_added = false;
         }
       else if (cur_attr_name == "window_x_min" || cur_attr_name == "window_x_max" || cur_attr_name == "window_y_min" ||
                cur_attr_name == "window_y_max" || cur_attr_name == "window_z_min" || cur_attr_name == "window_z_max")
@@ -2225,11 +2278,8 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                                       form->addRow(viewport);
                                       viewport_added = true;
                                     }
-                                  if (!advanced_editor)
-                                    {
-                                      was_added = false;
-                                      if (viewport_added) viewport_form->addRow(label, line_edit);
-                                    }
+                                  if (viewport_added) viewport_form->addRow(label, line_edit);
+                                  if (advanced_editor) was_added = false;
                                 }
                               else if (attr_name == "viewport_normalized_x_min" ||
                                        attr_name == "viewport_normalized_x_max" ||
@@ -2271,11 +2321,8 @@ void EditElementWidget::attributeEditEvent(std::vector<std::shared_ptr<GRM::Elem
                                     double val = static_cast<QLineEdit *>(line_edit)->text().toDouble();
                                     slider->setValue(val * 100.0);
                                   });
-                                  if (!advanced_editor)
-                                    {
-                                      was_added = false;
-                                      if (viewport_normalized_added) viewport_normalized_form->addRow(label, widget);
-                                    }
+                                  if (viewport_normalized_added) viewport_normalized_form->addRow(label, widget);
+                                  if (advanced_editor) was_added = false;
                                 }
                               else if (attr_name == "x_range_min" || attr_name == "x_range_max" ||
                                        attr_name == "y_range_min" || attr_name == "y_range_max" ||
@@ -2838,8 +2885,48 @@ bool EditElementWidget::setAttributesDuringAccept(std::shared_ptr<GRM::Element> 
                       else if (attr_name != "Colorrep-value")
                         {
                           const auto value = static_cast<QLineEdit *>(fields[i])->text().toStdString();
-                          if ((attr_type[attr_name] == "xs:string" || attr_type[attr_name] == "strint") &&
-                              !util::isDigits(value))
+                          if (attr_name == "x_lim_min" || attr_name == "x_lim_max" || attr_name == "x_range_min" ||
+                              attr_name == "x_range_max")
+                            {
+                              auto plot_elem = current_selection;
+                              GRM::getPlotParent(plot_elem);
+                              auto coordinate_system = plot_elem->querySelectors("coordinate_system");
+                              if (coordinate_system->hasAttribute("_time_axis") &&
+                                  static_cast<int>(coordinate_system->getAttribute("_time_axis")))
+                                {
+                                  // TODO: Put time parsing into a utility function
+#ifdef _WIN32
+                                  struct tm timestamp_tm = {0};
+                                  int year, month, day, hour, minute, second;
+
+                                  if (sscanf(value.c_str(), "%d-%d-%dT%d:%d:%d", &year, &month, &day, &hour, &minute,
+                                             &second))
+                                    {
+                                      timestamp_tm.tm_year = year - 1900;
+                                      timestamp_tm.tm_mon = month - 1;
+                                      timestamp_tm.tm_mday = day;
+                                      timestamp_tm.tm_hour = hour;
+                                      timestamp_tm.tm_min = minute;
+                                      timestamp_tm.tm_sec = second;
+#else
+                                  struct tm timestamp_tm;
+                                  if (strptime(value.c_str(), "%Y-%m-%dT%H:%M:%S", &timestamp_tm) != nullptr)
+                                    {
+#endif
+                                      current_selection->setAttribute(attr_name, (int)mktime(&timestamp_tm));
+                                    }
+                                  else if (attr_type[attr_name] == "xs:double" && util::isNumber(value))
+                                    {
+                                      current_selection->setAttribute(attr_name, std::stod(value));
+                                    }
+                                }
+                              else if (attr_type[attr_name] == "xs:double" && util::isNumber(value))
+                                {
+                                  current_selection->setAttribute(attr_name, std::stod(value));
+                                }
+                            }
+                          else if ((attr_type[attr_name] == "xs:string" || attr_type[attr_name] == "strint") &&
+                                   !util::isDigits(value))
                             {
                               current_selection->setAttribute(attr_name, value);
                             }
@@ -2882,6 +2969,7 @@ bool EditElementWidget::setAttributesDuringAccept(std::shared_ptr<GRM::Element> 
             }
           else
             {
+              if (attr_name == "move_to_plot") grplot_widget->setMoveToPlot(true);
               if (attr_name == "location" && current_selection->localName() == "axis")
                 current_selection->setAttribute("_ignore_next_tick_orientation", true);
               const auto value = static_cast<QComboBox *>(fields[i])->itemText(index).toStdString();

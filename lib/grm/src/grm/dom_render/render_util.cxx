@@ -20,7 +20,7 @@ StringMap *grm_fmt_map = stringMapNewWithData(std::size(kind_to_fmt), kind_to_fm
 static bool bounding_boxes = !getenv("GRDISPLAY") || (getenv("GRDISPLAY") && strcmp(getenv("GRDISPLAY"), "view") != 0);
 static std::map<int, std::map<double, std::map<std::string, GRM::Value>>> tick_modification_map;
 
-void getPlotParent(std::shared_ptr<GRM::Element> &element)
+void GRM::getPlotParent(std::shared_ptr<GRM::Element> &element)
 {
   auto plot_parent = element;
   if (strEqualsAny(plot_parent->localName(), "root", "figure", "layout_grid", "layout_grid_element", "draw_graphics",
@@ -733,7 +733,8 @@ void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element)
       bool private_shift = false;
       double plot[4] = {NAN, NAN, NAN, NAN};
 
-      if (element->hasAttribute("viewport_x_min"))
+      if (element->hasAttribute("_viewport_x_min_org") && element->hasAttribute("_viewport_x_max_org") &&
+          element->hasAttribute("_viewport_y_min_org") && element->hasAttribute("_viewport_y_max_org"))
         {
           vp_org[0] = static_cast<double>(element->getAttribute("_viewport_x_min_org"));
           vp_org[1] = static_cast<double>(element->getAttribute("_viewport_x_max_org"));
@@ -794,6 +795,8 @@ void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element)
               auto aspect_ratio_ws = metric_width / metric_height;
               auto text_x = static_cast<double>(element->getAttribute("x"));
               auto text_y = static_cast<double>(element->getAttribute("y"));
+              double char_height;
+              gr_inqcharheight(&char_height);
 
               // clipping for the text offset
               if (x_shift > 0)
@@ -806,9 +809,9 @@ void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element)
 
               if (y_shift < 0)
                 if (aspect_ratio_ws > 1)
-                  y_shift = grm_max(-text_y, y_shift);
+                  y_shift = grm_max(-1.0 / aspect_ratio_ws + text_y + char_height, y_shift);
                 else
-                  y_shift = grm_max(text_y - 1.0, y_shift);
+                  y_shift = grm_max(-aspect_ratio_ws, y_shift);
               else
                 y_shift = grm_min(text_y - 0.01, y_shift);
               gr_settextoffset(x_shift, -y_shift);
@@ -850,46 +853,49 @@ void applyMoveTransformation(const std::shared_ptr<GRM::Element> &element)
               GRM::Render::setAutoUpdate(old_state);
             }
 
-          // calculate viewport changes in x-direction
-          vp[0] = vp_org[0] + x_min_shift + x_shift;
-          vp[1] = vp_org[1] + x_max_shift + x_shift;
-          diff = grm_min(vp[1] - vp[0], vp_border_x_max - vp_border_x_min);
-
-          // the viewport cant leave the [vp_border_x_min, vp_border_x_max] space
-          if (vp[0] < vp_border_x_min)
+          if (element->localName() != "text")
             {
-              vp[0] = vp_border_x_min;
-              vp[1] = vp_border_x_min + diff;
-            }
-          if (vp[1] > vp_border_x_max)
-            {
-              vp[0] = vp_border_x_max - diff;
-              vp[1] = vp_border_x_max;
-            }
+              // calculate viewport changes in x-direction
+              vp[0] = vp_org[0] + x_min_shift + x_shift;
+              vp[1] = vp_org[1] + x_max_shift + x_shift;
+              diff = grm_min(vp[1] - vp[0], vp_border_x_max - vp_border_x_min);
 
-          // calculate viewport changes in y-direction
-          vp[2] = vp_org[2] - y_min_shift - y_shift;
-          vp[3] = vp_org[3] - y_max_shift - y_shift;
-          diff = grm_min(vp_border_y_max - vp_border_y_min, vp[3] - vp[2]);
+              // the viewport cant leave the [vp_border_x_min, vp_border_x_max] space
+              if (vp[0] < vp_border_x_min)
+                {
+                  vp[0] = vp_border_x_min;
+                  vp[1] = vp_border_x_min + diff;
+                }
+              if (vp[1] > vp_border_x_max)
+                {
+                  vp[0] = vp_border_x_max - diff;
+                  vp[1] = vp_border_x_max;
+                }
 
-          // the viewport cant leave the [vp_border_y_min, vp_border_y_max] space
-          if (vp[2] < vp_border_y_min)
-            {
-              vp[3] = vp_border_y_min + diff;
-              vp[2] = vp_border_y_min;
-            }
-          if (vp[3] > vp_border_y_max)
-            {
-              vp[2] = vp_border_y_max - diff;
-              vp[3] = vp_border_y_max;
-            }
+              // calculate viewport changes in y-direction
+              vp[2] = vp_org[2] - y_min_shift - y_shift;
+              vp[3] = vp_org[3] - y_max_shift - y_shift;
+              diff = grm_min(vp_border_y_max - vp_border_y_min, vp[3] - vp[2]);
 
-          bool old_state;
-          GRM::Render::getAutoUpdate(&old_state);
-          GRM::Render::setAutoUpdate(false);
-          grm_get_render()->setViewport(element, vp[0], vp[1], vp[2], vp[3]);
-          processViewport(element);
-          GRM::Render::setAutoUpdate(old_state);
+              // the viewport cant leave the [vp_border_y_min, vp_border_y_max] space
+              if (vp[2] < vp_border_y_min)
+                {
+                  vp[3] = vp_border_y_min + diff;
+                  vp[2] = vp_border_y_min;
+                }
+              if (vp[3] > vp_border_y_max)
+                {
+                  vp[2] = vp_border_y_max - diff;
+                  vp[3] = vp_border_y_max;
+                }
+
+              bool old_state;
+              GRM::Render::getAutoUpdate(&old_state);
+              GRM::Render::setAutoUpdate(false);
+              grm_get_render()->setViewport(element, vp[0], vp[1], vp[2], vp[3]);
+              processViewport(element);
+              GRM::Render::setAutoUpdate(old_state);
+            }
         }
     }
   else if (x_shift != 0 || x_max_shift != 0 || x_min_shift != 0 || y_shift != 0 || y_max_shift != 0 || y_min_shift != 0)
@@ -2476,13 +2482,19 @@ bool getLimitsForColorbar(const std::shared_ptr<GRM::Element> &element, double &
   auto plot_parent = element->parentElement();
   getPlotParent(plot_parent);
 
-  if (!std::isnan(static_cast<double>(plot_parent->getAttribute("_c_lim_min"))) &&
-      !std::isnan(static_cast<double>(plot_parent->getAttribute("_c_lim_max"))))
+  if (auto volume = plot_parent->querySelectors("series_volume"); volume != nullptr)
+    {
+      c_min = static_cast<double>(volume->getAttribute("_c_lim_min"));
+      c_max = static_cast<double>(volume->getAttribute("_c_lim_max"));
+      limits_found = true;
+    }
+  else if (volume == nullptr && !std::isnan(static_cast<double>(plot_parent->getAttribute("_c_lim_min"))) &&
+           !std::isnan(static_cast<double>(plot_parent->getAttribute("_c_lim_max"))))
     {
       c_min = static_cast<double>(plot_parent->getAttribute("_c_lim_min"));
       c_max = static_cast<double>(plot_parent->getAttribute("_c_lim_max"));
     }
-  else if (!std::isnan(static_cast<double>(plot_parent->getAttribute("_z_lim_min"))) &&
+  else if (volume == nullptr && !std::isnan(static_cast<double>(plot_parent->getAttribute("_z_lim_min"))) &&
            !std::isnan(static_cast<double>(plot_parent->getAttribute("_z_lim_max"))))
     {
       c_min = static_cast<double>(plot_parent->getAttribute("_z_lim_min"));
@@ -2493,6 +2505,41 @@ bool getLimitsForColorbar(const std::shared_ptr<GRM::Element> &element, double &
       limits_found = false;
     }
 
+  auto active_figure = grm_get_render()->getActiveFigure();
+  if (active_figure->hasAttribute("consecutive_colorbars") &&
+      static_cast<int>(active_figure->getAttribute("consecutive_colorbars")))
+    {
+      auto current_type =
+          static_cast<std::string>(plot_parent->querySelectors("coordinate_system")->getAttribute("plot_type"));
+      for (const auto &plot_elem : active_figure->querySelectorsAll("plot"))
+        {
+          auto new_type =
+              static_cast<std::string>(plot_elem->querySelectors("coordinate_system")->getAttribute("plot_type"));
+          if (current_type == new_type)
+            {
+              if (auto volume = plot_elem->querySelectors("series_volume");
+                  !std::isnan(static_cast<double>(plot_elem->getAttribute("_z_lim_min"))) &&
+                  !std::isnan(static_cast<double>(plot_elem->getAttribute("_z_lim_max"))) && volume != nullptr)
+                {
+                  c_min = grm_min(c_min, static_cast<double>(volume->getAttribute("_c_lim_min")));
+                  c_max = grm_max(c_max, static_cast<double>(volume->getAttribute("_c_lim_max")));
+                }
+              else if (volume == nullptr && !std::isnan(static_cast<double>(plot_elem->getAttribute("_c_lim_min"))) &&
+                       !std::isnan(static_cast<double>(plot_elem->getAttribute("_c_lim_max"))))
+                {
+                  c_min = grm_min(c_min, static_cast<double>(plot_elem->getAttribute("_c_lim_min")));
+                  c_max = grm_max(c_max, static_cast<double>(plot_elem->getAttribute("_c_lim_max")));
+                }
+              else if (volume == nullptr && !std::isnan(static_cast<double>(plot_elem->getAttribute("_z_lim_min"))) &&
+                       !std::isnan(static_cast<double>(plot_elem->getAttribute("_z_lim_max"))) &&
+                       plot_elem->querySelectors("series_volume") == nullptr)
+                {
+                  c_min = grm_min(c_min, static_cast<double>(plot_elem->getAttribute("_z_lim_min")));
+                  c_max = grm_max(c_max, static_cast<double>(plot_elem->getAttribute("_z_lim_max")));
+                }
+            }
+        }
+    }
   return limits_found;
 }
 
@@ -3035,6 +3082,7 @@ void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group, int ch
   bool x_flip, y_flip, text_is_empty_or_number = true;
   double metric_width, metric_height;
   double aspect_ratio_ws_metric;
+  bool rotate_labels = false;
   auto global_creator = grm_get_creator();
 
   GRM::getFigureSize(nullptr, nullptr, &metric_width, &metric_height);
@@ -3104,7 +3152,94 @@ void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group, int ch
       if (child->localName() == "text" && child->hasAttribute("_child_id")) cur_child_count += 1;
     }
 
-  if (isNumber(text))
+  if (axis_type == "x" && tick_group->parentElement()->parentElement()->hasAttribute("_time_axis") &&
+      static_cast<int>(tick_group->parentElement()->parentElement()->getAttribute("_time_axis")) && !text.empty())
+    {
+      double tbx[4], tby[4];
+      char text_c[256];
+      double viewport[4];
+
+      snprintf(text_c, 256, "%s", text.c_str());
+      gr_inqtext(x, y, text_c, tbx, tby);
+
+      if (!GRM::Render::getViewport(tick_group->parentElement(), &viewport[0], &viewport[1], &viewport[2],
+                                    &viewport[3]))
+        throw NotFoundError(tick_group->parentElement()->localName() + " doesn't have a viewport but it should.\n");
+
+      width = tbx[1] - tbx[0];
+      auto total_available_width = (viewport[1] - viewport[0]);
+      auto single_available_width =
+          total_available_width / static_cast<int>(tick_group->parentElement()->getAttribute("num_tick_labels"));
+
+      if (auto break_pos = std::find(text.begin(), text.end(), ' '); break_pos != text.end())
+        {
+          const char *label = text.c_str();
+          for (i = 0; i == 0 || label[i - 1] != '\0'; ++i)
+            {
+              if (label[i] == ' ')
+                {
+                  /* calculate width of the next part of the label to be drawn */
+                  new_label[i] = '\0';
+
+                  if ((del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT) ||
+                      cur_child_count + child_id_org < child_id)
+                    {
+                      text_elem = global_creator->createText(x, y, new_label + cur_start, CoordinateSpace::NDC);
+                      tick_group->append(text_elem);
+                      text_elem->setAttribute("_child_id", child_id++);
+                    }
+                  else
+                    {
+                      text_elem = tick_group->querySelectors("text[_child_id=" + std::to_string(child_id++) + "]");
+                      if (text_elem != nullptr)
+                        text_elem =
+                            global_creator->createText(x, y, new_label + cur_start, CoordinateSpace::NDC, text_elem);
+                    }
+                  if (text_elem != nullptr)
+                    {
+                      if (!text_elem->hasAttribute("text_color_ind")) text_elem->setAttribute("text_color_ind", 1);
+                      int label_orientation = 0;
+                      if (tick_group->parentElement()->hasAttribute("label_orientation"))
+                        label_orientation =
+                            static_cast<int>(tick_group->parentElement()->getAttribute("label_orientation"));
+                      text_elem->setAttribute("text_align_horizontal", GKS_K_TEXT_HALIGN_CENTER);
+                      if (((pos <= 0.5 * (window[2] + window[3]) ||
+                            ((scale & GR_OPTION_FLIP_Y || y_flip) && pos > 0.5 * (window[2] + window[3]))) &&
+                           label_orientation == 0) ||
+                          label_orientation < 0)
+                        {
+                          text_elem->setAttribute("text_align_vertical", GKS_K_TEXT_VALIGN_TOP);
+                        }
+                      else
+                        {
+                          text_elem->setAttribute("text_align_vertical", GKS_K_TEXT_VALIGN_BOTTOM);
+                        }
+
+                      text_elem->setAttribute("scientific_format", scientific_format);
+                    }
+                  cur_start = i + 1;
+                  y -= 1.1 * char_height;
+                }
+              else
+                {
+                  new_label[i] = label[i];
+                }
+            }
+          text = new_label + cur_start;
+
+          if (text.empty() && (del != DelValues::UPDATE_WITHOUT_DEFAULT && del != DelValues::UPDATE_WITH_DEFAULT))
+            del = DelValues::UPDATE_WITHOUT_DEFAULT;
+          if (i >= cur_start && text != " " && text != "\0" && !text.empty() &&
+              cur_child_count + child_id_org < child_id)
+            text_is_empty_or_number = false;
+          if (i < cur_start && !text_is_empty_or_number) child_id_org += 1;
+        }
+      else if (width > 0.8 * single_available_width)
+        {
+          rotate_labels = true;
+        }
+    }
+  else if (isNumber(text))
     {
       if (text.size() > 7)
         {
@@ -3287,17 +3422,35 @@ void tickLabelAdjustment(const std::shared_ptr<GRM::Element> &tick_group, int ch
               int label_orientation = 0;
               if (tick_group->parentElement()->hasAttribute("label_orientation"))
                 label_orientation = static_cast<int>(tick_group->parentElement()->getAttribute("label_orientation"));
-              text_elem->setAttribute("text_align_horizontal", GKS_K_TEXT_HALIGN_CENTER);
-              if ((((pos <= 0.5 * (window[2] + window[3]) && !(scale & GR_OPTION_FLIP_Y || y_flip)) ||
-                    ((scale & GR_OPTION_FLIP_Y || y_flip) && pos > 0.5 * (window[2] + window[3]))) &&
-                   label_orientation == 0) ||
-                  label_orientation < 0)
+              if (rotate_labels)
                 {
-                  text_elem->setAttribute("text_align_vertical", GKS_K_TEXT_VALIGN_TOP);
+                  text_elem->setAttribute("char_up_x", -0.5);
+                  text_elem->setAttribute("char_up_y", 1);
+                  if ((label_pos <= window[2] && label_orientation == 0) || label_orientation < 0)
+                    {
+                      text_elem->setAttribute("text_align_horizontal", GKS_K_TEXT_HALIGN_RIGHT);
+                      text_elem->setAttribute("text_align_vertical", GKS_K_TEXT_VALIGN_TOP);
+                    }
+                  else
+                    {
+                      text_elem->setAttribute("text_align_horizontal", GKS_K_TEXT_HALIGN_LEFT);
+                      text_elem->setAttribute("text_align_vertical", GKS_K_TEXT_VALIGN_BOTTOM);
+                    }
                 }
               else
                 {
-                  text_elem->setAttribute("text_align_vertical", GKS_K_TEXT_VALIGN_BOTTOM);
+                  text_elem->setAttribute("text_align_horizontal", GKS_K_TEXT_HALIGN_CENTER);
+                  if ((((pos <= 0.5 * (window[2] + window[3]) && !(scale & GR_OPTION_FLIP_Y || y_flip)) ||
+                        ((scale & GR_OPTION_FLIP_Y || y_flip) && pos > 0.5 * (window[2] + window[3]))) &&
+                       label_orientation == 0) ||
+                      label_orientation < 0)
+                    {
+                      text_elem->setAttribute("text_align_vertical", GKS_K_TEXT_VALIGN_TOP);
+                    }
+                  else
+                    {
+                      text_elem->setAttribute("text_align_vertical", GKS_K_TEXT_VALIGN_BOTTOM);
+                    }
                 }
             }
           else if (axis_type == "y")
@@ -3414,7 +3567,7 @@ void kindDependentCoordinateLimAdjustments(const std::shared_ptr<GRM::Element> &
   auto kind = static_cast<std::string>(element->getAttribute("_kind"));
   central_region = element->querySelectors("central_region");
 
-  if (kind == "barplot")
+  if (central_region->querySelectors("series_barplot") != nullptr)
     {
       for (const auto &series : central_region->children())
         {
@@ -3638,8 +3791,8 @@ void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &element
   {
     const char *plot;
     const char *series;
-  } * current_range_keys, range_keys[] = {{"x_lim", "x_range"}, {"y_lim", "y_range"}, {"z_lim", "z_range"},
-                                          {"c_lim", "c_range"}, {"r_lim", "r_range"}, {"theta_lim", "theta_range"}};
+  } *current_range_keys, range_keys[] = {{"x_lim", "x_range"}, {"y_lim", "y_range"}, {"z_lim", "z_range"},
+                                         {"c_lim", "c_range"}, {"r_lim", "r_range"}, {"theta_lim", "theta_range"}};
 
   logger((stderr, "Storing coordinate ranges\n"));
 
@@ -3704,11 +3857,16 @@ void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &element
                 location_names = {"x", "twin_x", "top", "bottom"};
               else if (*current_component_name == "y" && plot_type == "2d")
                 location_names = {"y", "twin_y", "right", "left"};
+              else if (*current_component_name == "c")
+                location_names = {"c"};
+              else if (*current_component_name == "z")
+                location_names = {"z"};
 
               for (const auto location : location_names)
                 {
                   double min_component = DBL_MAX, max_component = -DBL_MAX, step = -DBL_MAX;
-                  if (static_cast<std::string>(fmt).find(*current_component_name) != std::string::npos)
+                  if (strEqualsAny(*current_component_name, "c", "z") ||
+                      static_cast<std::string>(fmt).find(*current_component_name) != std::string::npos)
                     {
                       std::shared_ptr<GRM::Element> series_parent =
                           (kind == "marginal_heatmap") ? element : central_region;
@@ -3747,10 +3905,17 @@ void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &element
                                           static_cast<std::string>(series->getAttribute(*current_component_name));
                                       current_component = GRM::get<std::vector<double>>((*context)[cntx_key]);
                                       current_point_count = (int)current_component.size();
-                                      if (series_kind == "barplot")
+                                      if (strEqualsAny(series_kind, "barplot", "stem") &&
+                                          *current_component_name == "y")
                                         {
+                                          // added to fix an inconsistency with the ranges after kind change
                                           current_min_component = 0.0;
                                           current_max_component = 0.0;
+                                        }
+                                      else if (series_kind == "barplot" && *current_component_name == "x")
+                                        {
+                                          current_min_component = 1.0;
+                                          current_max_component = current_component.size() - 1;
                                         }
                                       for (int i = 0; i < current_point_count; i++)
                                         {
@@ -3761,7 +3926,7 @@ void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &element
                                               else
                                                 current_min_component += current_component[i];
                                             }
-                                          else
+                                          else if (series_kind != "barplot" || *current_component_name != "x")
                                             {
                                               if (!std::isnan(current_component[i]))
                                                 {
@@ -3920,6 +4085,7 @@ void calculateInitialCoordinateLims(const std::shared_ptr<GRM::Element> &element
                     {
                       if (strEqualsAny(kind, "imshow", "isosurface", "volume"))
                         {
+                          if (*current_component_name == "c" && strEqualsAny(kind, "volume", "isosurface")) continue;
                           min_component = (kind == "imshow" ? 0.0 : -1.0);
                           max_component = 1.0;
                         }

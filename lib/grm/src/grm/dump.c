@@ -102,7 +102,7 @@ void grm_dump(const grm_args_t *args, FILE *f)
         }                                                                                                              \
       else                                                                                                             \
         {                                                                                                              \
-          fprintf(f, "%*s", INDENT *recursion_level, "");                                                              \
+          fprintf(f, "%*s", INDENT * recursion_level, "");                                                             \
         }                                                                                                              \
     }                                                                                                                  \
   while (0)

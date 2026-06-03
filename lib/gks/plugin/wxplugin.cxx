@@ -78,11 +78,11 @@ DLLEXPORT void gks_wxplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int
   yd = (int)(p->c * (yn) + p->d);
 
 #define DC_to_NDC(xd, yd, xn, yn) \
-  xn = ((xd)-p->b) / p->a;        \
-  yn = ((yd)-p->d) / p->c;
+  xn = ((xd) - p->b) / p->a;      \
+  yn = ((yd) - p->d) / p->c;
 
-#define CharXform(xrel, yrel, x, y)                  \
-  x = cos(p->alpha) * (xrel)-sin(p->alpha) * (yrel); \
+#define CharXform(xrel, yrel, x, y)                    \
+  x = cos(p->alpha) * (xrel) - sin(p->alpha) * (yrel); \
   y = sin(p->alpha) * (xrel) + cos(p->alpha) * (yrel);
 
 #define nint(a) ((int)(a + 0.5))
@@ -870,7 +870,7 @@ static void interp(char *str)
           RESOLVE(dx, int, sizeof(int));
           RESOLVE(dy, int, sizeof(int));
           RESOLVE(dimx, int, sizeof(int));
-          RESOLVE(i_arr, int, *dimx **dy * sizeof(int));
+          RESOLVE(i_arr, int, *dimx * * dy * sizeof(int));
           break;
 
         case 19:  /* set linetype */

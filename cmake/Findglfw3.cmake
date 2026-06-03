@@ -45,12 +45,8 @@ endif()
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(
   Glfw
-  VERSION_VAR
-  GLFW_VERSION_STRING
-  REQUIRED_VARS
-  GLFW_LIBRARY
-  GLFW_INCLUDE_DIR
-  GLFW_VERSION_STRING
+  VERSION_VAR GLFW_VERSION_STRING
+  REQUIRED_VARS GLFW_LIBRARY GLFW_INCLUDE_DIR GLFW_VERSION_STRING
 )
 
 if(Glfw_FOUND)
@@ -61,14 +57,16 @@ if(Glfw_FOUND)
     add_library(Glfw::Glfw UNKNOWN IMPORTED)
     set_target_properties(
       Glfw::Glfw
-      PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${GLFW_INCLUDE_DIRS}"
-                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-                 IMPORTED_LOCATION "${GLFW_LIBRARY}"
+      PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${GLFW_INCLUDE_DIRS}"
+        IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+        IMPORTED_LOCATION "${GLFW_LIBRARY}"
     )
     if(APPLE)
       set_target_properties(
-        Glfw::Glfw PROPERTIES INTERFACE_LINK_LIBRARIES
-                              "-framework Cocoa -framework IOKit -framework CoreFoundation -framework CoreVideo"
+        Glfw::Glfw
+        PROPERTIES
+          INTERFACE_LINK_LIBRARIES "-framework Cocoa -framework IOKit -framework CoreFoundation -framework CoreVideo"
       )
     endif()
   endif()

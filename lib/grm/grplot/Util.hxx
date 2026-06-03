@@ -6,7 +6,6 @@
 #include <fstream>
 #include <iostream>
 #include <iomanip>
-#include <QPoint>
 #include <vector>
 
 #ifdef _WIN64
@@ -18,6 +17,13 @@
 #define access _access
 #else
 #include <unistd.h>
+#endif
+
+// `W` can be used to convert a C string literal to a `wchar_t` string literal on Windows, but not on other platforms
+#ifdef _WIN32
+#define W(x) (L"" x)
+#else
+#define W(x) (x)
 #endif
 
 namespace util
@@ -214,10 +220,5 @@ template <class... Ts> struct Overloaded : Ts...
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 } // namespace util
-
-inline std::ostream &operator<<(std::ostream &os, const QPoint &point)
-{
-  return os << "(" << std::setw(4) << point.x() << ", " << std::setw(4) << point.y() << ")";
-}
 
 #endif /* ifndef UTIL_HXX_INCLUDED */

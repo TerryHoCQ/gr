@@ -158,16 +158,34 @@ std::shared_ptr<GRM::Node> GRM::Node::cloneNode()
   return cloneNode(false);
 }
 
-std::shared_ptr<GRM::Node> GRM::Node::cloneNode(bool deep)
+std::shared_ptr<GRM::Node> GRM::Node::cloneNode(bool deep, bool clear_bbox)
 {
   auto clone = cloneIndividualNode();
+  if (clear_bbox)
+    {
+      std::dynamic_pointer_cast<GRM::Element>(clone)->removeAttribute("_bbox_id");
+      std::dynamic_pointer_cast<GRM::Element>(clone)->removeAttribute("_bbox_x_min");
+      std::dynamic_pointer_cast<GRM::Element>(clone)->removeAttribute("_bbox_x_max");
+      std::dynamic_pointer_cast<GRM::Element>(clone)->removeAttribute("_bbox_y_min");
+      std::dynamic_pointer_cast<GRM::Element>(clone)->removeAttribute("_bbox_y_max");
+    }
   clone->m_parent_node = {};
+
   if (deep)
     {
       clone->m_child_nodes.clear();
       for (auto const &child_node : m_child_nodes)
         {
-          clone->appendChild(child_node->cloneNode(deep));
+          auto new_child = child_node->cloneNode(deep, clear_bbox);
+          clone->appendChild(new_child);
+          if (clear_bbox)
+            {
+              std::dynamic_pointer_cast<GRM::Element>(new_child)->removeAttribute("_bbox_id");
+              std::dynamic_pointer_cast<GRM::Element>(new_child)->removeAttribute("_bbox_x_min");
+              std::dynamic_pointer_cast<GRM::Element>(new_child)->removeAttribute("_bbox_x_max");
+              std::dynamic_pointer_cast<GRM::Element>(new_child)->removeAttribute("_bbox_y_min");
+              std::dynamic_pointer_cast<GRM::Element>(new_child)->removeAttribute("_bbox_y_max");
+            }
         }
     }
   else

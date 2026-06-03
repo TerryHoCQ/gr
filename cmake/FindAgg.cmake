@@ -35,8 +35,11 @@ endif()
 if(AGG_INCLUDE_DIR)
   if(NOT AGG_VERSION_STRING)
     file(READ ${AGG_INCLUDE_DIR}/agg_basics.h AGG_BASICS_H_TEXT)
-    string(REGEX REPLACE ".*Anti-Grain Geometry - Version[ \tA-Za-z,]*([0-9]+.[0-9]+).*" "\\1" AGG_VERSION_STRING
-                         ${AGG_BASICS_H_TEXT}
+    string(
+      REGEX REPLACE ".*Anti-Grain Geometry - Version[ \tA-Za-z,]*([0-9]+.[0-9]+).*"
+      "\\1"
+      AGG_VERSION_STRING
+      ${AGG_BASICS_H_TEXT}
     )
   endif()
 endif()
@@ -44,12 +47,8 @@ endif()
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(
   Agg
-  VERSION_VAR
-  AGG_VERSION_STRING
-  REQUIRED_VARS
-  AGG_LIBRARY
-  AGG_INCLUDE_DIR
-  AGG_VERSION_STRING
+  VERSION_VAR AGG_VERSION_STRING
+  REQUIRED_VARS AGG_LIBRARY AGG_INCLUDE_DIR AGG_VERSION_STRING
 )
 
 if(Agg_FOUND)
@@ -60,9 +59,10 @@ if(Agg_FOUND)
     add_library(Agg::Agg UNKNOWN IMPORTED)
     set_target_properties(
       Agg::Agg
-      PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${AGG_INCLUDE_DIRS}"
-                 IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
-                 IMPORTED_LOCATION "${AGG_LIBRARY}"
+      PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${AGG_INCLUDE_DIRS}"
+        IMPORTED_LINK_INTERFACE_LANGUAGES "CXX"
+        IMPORTED_LOCATION "${AGG_LIBRARY}"
     )
   endif()
 elseif(${CMAKE_FIND_PACKAGE_NAME}_FIND_REQUIRED)

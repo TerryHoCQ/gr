@@ -1,27 +1,20 @@
 #ifndef GRM_IMPORT_H_INCLUDED
 #define GRM_IMPORT_H_INCLUDED
 
-#include "plot.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* ######################### includes ############################################################################### */
 
 #include "args.h"
-#include "util.h"
-#include "net.h"
+
+#ifdef __cplusplus
+#include <memory>
+#include <string>
+#include "grm/dom_render/context.hxx"
+
+extern "C" {
+#endif
 
 
 /* ######################### public interface ####################################################################### */
-
-/* ========================= datatypes ============================================================================== */
-
-/* ------------------------- argument ------------------------------------------------------------------------------- */
-
-typedef struct _grm_file_args_t grm_file_args_t;
-typedef struct _grm_special_axis_series_t grm_special_axis_series_t;
 
 /* ========================= functions ============================================================================== */
 

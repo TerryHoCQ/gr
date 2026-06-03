@@ -30,19 +30,17 @@ ifeq ($(DOWNLOAD_CMD),)
 DOWNLOAD_CMD := echo "Error: Unable to find curl or wget."; exit 1; \#
 endif
 
-ifeq ($(shell [[ "$(ARCH)" == "x86_64" || "$(ARCHS)" == "-arch x86_64" ]] && echo macos_cross),macos_cross)
-default: run_macos_x86_64_cross_makefile
-else ifeq ($(shell [[ "$(CC)" =~ -mingw ]] && echo mingw),mingw)
-default: run_mingw_makefile
+ifeq ($(shell [[ -n "$(HOST)" ]] && echo cross),cross)
+default: run_cross_makefile
+else ifeq ($(shell [[ "$(ARCH)" == "x86_64" || "$(ARCHS)" == "-arch x86_64" ]] && echo macos_cross),macos_cross)
+HOST = x86_64-apple-darwin
+default: run_cross_makefile
 else
 default: install
 endif
 
-run_macos_x86_64_cross_makefile:
-	$(MAKE) -f Makefile.macos_x86_64_cross
-
-run_mingw_makefile:
-	$(MAKE) -f Makefile.mingw
+run_cross_makefile:
+	$(MAKE) -f Makefile.cross HOST=$(HOST)
 
 $(PREFIX)/src/icu4c-$(VERSION).tar.gz:
 	mkdir -p $(PREFIX)/src
@@ -76,4 +74,4 @@ clean:
 
 install: $(PREFIX)/lib/libicuuc.a
 
-.PHONY: default clean install run_macos_x86_64_cross_makefile run_mingw_makefile
+.PHONY: default clean install run_cross_makefile

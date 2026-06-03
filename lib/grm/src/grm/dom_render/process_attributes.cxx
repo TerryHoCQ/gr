@@ -111,6 +111,11 @@ void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::Element
   auto render = grm_get_render();
   getPlotParent(plot_parent);
 
+  // factor to scale the text_region if the overall text size gets scaled -> central_region uses the scaled text_regions
+  double scale_factor = 1.0;
+  auto figure = grm_get_document_root()->querySelectors("figure[active=\"1\"]");
+  if (figure->hasAttribute("text_scale")) scale_factor = static_cast<double>(figure->getAttribute("text_scale"));
+
   kind = static_cast<std::string>(plot_parent->getAttribute("_kind"));
   keep_aspect_ratio = static_cast<int>(plot_parent->getAttribute("keep_aspect_ratio"));
   only_square_aspect_ratio = static_cast<int>(plot_parent->getAttribute("only_square_aspect_ratio"));
@@ -242,9 +247,9 @@ void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::Element
     }
 
   // margin respects text in the specific side_region
-  if (left_text_margin) left_margin += 0.05;
-  if (right_text_margin) right_margin += 0.05;
-  if (bottom_text_margin) bottom_margin += 0.05;
+  if (left_text_margin) left_margin += 0.05 * scale_factor;
+  if (right_text_margin) right_margin += 0.05 * scale_factor;
+  if (bottom_text_margin) bottom_margin += 0.05 * scale_factor;
 
   if (plot_parent->hasAttribute("_twin_y_window_xform_a_org")) right_margin += 0.025;
   if (plot_parent->hasAttribute("_twin_x_window_xform_a_org")) top_margin += 0.025;
@@ -252,7 +257,8 @@ void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::Element
   // calculate text impact for top_margin and adjust all margins if defined by attributes
   if (kind == "marginal_heatmap")
     {
-      top_margin += (right_margin - top_margin) + (top_text_margin ? top_text_is_title ? 0.1 : 0.075 : 0.025);
+      top_margin +=
+          (right_margin - top_margin) + scale_factor * (top_text_margin ? top_text_is_title ? 0.1 : 0.075 : 0.025);
 
       if (keep_aspect_ratio && uniform_data && only_square_aspect_ratio)
         {
@@ -273,7 +279,7 @@ void calculateCentralRegionMarginOrDiagFactor(const std::shared_ptr<GRM::Element
     }
   else
     {
-      top_margin += (top_text_margin ? top_text_is_title ? 0.075 : 0.05 : 0.0);
+      top_margin += scale_factor * (top_text_margin ? top_text_is_title ? 0.075 : 0.05 : 0.0);
       if (keep_aspect_ratio && uniform_data && only_square_aspect_ratio)
         {
           if (bottom_margin != left_margin)
@@ -591,6 +597,11 @@ void calculateViewport(const std::shared_ptr<GRM::Element> &element)
       if (!element->hasAttribute("_viewport_offset_set_by_user")) element->setAttribute("viewport_offset", offset);
       if (!element->hasAttribute("_width_set_by_user")) element->setAttribute("width", width);
 
+      // factor to scale the text_region -> scale the width of the side_regions aswell
+      double scale_factor = 1.0;
+      auto figure = grm_get_document_root()->querySelectors("figure[active=\"1\"]");
+      if (figure->hasAttribute("text_scale")) scale_factor = static_cast<double>(figure->getAttribute("text_scale"));
+
       // apply text width to the side_region
       if (kind != "imshow")
         {
@@ -619,7 +630,7 @@ void calculateViewport(const std::shared_ptr<GRM::Element> &element)
               if (kinds_3d.count(kind) > 0) offset = PLOT_DEFAULT_COLORBAR_OFFSET;
               if (element->hasAttribute("text_content"))
                 {
-                  width += (is_title ? 0.075 : 0.05) * (viewport_normalized[3] - viewport_normalized[2]);
+                  width += scale_factor * (is_title ? 0.075 : 0.05) * (viewport_normalized[3] - viewport_normalized[2]);
                   if (additional_axis && is_title) width += 0.025 * (viewport_normalized[3] - viewport_normalized[2]);
                   if (!additional_axis && !is_title && strEqualsAny(kind, "heatmap", "shade", "contourf"))
                     offset += 0.02;
@@ -633,17 +644,18 @@ void calculateViewport(const std::shared_ptr<GRM::Element> &element)
                   element->querySelectors("text_region") != nullptr)
                 offset += 0.025 * (viewport_normalized[1] - viewport_normalized[0]);
               if (element->hasAttribute("text_content"))
-                width += 0.05 * (viewport_normalized[1] - viewport_normalized[0]);
+                width += scale_factor * 0.05 * (viewport_normalized[1] - viewport_normalized[0]);
             }
           else if (location == "bottom")
             {
+              // special use case of the scale factor -> needed fe. the sans dataset label
               if (kinds_3d.count(kind) == 0 && polar_kinds.count(kind) == 0)
-                offset += 0.05 * (viewport_normalized[3] - viewport_normalized[2]);
+                offset += scale_factor * 0.05 * (viewport_normalized[3] - viewport_normalized[2]);
               if (element->querySelectors("side_plot_region") == nullptr ||
                   element->querySelectors("text_region") != nullptr)
                 offset += 0.025 * (viewport_normalized[3] - viewport_normalized[2]);
               if (element->hasAttribute("text_content"))
-                width += 0.05 * (viewport_normalized[3] - viewport_normalized[2]);
+                width += scale_factor * 0.05 * (viewport_normalized[3] - viewport_normalized[2]);
             }
           else if (location == "right")
             {
@@ -655,7 +667,7 @@ void calculateViewport(const std::shared_ptr<GRM::Element> &element)
                     offset += 0.05 * (viewport_normalized[1] - viewport_normalized[0]);
                 }
               if (element->hasAttribute("text_content"))
-                width += 0.05 * (viewport_normalized[1] - viewport_normalized[0]);
+                width += scale_factor * 0.05 * (viewport_normalized[1] - viewport_normalized[0]);
             }
         }
       if (plot_parent->hasAttribute("x_flip")) x_flip = static_cast<int>(plot_parent->getAttribute("x_flip"));
@@ -702,6 +714,12 @@ void calculateViewport(const std::shared_ptr<GRM::Element> &element)
         {
           offset = PLOT_DEFAULT_ADDITIONAL_AXIS_WIDTH;
         }
+
+      // factor to scale the text_region offset if the overall text size gets scaled
+      double scale_factor = 1.0;
+      auto figure = grm_get_document_root()->querySelectors("figure[active=\"1\"]");
+      if (figure->hasAttribute("text_scale")) scale_factor = static_cast<double>(figure->getAttribute("text_scale"));
+
       if (!(element->parentElement()->hasAttribute("marginal_heatmap_side_plot") &&
             static_cast<int>(element->parentElement()->getAttribute("marginal_heatmap_side_plot"))))
         {
@@ -711,25 +729,28 @@ void calculateViewport(const std::shared_ptr<GRM::Element> &element)
               auto additional_axis = element->parentElement()->querySelectors("axis");
               if (location == "top")
                 {
-                  if (!additional_axis) offset += 0.05 * (viewport_normalized[3] - viewport_normalized[2]);
+                  if (!additional_axis)
+                    offset += scale_factor * 0.05 * (viewport_normalized[3] - viewport_normalized[2]);
                 }
               if (location == "left")
                 {
-                  if (!additional_axis) offset += 0.05 * (viewport_normalized[1] - viewport_normalized[0]);
+                  if (!additional_axis)
+                    offset += scale_factor * 0.05 * (viewport_normalized[1] - viewport_normalized[0]);
                 }
               if (location == "bottom")
                 {
-                  if (!additional_axis) offset += 0.05 * (viewport_normalized[3] - viewport_normalized[2]);
+                  if (!additional_axis)
+                    offset += scale_factor * 0.05 * (viewport_normalized[3] - viewport_normalized[2]);
                 }
               if (location == "right" && !additional_axis)
                 {
-                  offset += 0.05 * (viewport_normalized[1] - viewport_normalized[0]);
+                  offset += scale_factor * 0.05 * (viewport_normalized[1] - viewport_normalized[0]);
                 }
             }
         }
       else
         {
-          if (location == "top") offset = 0.05 * (viewport_normalized[3] - viewport_normalized[2]);
+          if (location == "top") offset = scale_factor * 0.05 * (viewport_normalized[3] - viewport_normalized[2]);
         }
 
       setViewportForSideRegionElements(element, offset, width, false);
@@ -1423,6 +1444,7 @@ void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element> &eleme
     }
   start_aspect_ratio_ws = static_cast<double>(plot_parent->getAttribute("_start_aspect_ratio"));
 
+  calculateViewport(central_region);
   if (!GRM::Render::getViewport(central_region, &viewport[0], &viewport[1], &viewport[2], &viewport[3]))
     throw NotFoundError("Central region doesn't have a viewport but it should.\n");
 
@@ -1450,6 +1472,12 @@ void setViewportForSideRegionElements(const std::shared_ptr<GRM::Element> &eleme
       auto figure_vp_element = plot_parent->parentElement()->localName() == "layout_grid_element"
                                    ? plot_parent->parentElement()
                                    : plot_parent;
+
+      // special case cause a single plot inside a layout_grid_element would differ from a single plot without layout
+      // this happened with the joining of plots
+      if (plot_parent->parentElement()->localName() == "layout_grid_element" &&
+          active_figure->querySelectorsAll("layout_grid_element").size() <= 1)
+        figure_vp_element = plot_parent;
 
       auto default_diag_factor =
           ((DEFAULT_ASPECT_RATIO_FOR_SCALING) *
@@ -1710,7 +1738,11 @@ void processCharExpan(const std::shared_ptr<GRM::Element> &element)
 
 void processCharHeight(const std::shared_ptr<GRM::Element> &element)
 {
-  gr_setcharheight(static_cast<double>(element->getAttribute("char_height")));
+  // global factor to scale all texts the same way
+  double scale_factor = 1.0;
+  auto figure = grm_get_document_root()->querySelectors("figure[active=\"1\"]");
+  if (figure->hasAttribute("text_scale")) scale_factor = static_cast<double>(figure->getAttribute("text_scale"));
+  gr_setcharheight(scale_factor * static_cast<double>(element->getAttribute("char_height")));
 }
 
 void processCharSpace(const std::shared_ptr<GRM::Element> &element)
@@ -2530,7 +2562,9 @@ void processColorRep(const std::shared_ptr<GRM::Element> &element, const std::st
 
   red = ((hex_int >> 16) & 0xFF) / 255.0;
   green = ((hex_int >> 8) & 0xFF) / 255.0;
+  // clang-format off
   blue = ((hex_int)&0xFF) / 255.0;
+  // clang-format on
 
   gr_setcolorrep(index, red, green, blue);
 }
@@ -3098,6 +3132,30 @@ void GRM::processWindow(const std::shared_ptr<GRM::Element> &element)
         {
           auto zmin = static_cast<double>(element->getAttribute("window_z_min"));
           auto zmax = static_cast<double>(element->getAttribute("window_z_max"));
+
+          if (strEqualsAny(kind, "surface", "trisurface"))
+            {
+              auto active_figure = grm_get_render()->getActiveFigure();
+              if (active_figure->hasAttribute("consecutive_colorbars") &&
+                  static_cast<int>(active_figure->getAttribute("consecutive_colorbars")))
+                {
+                  for (const auto &plot_elem : active_figure->querySelectorsAll("plot"))
+                    {
+                      if (plot_elem->querySelectors("colorbar"))
+                        {
+                          if (plot_elem->hasAttribute("_z_lim_min") && plot_elem->hasAttribute("_z_lim_max") &&
+                              plot_elem->querySelectors("coordinate_system[plot_type=\"3d\"]") &&
+                              plot_elem->querySelectors("series_volume") == nullptr)
+                            {
+                              auto new_c_min = static_cast<double>(plot_elem->getAttribute("_z_lim_min"));
+                              auto new_c_max = static_cast<double>(plot_elem->getAttribute("_z_lim_max"));
+                              if (!grm_isnan(new_c_min)) zmin = grm_min(zmin, new_c_min);
+                              if (!grm_isnan(new_c_max)) zmax = grm_max(zmax, new_c_max);
+                            }
+                        }
+                    }
+                }
+            }
 
           gr_setwindow3d(xmin, xmax, ymin, ymax, zmin, zmax);
         }

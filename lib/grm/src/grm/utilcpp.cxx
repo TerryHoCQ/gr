@@ -8,8 +8,9 @@
 #include <algorithm>
 #include <string_view>
 
-#ifdef _WIN64
-#include <stdlib.h>
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 #include <io.h>
 #include <process.h>
 #include <direct.h>
@@ -405,3 +406,39 @@ template <typename T> void IdPool<T>::reset()
 
 /* Generate code for int IDs since this is needed in the code */
 template class IdPool<int>;
+
+#ifdef _WIN32
+std::wstring getEnvVar(const std::wstring &name, const std::wstring &default_value)
+#else
+std::string getEnvVar(const std::string &name, const std::string &default_value)
+#endif
+{
+#ifdef _WIN32
+  DWORD needed_wide_chars = GetEnvironmentVariableW(name.c_str(), nullptr, 0);
+  if (GetLastError() != ERROR_ENVVAR_NOT_FOUND)
+    {
+      std::vector<wchar_t> value_wide(needed_wide_chars);
+      GetEnvironmentVariableW(name.c_str(), value_wide.data(), needed_wide_chars);
+      return std::wstring(value_wide.data());
+    }
+  else
+    {
+      return default_value;
+    }
+#else
+  const char *value_c_ptr = getenv(name.c_str());
+  if (value_c_ptr != nullptr) return std::string(value_c_ptr);
+  return default_value;
+#endif
+}
+
+#ifdef _WIN32
+std::wstring w(const std::string &s)
+{
+  if (s.empty()) return {};
+  int size = MultiByteToWideChar(CP_UTF8, 0, s.data(), (int)s.size(), nullptr, 0);
+  std::wstring result(size, 0);
+  MultiByteToWideChar(CP_UTF8, 0, s.data(), (int)s.size(), result.data(), size);
+  return result;
+}
+#endif

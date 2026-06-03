@@ -50,7 +50,7 @@ typedef __int64 int64_t;
 #define isinf(x) (!isnan(x) && isnan((x) - (x)))
 #endif
 #ifndef round
-#define round(x) (((x) < 0) ? ceil((x)-.5) : floor((x) + .5))
+#define round(x) (((x) < 0) ? ceil((x) - .5) : floor((x) + .5))
 #endif
 
 str_format_reference_t *str_get_format_reference(str_format_reference_t *result, double origin, double min, double max,

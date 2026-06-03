@@ -127,8 +127,7 @@ int eventQueueProcessAll(EventQueue *queue)
 {
   if (eventReflistEmpty(queue->queue)) return 0;
 
-  while (eventQueueProcessNext(queue))
-    ;
+  while (eventQueueProcessNext(queue));
 
   return 1;
 }

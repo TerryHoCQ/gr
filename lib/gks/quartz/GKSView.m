@@ -1,3 +1,4 @@
+// clang-format off
 
 #include "gks.h"
 #include "gkscore.h"
@@ -683,7 +684,7 @@ static void seg_xform_rel(double *x, double *y) {}
   if (buffer)
     {
       double scale = [self.window backingScaleFactor];
-      c = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
+      c = (CGContextRef)[[NSGraphicsContext currentContext] CGContext];
 
       NSSize boundsSizeBefore = self.bounds.size;
 
@@ -739,7 +740,7 @@ static void seg_xform_rel(double *x, double *y) {}
 
 - (void)setDisplayList:(id)display_list
 {
-  int len = [display_list length];
+  NSUInteger len = [display_list length];
   if (len + sizeof(int) > size)
     {
       while (len + sizeof(int) > size) size += MEMORY_INCREMENT;
@@ -872,7 +873,7 @@ static void seg_xform_rel(double *x, double *y) {}
 #else
   [savePanel beginSheetModalForWindow:[self window]
                     completionHandler:^(NSInteger result) {
-                      [self savePanelDidEnd:savePanel returnCode:result contextInfo:saveFormatPopUp];
+                      [self savePanelDidEnd:savePanel returnCode:(int)result contextInfo:saveFormatPopUp];
                     }];
 #endif
 }
@@ -883,7 +884,7 @@ static void seg_xform_rel(double *x, double *y) {}
   NSData *data;
   NSBitmapImageRep *bitmap;
 
-  if (NSFileHandlingPanelOKButton == returnCode && [[theSheet URL] isFileURL])
+  if (NSModalResponseOK == returnCode && [[theSheet URL] isFileURL])
     {
       filename = [[[theSheet URL] path] stringByDeletingPathExtension];
       if ([[formatPopUp titleOfSelectedItem] isEqualToString:@"PDF"])
@@ -902,10 +903,8 @@ static void seg_xform_rel(double *x, double *y) {}
 
           filename = [filename stringByAppendingPathExtension:@"tiff"];
 
-          [self lockFocus];
           bitmap = [self bitmapImageRepForCachingDisplayInRect:[self bounds]];
           [self cacheDisplayInRect:[self bounds] toBitmapImageRep:bitmap];
-          [self unlockFocus];
 
           [[bitmap TIFFRepresentationUsingCompression:compression factor:1.0] writeToFile:filename atomically:YES];
 
@@ -915,10 +914,8 @@ static void seg_xform_rel(double *x, double *y) {}
         {
           filename = [filename stringByAppendingPathExtension:@"png"];
 
-          [self lockFocus];
           bitmap = [self bitmapImageRepForCachingDisplayInRect:[self bounds]];
           [self cacheDisplayInRect:[self bounds] toBitmapImageRep:bitmap];
-          [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
 
@@ -938,10 +935,8 @@ static void seg_xform_rel(double *x, double *y) {}
         {
           filename = [filename stringByAppendingPathExtension:@"jpg"];
 
-          [self lockFocus];
           bitmap = [self bitmapImageRepForCachingDisplayInRect:[self bounds]];
           [self cacheDisplayInRect:[self bounds] toBitmapImageRep:bitmap];
-          [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
 
@@ -971,10 +966,8 @@ static void seg_xform_rel(double *x, double *y) {}
         {
           filename = [filename stringByAppendingPathExtension:@"jp2"];
 
-          [self lockFocus];
           bitmap = [self bitmapImageRepForCachingDisplayInRect:[self bounds]];
           [self cacheDisplayInRect:[self bounds] toBitmapImageRep:bitmap];
-          [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
 
@@ -1004,10 +997,8 @@ static void seg_xform_rel(double *x, double *y) {}
         {
           filename = [filename stringByAppendingPathExtension:@"gif"];
 
-          [self lockFocus];
           bitmap = [self bitmapImageRepForCachingDisplayInRect:[self bounds]];
           [self cacheDisplayInRect:[self bounds] toBitmapImageRep:bitmap];
-          [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
 
@@ -1027,10 +1018,8 @@ static void seg_xform_rel(double *x, double *y) {}
         {
           filename = [filename stringByAppendingPathExtension:@"bmp"];
 
-          [self lockFocus];
           bitmap = [self bitmapImageRepForCachingDisplayInRect:[self bounds]];
           [self cacheDisplayInRect:[self bounds] toBitmapImageRep:bitmap];
-          [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
 
@@ -1050,10 +1039,8 @@ static void seg_xform_rel(double *x, double *y) {}
         {
           filename = [filename stringByAppendingPathExtension:@"pic"];
 
-          [self lockFocus];
           bitmap = [self bitmapImageRepForCachingDisplayInRect:[self bounds]];
           [self cacheDisplayInRect:[self bounds] toBitmapImageRep:bitmap];
-          [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
 
@@ -1076,13 +1063,13 @@ static void seg_xform_rel(double *x, double *y) {}
     }
 }
 
-- (void)set_fill_color:(int)color:(CGContextRef)context
+- (void)set_fill_color:(int)color :(CGContextRef)context
 {
   update_color(color);
   CGContextSetFillColorWithColor(context, p->rgb[color]);
 }
 
-- (void)set_stroke_color:(int)color:(CGContextRef)context
+- (void)set_stroke_color:(int)color :(CGContextRef)context
 {
   update_color(color);
   CGContextSetStrokeColorWithColor(context, p->rgb[color]);
@@ -1224,7 +1211,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
   if (linetype == 0) CGContextClosePath(context);
 }
 
-- (void)polyline:(int)n:(double *)px:(double *)py
+- (void)polyline :(int)n :(double *)px :(double *)py
 {
   int ln_type, ln_color, i;
   double ln_width;
@@ -1275,13 +1262,13 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
   end_context(context);
 }
 
-- (void)draw_marker:(double)
-                 xn:(double)yn
-                   :(int)mtype
-                   :(double)mscale
-                   :(int)mcolor
-                   :(CGContextRef)context
-                   :(const CGFloat *)color
+- (void)draw_marker :(double)xn
+                    :(double)yn
+                    :(int)mtype
+                    :(double)mscale
+                    :(int)mcolor
+                    :(CGContextRef)context
+                    :(const CGFloat *)color
 {
   double x, y;
   int i;
@@ -1435,7 +1422,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
   while (op != 0);
 }
 
-- (void)polymarker:(int)n:(double *)px:(double *)py
+- (void)polymarker :(int)n :(double *)px :(double *)py
 {
   int mk_type, mk_color;
   double mk_size;
@@ -1584,7 +1571,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
   CGPathRelease(shape);
 }
 
-- (void)fillarea:(int)n:(double *)px:(double *)py
+- (void)fillarea :(int)n :(double *)px :(double *)py
 {
   int fl_inter, fl_style, fl_color, i = 0;
   double x, y;
@@ -1662,7 +1649,7 @@ static void to_DC(int n, double *x, double *y)
     }
 }
 
-- (void)draw_path:(int)n:(double *)px:(double *)py:(int)nc:(int *)codes
+- (void)draw_path :(int)n :(double *)px :(double *)py :(int)nc :(int *)codes
 {
   int i, j;
   double x[3], y[3], w, h, a1, a2;
@@ -1836,7 +1823,7 @@ static void to_DC(int n, double *x, double *y)
 }
 
 
-- (void)draw_lines:(int)n:(double *)px:(double *)py:(int *)attributes
+- (void)draw_lines :(int)n :(double *)px :(double *)py :(int *)attributes
 {
   int i, j = 0, rgba;
   double x, y, xim1, yim1, xi, yi;
@@ -1885,7 +1872,7 @@ static void to_DC(int n, double *x, double *y)
 }
 
 
-- (void)draw_markers:(int)n:(double *)px:(double *)py:(int *)attributes
+- (void)draw_markers :(int)n :(double *)px :(double *)py :(int *)attributes
 {
   int mk_type, mk_color = 0;
   double x, y, mk_size;
@@ -1928,7 +1915,7 @@ static void to_DC(int n, double *x, double *y)
 }
 
 
-- (void)draw_triangles:(int)n:(double *)px:(double *)py:(int)ntri:(int *)tri
+- (void)draw_triangles :(int)n :(double *)px :(double *)py :(int)ntri :(int *)tri
 {
   double x, y;
   int i, j, k, rgba;
@@ -1988,13 +1975,12 @@ static void to_DC(int n, double *x, double *y)
 }
 
 
-- (void)fill_polygons:(int)n:(double *)px:(double *)py:(int)nply:(int *)ply
+- (void)fill_polygons :(int)n :(double *)px :(double *)py :(int)nply :(int *)ply
 {
   double x, y;
   int i, j, k, len;
-  CGPoint polygon[6];
   unsigned int rgba;
-  CGFloat *border_color, color[4];
+  CGFloat color[4];
 
   begin_context(context);
 
@@ -2006,7 +1992,7 @@ static void to_DC(int n, double *x, double *y)
   CGContextSetFillColorSpace(context, colorSpace);
 
   CGContextSetLineWidth(context, gkss->bwidth * p->nominal_size);
-  border_color = CGColorGetComponents(p->rgb[gkss->bcoli]);
+  const CGFloat *border_color = CGColorGetComponents(p->rgb[gkss->bcoli]);
 
   if (n > num_points)
     {
@@ -2054,7 +2040,7 @@ static void to_DC(int n, double *x, double *y)
 }
 
 
-- (void)gdp:(int)n:(double *)px:(double *)py:(int)primid:(int)nc:(int *)codes
+- (void)gdp: (int)n :(double *)px :(double *)py :(int)primid :(int)nc :(int *)codes
 {
   switch (primid)
     {
@@ -2080,15 +2066,15 @@ static void to_DC(int n, double *x, double *y)
 }
 
 
-- (void)cellarray:(double)
-             xmin:(double)xmax
-                 :(double)ymin
-                 :(double)ymax
-                 :(int)dx
-                 :(int)dy
-                 :(int)dimx
-                 :(int *)colia
-                 :(int)true_color
+- (void)cellarray :(double)xmin
+                  :(double)xmax
+                  :(double)ymin
+                  :(double)ymax
+                  :(int)dx
+                  :(int)dy
+                  :(int)dimx
+                  :(int *)colia
+                  :(int)true_color
 {
   double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
@@ -2177,7 +2163,7 @@ static void to_DC(int n, double *x, double *y)
       colia = (int *)pixels;
     }
 
-  bitmap = CGBitmapContextCreate(colia, width, height, 8, 4 * width, cs, kCGImageAlphaPremultipliedLast);
+  bitmap = CGBitmapContextCreate(colia, width, height, 8, 4 * width, cs, (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
   CGContextScaleCTM(context, 1 / scale, 1 / scale);
   image = CGBitmapContextCreateImage(bitmap);
   CGContextDrawImage(context, CGRectMake(x, y, width, height), image);
@@ -2191,7 +2177,7 @@ static void to_DC(int n, double *x, double *y)
   end_context(context);
 }
 
-- (void)drawimage:(int)x:(int)y:(int)width:(int)height:(int *)bitmap
+- (void)drawimage :(int)x :(int)y :(int)width :(int)height :(int *)bitmap
 {
   CGColorSpaceRef cs;
   CGContextRef bmp;
@@ -2199,7 +2185,7 @@ static void to_DC(int n, double *x, double *y)
 
   begin_context(context);
   cs = CGColorSpaceCreateDeviceRGB();
-  bmp = CGBitmapContextCreate(bitmap, width, height, 8, 4 * width, cs, kCGImageAlphaPremultipliedLast);
+  bmp = CGBitmapContextCreate(bitmap, width, height, 8, 4 * width, cs, (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
   image = CGBitmapContextCreateImage(bmp);
   CGContextDrawImage(context, CGRectMake(x, y, width, height), image);
   CGImageRelease(image);
@@ -2214,7 +2200,7 @@ static void to_DC(int n, double *x, double *y)
   if (family == 30)
     { // ZapfDingbatsITC
       int i;
-      int nchars = strlen(text);
+      size_t nchars = strlen(text);
       string = [NSString string];
       for (i = 0; i < nchars; i++)
         {
@@ -2233,7 +2219,7 @@ static void to_DC(int n, double *x, double *y)
           /* if string creation failed, replace all invalid bytes with question marks */
           int i;
           const char *utf8_str = text;
-          char *text_without_invalid_bytes = gks_malloc(strlen(text) + 1);
+          char *text_without_invalid_bytes = gks_malloc((int)strlen(text) + 1);
           for (i = 0; utf8_str[i] != 0; i++)
             {
               if ((utf8_str[i] & 0x80) == 0x00)
@@ -2279,7 +2265,7 @@ static void to_DC(int n, double *x, double *y)
           /* if string creation failed again, replace all non-ASCII bytes with question marks */
           int i;
           const char *utf8_str = text;
-          char *text_without_nonascii_bytes = gks_malloc(strlen(text) + 1);
+          char *text_without_nonascii_bytes = gks_malloc((int)strlen(text) + 1);
           for (i = 0; utf8_str[i] != 0; i++)
             {
               if ((utf8_str[i] & 0x80) == 0x00)
@@ -2302,13 +2288,13 @@ static void to_DC(int n, double *x, double *y)
 }
 
 
-- (void)text:(double)px:(double)py:(char *)text
+- (void)text :(double)px :(double)py :(char *)text
 {
-  int tx_font, tx_prec, tx_color, nchars;
+  int tx_font, tx_prec, tx_color;
   double xn, yn, xstart, ystart, xrel, yrel, ax, ay;
   NSString *fontName;
 
-  nchars = strlen(text);
+  size_t nchars = strlen(text);
 
   tx_font = gkss->asf[6] ? gkss->txfont : predef_font[gkss->tindex - 1];
   tx_prec = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
@@ -2402,7 +2388,7 @@ static void to_DC(int n, double *x, double *y)
 #endif
   else
     {
-      gks_emul_text(px, py, nchars, text, line_routine, fill_routine);
+      gks_emul_text(px, py, (int)nchars, text, line_routine, fill_routine);
     }
 
   end_context(context);

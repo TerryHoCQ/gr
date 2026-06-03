@@ -264,7 +264,10 @@
     return method_prefix##ListPushFront(list, entry);                                                                  \
   }                                                                                                                    \
                                                                                                                        \
-  type_prefix##ListEntry method_prefix##ListPop(type_prefix##List *list) { return method_prefix##ListPopFront(list); } \
+  type_prefix##ListEntry method_prefix##ListPop(type_prefix##List *list)                                               \
+  {                                                                                                                    \
+    return method_prefix##ListPopFront(list);                                                                          \
+  }                                                                                                                    \
                                                                                                                        \
   grm_error_t method_prefix##ListEnqueue(type_prefix##List *list, type_prefix##ListConstEntry entry)                   \
   {                                                                                                                    \
@@ -276,7 +279,10 @@
     return method_prefix##ListPopFront(list);                                                                          \
   }                                                                                                                    \
                                                                                                                        \
-  int method_prefix##ListEmpty(type_prefix##List *list) { return list->size == 0; }                                    \
+  int method_prefix##ListEmpty(type_prefix##List *list)                                                                \
+  {                                                                                                                    \
+    return list->size == 0;                                                                                            \
+  }                                                                                                                    \
                                                                                                                        \
   int method_prefix##ListFindPreviousNode(const type_prefix##List *list, const type_prefix##ListNode *node,            \
                                           type_prefix##ListNode **previous_node)                                       \
@@ -396,4 +402,7 @@
     return GRM_ERROR_NONE;                                                                                             \
   }                                                                                                                    \
                                                                                                                        \
-  grm_error_t method_prefix##ReflistEntryDelete(type_prefix##ReflistEntry entry UNUSED) { return GRM_ERROR_NONE; }
+  grm_error_t method_prefix##ReflistEntryDelete(type_prefix##ReflistEntry entry UNUSED)                                \
+  {                                                                                                                    \
+    return GRM_ERROR_NONE;                                                                                             \
+  }

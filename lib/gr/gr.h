@@ -369,7 +369,7 @@ DLLEXPORT void gr_axes(double, double, double, double, int, int, double);
 DLLEXPORT void gr_axeslbl(double, double, double, double, int, int, double,
                           void (*)(double, double, const char *, double),
                           void (*)(double, double, const char *, double));
-DLLEXPORT void gr_axis(char, axis_t *);
+DLLEXPORT void gr_axis(const char *, axis_t *);
 DLLEXPORT void gr_drawaxis(char, axis_t *);
 DLLEXPORT void gr_drawaxes(axis_t *, axis_t *, int);
 DLLEXPORT void gr_freeaxis(axis_t *);
@@ -533,6 +533,8 @@ DLLEXPORT void gr_settextoffset(double xoff, double yoff);
 DLLEXPORT char *gr_ftoa(char *string, double value, format_reference_t *reference);
 DLLEXPORT void gr_getformat(format_reference_t *result, double origin, double min, double max, double tick_width,
                             int major);
+DLLEXPORT void gr_setcolorlimits(double, double);
+DLLEXPORT void gr_inqcolorlimits(double *, double *);
 
 #ifdef __cplusplus
 }

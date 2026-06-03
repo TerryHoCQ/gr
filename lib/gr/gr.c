@@ -12,6 +12,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include <time.h>
 #include <math.h>
 #include <float.h>
 #ifdef _MSC_VER
@@ -275,6 +277,28 @@ typedef struct
   double min, max;
 } minmax_t;
 
+typedef struct
+{
+  time_t value;
+  char label[128];
+} Tick;
+
+typedef enum
+{
+  TICK_MINUTE,
+  TICK_HOUR,
+  TICK_DAY,
+  TICK_WEEK,
+  TICK_MONTH,
+  TICK_YEAR
+} TickUnit;
+
+typedef struct
+{
+  TickUnit unit;
+  int step;
+} TickSpec;
+
 gauss_t interp_gauss_data = {1, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
 tri_linear_t interp_tri_linear_data = {1, 1, 1};
 
@@ -338,6 +362,8 @@ static int first_color = DEFAULT_FIRST_COLOR, last_color = DEFAULT_LAST_COLOR;
 #define MAX_COLOR 1256
 
 static unsigned int rgb[MAX_COLOR], used[MAX_COLOR];
+
+static double color_lim_min = NAN, color_lim_max = NAN;
 
 #define MAX_TICKS 500
 
@@ -403,7 +429,7 @@ typedef struct
 #endif
 
 #define arc(angle) (M_PI * (angle) / 180.0)
-#define deg(rad) ((rad)*180.0 / M_PI)
+#define deg(rad) ((rad) * 180.0 / M_PI)
 
 static unsigned char *opcode = NULL;
 
@@ -992,8 +1018,7 @@ minmax_t find_minmax(int n, double *values)
 {
   int i;
   double d, min, max;
-  for (i = 0; i != n && is_nan(values[i]); ++i)
-    ;
+  for (i = 0; i != n && is_nan(values[i]); ++i);
   if (i == n) return (minmax_t){NAN, NAN};
   min = max = values[i];
   for (++i; i != n; ++i)
@@ -2094,7 +2119,7 @@ void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, 
       x[scol] = x_orig[scol];
       for (color_x_ind = scol + 1; color_x_ind < ncol; color_x_ind++)
         {
-          x[color_x_ind] = 0.5 * (x_orig[color_x_ind] + x_orig[color_x_ind - 1]);
+          x[color_x_ind] = x_log(0.5 * (x_lin(x_orig[color_x_ind]) + x_lin(x_orig[color_x_ind - 1])));
         }
       x[ncol] = x_orig[ncol - 1];
     }
@@ -2118,7 +2143,7 @@ void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, 
       y[srow] = y_orig[srow];
       for (color_y_ind = srow + 1; color_y_ind < nrow; color_y_ind++)
         {
-          y[color_y_ind] = 0.5 * (y_orig[color_y_ind] + y_orig[color_y_ind - 1]);
+          y[color_y_ind] = y_log(0.5 * (y_lin(y_orig[color_y_ind]) + y_lin(y_orig[color_y_ind - 1])));
         }
       y[nrow] = y_orig[nrow - 1];
     }
@@ -5290,8 +5315,270 @@ void gr_axes(double x_tick, double y_tick, double x_org, double y_org, int major
   gr_axeslbl(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size, NULL, NULL);
 }
 
-void gr_axis(char which, axis_t *axis)
+static struct tm to_tm(time_t t)
 {
+  return *localtime(&t);
+}
+
+static time_t from_tm(struct tm tm)
+{
+  tm.tm_isdst = -1;
+  return mktime(&tm);
+}
+
+static void format_time(time_t t, const char *fmt, char *out, int out_size)
+{
+  struct tm tm = to_tm(t);
+  strftime(out, out_size, fmt, &tm);
+}
+
+static bool same_year(time_t a, time_t b)
+{
+  struct tm ta = to_tm(a);
+  struct tm tb = to_tm(b);
+  return ta.tm_year == tb.tm_year;
+}
+
+static bool same_day(time_t a, time_t b)
+{
+  struct tm ta = to_tm(a);
+  struct tm tb = to_tm(b);
+
+  return ta.tm_year == tb.tm_year && ta.tm_yday == tb.tm_yday;
+}
+
+static int estimate_tick_count(double span, TickSpec spec)
+{
+  switch (spec.unit)
+    {
+    case TICK_MINUTE:
+      return (int)(span / (spec.step * 60)) + 1;
+    case TICK_HOUR:
+      return (int)(span / (spec.step * 3600)) + 1;
+    case TICK_DAY:
+      return (int)(span / (spec.step * 24 * 3600)) + 1;
+    case TICK_WEEK:
+      return (int)(span / (spec.step * 7 * 24 * 3600)) + 1;
+    case TICK_MONTH:
+      return (int)(span / (spec.step * 30 * 24 * 3600)) + 1;
+    case TICK_YEAR:
+      return (int)(span / (spec.step * 365 * 24 * 3600)) + 1;
+    }
+
+  return 0;
+}
+
+static TickSpec choose_tick_spec(double span)
+{
+  const int min_ticks = 6;
+  int i;
+
+  TickSpec candidates[] = {{TICK_MINUTE, 1},  {TICK_MINUTE, 2}, {TICK_MINUTE, 5}, {TICK_MINUTE, 10}, {TICK_MINUTE, 15},
+                           {TICK_MINUTE, 30},
+
+                           {TICK_HOUR, 1},    {TICK_HOUR, 2},   {TICK_HOUR, 3},   {TICK_HOUR, 6},    {TICK_HOUR, 12},
+
+                           {TICK_DAY, 1},     {TICK_DAY, 2},
+
+                           {TICK_WEEK, 1},    {TICK_WEEK, 2},
+
+                           {TICK_MONTH, 1},   {TICK_MONTH, 2},  {TICK_MONTH, 3},  {TICK_MONTH, 6},
+
+                           {TICK_YEAR, 1},    {TICK_YEAR, 2},   {TICK_YEAR, 5},   {TICK_YEAR, 10}};
+
+  int count = sizeof(candidates) / sizeof(candidates[0]);
+  TickSpec best = candidates[0];
+
+  for (i = 0; i < count; ++i)
+    {
+      if (estimate_tick_count(span, candidates[i]) >= min_ticks)
+        best = candidates[i];
+      else
+        break;
+    }
+
+  return best;
+}
+
+static time_t floor_to_unit(time_t t, TickSpec spec)
+{
+  struct tm tm = to_tm(t);
+
+  tm.tm_sec = 0;
+
+  switch (spec.unit)
+    {
+    case TICK_MINUTE:
+      tm.tm_min = (tm.tm_min / spec.step) * spec.step;
+      break;
+
+    case TICK_HOUR:
+      tm.tm_min = 0;
+      tm.tm_hour = (tm.tm_hour / spec.step) * spec.step;
+      break;
+
+    case TICK_DAY:
+      tm.tm_min = 0;
+      tm.tm_hour = 0;
+      break;
+
+    case TICK_WEEK:
+      {
+        tm.tm_min = 0;
+        tm.tm_hour = 0;
+
+        int days_since_monday = (tm.tm_wday + 6) % 7;
+        tm.tm_mday -= days_since_monday;
+        break;
+      }
+
+    case TICK_MONTH:
+      tm.tm_min = 0;
+      tm.tm_hour = 0;
+      tm.tm_mday = 1;
+      tm.tm_mon = (tm.tm_mon / spec.step) * spec.step;
+      break;
+
+    case TICK_YEAR:
+      {
+        tm.tm_min = 0;
+        tm.tm_hour = 0;
+        tm.tm_mday = 1;
+        tm.tm_mon = 0;
+
+        int year = tm.tm_year + 1900;
+        year = (year / spec.step) * spec.step;
+
+        tm.tm_year = year - 1900;
+        break;
+      }
+    }
+
+  return from_tm(tm);
+}
+
+static time_t add_tick(time_t t, TickSpec spec)
+{
+  struct tm tm = to_tm(t);
+
+  switch (spec.unit)
+    {
+    case TICK_MINUTE:
+      tm.tm_min += spec.step;
+      break;
+    case TICK_HOUR:
+      tm.tm_hour += spec.step;
+      break;
+    case TICK_DAY:
+      tm.tm_mday += spec.step;
+      break;
+    case TICK_WEEK:
+      tm.tm_mday += 7 * spec.step;
+      break;
+    case TICK_MONTH:
+      tm.tm_mon += spec.step;
+      break;
+    case TICK_YEAR:
+      tm.tm_year += spec.step;
+      break;
+    }
+
+  return from_tm(tm);
+}
+
+static void make_label(time_t tick, time_t tmin, time_t tmax, TickSpec spec, char *out, int out_size)
+{
+  bool crosses_year = !same_year(tmin, tmax);
+
+  switch (spec.unit)
+    {
+    case TICK_MINUTE:
+    case TICK_HOUR:
+      if (same_day(tick, tmin))
+        format_time(tick, "%H:%M", out, out_size);
+      else
+        format_time(tick, "%d.%m %H:%M", out, out_size);
+      break;
+
+    case TICK_DAY:
+    case TICK_WEEK:
+      if (crosses_year)
+        format_time(tick, "%d.%m.%Y", out, out_size);
+      else
+        format_time(tick, "%d.%m", out, out_size);
+      break;
+
+    case TICK_MONTH:
+      if (crosses_year)
+        format_time(tick, "%m.%Y", out, out_size);
+      else
+        format_time(tick, "%b", out, out_size);
+      break;
+
+    case TICK_YEAR:
+      format_time(tick, "%Y", out, out_size);
+      break;
+    }
+}
+
+static Tick *generate_time_ticks(time_t tmin, time_t tmax, int *out_count)
+{
+  *out_count = 0;
+
+  if (tmax < tmin)
+    {
+      time_t tmp = tmin;
+      tmin = tmax;
+      tmax = tmp;
+    }
+
+  double span = difftime(tmax, tmin);
+  TickSpec spec = choose_tick_spec(span);
+
+  int capacity = 64;
+  Tick *ticks = malloc(capacity * sizeof(Tick));
+
+  if (!ticks) return NULL;
+
+  time_t t = floor_to_unit(tmin, spec);
+
+  if (t < tmin) t = add_tick(t, spec);
+
+  while (t <= tmax)
+    {
+      if (*out_count >= capacity)
+        {
+          capacity *= 2;
+          Tick *new_ticks = realloc(ticks, capacity * sizeof(Tick));
+
+          if (!new_ticks)
+            {
+              free(ticks);
+              return NULL;
+            }
+
+          ticks = new_ticks;
+        }
+
+      ticks[*out_count].value = t;
+
+      make_label(t, tmin, tmax, spec, ticks[*out_count].label, sizeof(ticks[*out_count].label));
+
+      (*out_count)++;
+
+      time_t next = add_tick(t, spec);
+
+      if (next <= t) break;
+
+      t = next;
+    }
+
+  return ticks;
+}
+
+void gr_axis(const char *spec, axis_t *axis)
+{
+  char which = *spec;
   int errind, tnr;
   double wn[4], vp[4];
   double x_min, x_max, y_min, y_max;
@@ -5316,6 +5603,41 @@ void gr_axis(char which, axis_t *axis)
   y_max = wn[3];
 
   if (is_nan(axis->tick_size)) axis->tick_size = 0.0075;
+
+  if (!strcmp(spec, "TIMESTAMP"))
+    {
+      long tmin = x_min;
+      long tmax = x_max;
+      Tick *ticks = generate_time_ticks(tmin, tmax, &axis->num_ticks);
+
+      if (ticks)
+        {
+          /*
+           * Label every second tick by default. This is a difference to non-time axes which disable
+           * labels if no major count is specified.
+           */
+          if (axis->major_count <= 0) axis->major_count = 2;
+          axis->ticks = (tick_t *)xcalloc(axis->num_ticks, sizeof(tick_t));
+          axis->num_tick_labels =
+              axis->num_ticks / axis->major_count + ((axis->num_ticks % axis->major_count != 0) ? 1 : 0);
+          axis->tick_labels = (tick_label_t *)xcalloc(axis->num_tick_labels, sizeof(tick_label_t));
+          for (i = 0, j = 0; i < axis->num_ticks; ++i)
+            {
+              axis->ticks[i].value = ticks[i].value;
+              axis->ticks[i].is_major = (i % axis->major_count == 0);
+              if (axis->ticks[i].is_major)
+                {
+                  axis->tick_labels[j].tick = ticks[i].value;
+                  axis->tick_labels[j].label = strdup(ticks[i].label);
+                  gr_inqtext(0, 0, axis->tick_labels[j].label, tbx, tby);
+                  axis->tick_labels[j].width = tbx[2] - tbx[0];
+                  ++j;
+                }
+            }
+          free(ticks);
+        }
+      which = 'X';
+    }
 
   if (which == 'X')
     {
@@ -5485,6 +5807,7 @@ void gr_axis(char which, axis_t *axis)
 static void draw_axis(char which, axis_t *axis, int pass)
 {
   int errind, tnr, halign, valign;
+  double chux, chuy;
   double wn[4], vp[4];
   double tick, minor_tick, major_tick;
   int i;
@@ -5558,15 +5881,48 @@ static void draw_axis(char which, axis_t *axis, int pass)
         {
           if (axis->num_tick_labels > 0)
             {
+              bool rotate_labels = false;
+
+              if (which == 'X')
+                {
+                  double width = 0;
+
+                  for (i = 0; i < axis->num_tick_labels; i++)
+                    {
+                      double tbx[4], tby[4];
+                      gr_inqtext(0, 0, axis->tick_labels[i].label, tbx, tby);
+                      width += tbx[2] - tbx[0];
+                    }
+
+                  if (width > 0.8 * (vp[1] - vp[0]))
+                    {
+                      /* save text character-up vector */
+                      gks_inq_text_upvec(&errind, &chux, &chuy);
+
+                      gks_set_text_upvec(-1, 1);
+                      rotate_labels = true;
+                    }
+                }
+
               /* save text alignment */
               gks_inq_text_align(&errind, &halign, &valign);
 
               if (which == 'X')
                 {
-                  if ((axis->position <= wn[2] && axis->label_orientation == 0) || axis->label_orientation < 0)
-                    gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+                  if (rotate_labels)
+                    {
+                      if ((axis->position <= wn[2] && axis->label_orientation == 0) || axis->label_orientation < 0)
+                        gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_TOP);
+                      else
+                        gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_BOTTOM);
+                    }
                   else
-                    gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
+                    {
+                      if ((axis->position <= wn[2] && axis->label_orientation == 0) || axis->label_orientation < 0)
+                        gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+                      else
+                        gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
+                    }
                 }
               else
                 {
@@ -5582,6 +5938,9 @@ static void draw_axis(char which, axis_t *axis, int pass)
                   else
                     text2d(axis->label_position, axis->tick_labels[i].tick, axis->tick_labels[i].label);
                 }
+
+              if (rotate_labels) /* restore text character-up vector */
+                gks_set_text_upvec(chux, chuy);
 
               /* restore text alignment */
               gks_set_text_align(halign, valign);
@@ -9683,7 +10042,7 @@ void gr_gradient(int nx, int ny, double *x, double *y, double *z, double *u, dou
 void gr_quiver(int nx, int ny, double *x, double *y, double *u, double *v, int color)
 {
   int i, j, ci;
-  double gnorm, gmax = 0;
+  double gnorm, gmax = 0, gmin = 0;
   double dx = 0, dy = 0;
   int errind, linecolor, fillcolor;
 
@@ -9746,17 +10105,20 @@ void gr_quiver(int nx, int ny, double *x, double *y, double *u, double *v, int c
         }
     }
 
+  if (!isnan(color_lim_min)) gmin = color_lim_min;
+  if (!isnan(color_lim_max)) gmax = color_lim_max;
   for (j = 0; j < ny; j++)
     for (i = 0; i < nx; i++)
       {
-        gnorm = sqrt(U(i, j) * U(i, j) + V(i, j) * V(i, j)) / gmax;
+        gnorm = sqrt(U(i, j) * U(i, j) + V(i, j) * V(i, j));
         if (color)
           {
-            ci = first_color + (int)((last_color - first_color) * gnorm);
+            ci = (int)(first_color + (gnorm - gmin) / (gmax - gmin) * (last_color - first_color));
+            ci = max(min(ci, last_color), first_color);
             gr_setlinecolorind(ci);
             gr_setfillcolorind(ci);
           }
-        gr_setarrowsize(gnorm);
+        gr_setarrowsize(gnorm / gmax);
         gr_drawarrow(x[i], y[j], x[i] + dx * U(i, j) / gmax, y[j] + dy * V(i, j) / gmax);
       }
 
@@ -10322,6 +10684,7 @@ const hexbin_2pass_t *gr_hexbin_2pass(int n, double *x, double *y, int nbins, co
           int *cell, *cnt;
           double *xcm, *ycm;
           double xlist[7], ylist[7], xdelta[6], ydelta[6];
+          double gmax = 0, gmin = 0;
           int i, j;
 
           nc = context->nc;
@@ -10330,6 +10693,10 @@ const hexbin_2pass_t *gr_hexbin_2pass(int n, double *x, double *y, int nbins, co
           cnt = context->priv->cnt;
           xcm = context->priv->xcm;
           ycm = context->priv->ycm;
+          gmax = cntmax;
+
+          if (!isnan(color_lim_min)) gmin = color_lim_min;
+          if (!isnan(color_lim_max)) gmax = color_lim_max;
 
           for (j = 0; j < 6; j++)
             {
@@ -10356,7 +10723,9 @@ const hexbin_2pass_t *gr_hexbin_2pass(int n, double *x, double *y, int nbins, co
               xlist[6] = xlist[0];
               ylist[6] = ylist[0];
 
-              gks_set_fill_color_index(first_color + (last_color - first_color) * ((double)cnt[i] / cntmax));
+              int ci = (int)(first_color + ((double)cnt[i] - gmin) / (gmax - gmin) * (last_color - first_color));
+              ci = max(min(ci, last_color), first_color);
+              gks_set_fill_color_index(ci);
               gks_fillarea(6, xlist, ylist);
               gks_polyline(7, xlist, ylist);
             }
@@ -10387,6 +10756,7 @@ const hexbin_2pass_t *gr_hexbin_2pass(int n, double *x, double *y, int nbins, co
 
   return context_;
 }
+
 /*!
  * Set the currently used colormap.
  *
@@ -14968,7 +15338,7 @@ void gr_inqvolumeflags(int *border, int *max_threads, int *picture_width, int *p
 static void draw_volume(const double *pixels)
 {
   int i;
-  double dmax;
+  double dmax, dmin = 0;
   double xmin, ymin, xmax, ymax;
   int *ipixels, *colormap;
 
@@ -14982,6 +15352,9 @@ static void draw_volume(const double *pixels)
           dmax = pixels[i];
         }
     }
+
+  if (!isnan(color_lim_min)) dmin = color_lim_min;
+  if (!isnan(color_lim_max)) dmax = color_lim_max;
 
   colormap = (int *)gks_malloc((last_color - first_color + 1) * sizeof(int));
   for (i = first_color; i <= last_color; i++)
@@ -14999,7 +15372,8 @@ static void draw_volume(const double *pixels)
             }
           else
             {
-              ipixels[i] = (255u << 24) + colormap[(int)(pixels[i] / dmax * (last_color - first_color))];
+              ipixels[i] =
+                  (255u << 24) + colormap[(int)((pixels[i] - dmin) / (dmax - dmin) * (last_color - first_color))];
             }
         }
     }
@@ -16940,4 +17314,16 @@ void gr_inqmathfont(int *font)
   check_autoinit;
 
   *font = math_font;
+}
+
+void gr_setcolorlimits(double min, double max)
+{
+  color_lim_min = min;
+  color_lim_max = max;
+}
+
+void gr_inqcolorlimits(double *min, double *max)
+{
+  *min = color_lim_min;
+  *max = color_lim_max;
 }

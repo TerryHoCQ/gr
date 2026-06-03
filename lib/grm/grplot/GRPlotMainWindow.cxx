@@ -19,7 +19,6 @@
 #include "GRPlotMainWindow.hxx"
 #include "GRPlotDockWidget.hxx"
 
-const unsigned int MAXPATHLEN = 1024;
 const int LEFT_AREA_WIDTH = 300;
 const int RIGHT_AREA_WIDTH = 250;
 
@@ -35,8 +34,7 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
     {
       auto *w = new QWidget(this);
       std::string kind;
-      static char path[MAXPATHLEN];
-      std::snprintf(path, MAXPATHLEN, "%s/lib", GRDIR);
+      auto path = util::getEnvVar(W("GRDIR"), W(GRDIR)) + W("/lib");
 
       this->help_mode = help_mode;
       find_line_edit = new QLineEdit(w);
@@ -48,7 +46,11 @@ GRPlotMainWindow::GRPlotMainWindow(int argc, char **argv, int width, int height,
       form->addWidget(button, 0, 1);
 
       message = new QTextBrowser(w);
-      message->setSearchPaths(QStringList(path));
+#ifdef _WIN32
+      message->setSearchPaths(QStringList(QString::fromStdWString(path)));
+#else
+      message->setSearchPaths(QStringList(QString::fromStdString(path)));
+#endif
       message->setSource(QUrl("../share/doc/grplot/grplot.man.md"));
       message->setReadOnly(true);
       message->setOpenExternalLinks(true);
@@ -250,6 +252,11 @@ void GRPlotMainWindow::findButtonClickedSlot()
 {
   QString search_string = find_line_edit->text();
   message->find(search_string, QTextDocument::FindWholeWords);
+}
+
+void GRPlotMainWindow::closeEvent(QCloseEvent *event)
+{
+  grm_finalize();
 }
 
 void GRPlotMainWindow::keyPressEvent(QKeyEvent *event)

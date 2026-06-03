@@ -842,8 +842,8 @@ static void calc_contours(double *z, int nrz, int nx, int ny, double *cv, int nc
   int ij[2], l2[4];
   int ii, jj, ni, ks = 0, ix, nxidir, icv = 0;
 
-#define Z(i, j) z[(i)-1 + ((j)-1) * nrz]
-#define BITMAP(i, j, k, l) bitmap[(i)-1 + ((j)-1 + ((k)-1 + ((l)-1) * ncv) * ny) * nx]
+#define Z(i, j) z[(i) - 1 + ((j) - 1) * nrz]
+#define BITMAP(i, j, k, l) bitmap[(i) - 1 + ((j) - 1 + ((k) - 1 + ((l) - 1) * ncv) * ny) * nx]
 
   l1[0] = nx;
   l1[1] = ny;

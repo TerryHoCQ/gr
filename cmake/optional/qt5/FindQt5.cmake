@@ -60,24 +60,26 @@ endif()
 
 if(NOT Qt5_VERSION_STRING AND Qt5_INCLUDE_DIR)
   file(READ ${Qt5_INCLUDE_DIR}/QtCore/qconfig.h QCONFIG_H_TEXT)
-  string(REGEX REPLACE ".*#define QT_VERSION_STR \"([0-9]+.[0-9]+.[0-9]+)\".*" "\\1" Qt5_VERSION_STRING
-                       ${QCONFIG_H_TEXT}
+  string(
+    REGEX REPLACE ".*#define QT_VERSION_STR \"([0-9]+.[0-9]+.[0-9]+)\".*"
+    "\\1"
+    Qt5_VERSION_STRING
+    ${QCONFIG_H_TEXT}
   )
 endif()
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(
   Qt5
-  VERSION_VAR
-  Qt5_VERSION_STRING
+  VERSION_VAR Qt5_VERSION_STRING
   REQUIRED_VARS
-  Qt5Core_LIBRARY
-  Qt5Network_LIBRARY
-  Qt5Gui_LIBRARY
-  Qt5Widgets_LIBRARY
-  Qt5_INCLUDE_DIR
-  Qt5_LIBRARY_DIR
-  Qt5_VERSION_STRING
+    Qt5Core_LIBRARY
+    Qt5Network_LIBRARY
+    Qt5Gui_LIBRARY
+    Qt5Widgets_LIBRARY
+    Qt5_INCLUDE_DIR
+    Qt5_LIBRARY_DIR
+    Qt5_VERSION_STRING
 )
 
 set(Qt5Core_FOUND "${Qt5_FOUND}")
@@ -94,38 +96,44 @@ if(Qt5_FOUND)
   if(NOT TARGET Qt5::Core)
     add_library(Qt5::Core UNKNOWN IMPORTED)
     set_target_properties(
-      Qt5::Core PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${Qt5Core_INCLUDE_DIRS}"
-                           IMPORTED_LINK_INTERFACE_LANGUAGES "C" IMPORTED_LOCATION "${Qt5Core_LIBRARY}"
+      Qt5::Core
+      PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${Qt5Core_INCLUDE_DIRS}"
+        IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+        IMPORTED_LOCATION "${Qt5Core_LIBRARY}"
     )
   endif()
   if(NOT TARGET Qt5::Network)
     add_library(Qt5::Network UNKNOWN IMPORTED)
     set_target_properties(
       Qt5::Network
-      PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${Qt5Network_INCLUDE_DIRS}"
-                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-                 IMPORTED_LOCATION "${Qt5Network_LIBRARY}"
-                 INTERFACE_LINK_LIBRARIES "Qt5::Core"
+      PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${Qt5Network_INCLUDE_DIRS}"
+        IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+        IMPORTED_LOCATION "${Qt5Network_LIBRARY}"
+        INTERFACE_LINK_LIBRARIES "Qt5::Core"
     )
   endif()
   if(NOT TARGET Qt5::Gui)
     add_library(Qt5::Gui UNKNOWN IMPORTED)
     set_target_properties(
       Qt5::Gui
-      PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${Qt5Gui_INCLUDE_DIRS}"
-                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-                 IMPORTED_LOCATION "${Qt5Gui_LIBRARY}"
-                 INTERFACE_LINK_LIBRARIES "Qt5::Core"
+      PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${Qt5Gui_INCLUDE_DIRS}"
+        IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+        IMPORTED_LOCATION "${Qt5Gui_LIBRARY}"
+        INTERFACE_LINK_LIBRARIES "Qt5::Core"
     )
   endif()
   if(NOT TARGET Qt5::Widgets)
     add_library(Qt5::Widgets UNKNOWN IMPORTED)
     set_target_properties(
       Qt5::Widgets
-      PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${Qt5Widgets_INCLUDE_DIRS}"
-                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-                 IMPORTED_LOCATION "${Qt5Widgets_LIBRARY}"
-                 INTERFACE_LINK_LIBRARIES "Qt5::Gui"
+      PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${Qt5Widgets_INCLUDE_DIRS}"
+        IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+        IMPORTED_LOCATION "${Qt5Widgets_LIBRARY}"
+        INTERFACE_LINK_LIBRARIES "Qt5::Gui"
     )
   endif()
 elseif(${CMAKE_FIND_PACKAGE_NAME}_FIND_REQUIRED)

@@ -2,10 +2,7 @@ cmake_minimum_required(VERSION 3.5...4.0 FATAL_ERROR)
 
 project(gr_qt4_example LANGUAGES CXX)
 
-set(GRDIR
-    "/usr/local/gr"
-    CACHE STRING "Default value for GRDIR"
-)
+set(GRDIR "/usr/local/gr" CACHE STRING "Default value for GRDIR")
 list(APPEND CMAKE_PREFIX_PATH "${GRDIR}")
 
 set(CMAKE_AUTOMOC ON)

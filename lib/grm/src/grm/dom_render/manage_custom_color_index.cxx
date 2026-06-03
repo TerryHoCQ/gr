@@ -17,7 +17,7 @@ void ManageCustomColorIndex::restoreState()
       int rgb = this->state.top();
       this->state.pop();
 
-      double red = ((rgb)&0xFF) / 255.0;
+      double red = ((rgb) & 0xFF) / 255.0;
       double green = ((rgb >> 8) & 0xFF) / 255.0;
       double blue = ((rgb >> 16) & 0xFF) / 255.0;
 
@@ -42,7 +42,7 @@ void ManageCustomColorIndex::selectContext(int context_id)
     {
       int rgb = search->second;
 
-      double red = ((rgb)&0xFF) / 255.0;
+      double red = ((rgb) & 0xFF) / 255.0;
       double green = ((rgb >> 8) & 0xFF) / 255.0;
       double blue = ((rgb >> 16) & 0xFF) / 255.0;
 

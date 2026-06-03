@@ -214,7 +214,6 @@ static bool isPartOfElement(const std::shared_ptr<GRM::Element> &element, int x,
 
 std::unordered_set<unsigned int> BoundingLogic::getElementsAtPoint(int x, int y, bool grid_hidden, bool advanced_editor)
 {
-  GRM::getGroupMask()->toPPM("group_mask.ppm", std::nullopt, true);
   auto group_ids = GRM::getGroupMask()->getObjectsInBox(x, y);
   if (!group_ids.empty())
     {
@@ -324,6 +323,7 @@ std::unordered_set<unsigned int> BoundingLogic::getElementsAtPoint(int x, int y,
                   break;
                 }
             }
+          if (plot == nullptr) return group_ids;
         }
       const auto central_region = plot->querySelectors("central_region");
       const auto legend = plot->querySelectors("legend");

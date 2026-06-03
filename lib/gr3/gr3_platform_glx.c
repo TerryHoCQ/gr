@@ -68,7 +68,7 @@ struct platform *gr3_platform_initGL_dynamic_(void (*log_callback)(const char *)
   gr3_log_ = log_callback;
   gr3_appendtorenderpathstring_ = appendtorenderpathstring_callback;
   gr3_log_("gr3_platform_initGL_dynamic_");
-  gr3_platform_.getProcAddress = (void (*(*)(const char *))()) & glXGetProcAddress;
+  gr3_platform_.getProcAddress = (void (*(*)(const char *))())&glXGetProcAddress;
 
   display = XOpenDisplay(0);
   if (!display)

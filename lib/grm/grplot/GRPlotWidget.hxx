@@ -79,6 +79,7 @@ public:
   void setUpPreviewTextWidget(const std::string &text, int scientific_format, int text_color, int font_precision,
                               int font, int width, int height);
   void addTreeSelection(int id);
+  void setMoveToPlot(bool status);
 
   inline bool isDarkMode()
   {
@@ -161,6 +162,8 @@ public:
   QAction *getShowFlipSubMenuAct();
   QAction *getHidePlotTypeSubMenuAct();
   QAction *getShowPlotTypeSubMenuAct();
+  QAction *getHideMultiplotSubMenuAct();
+  QAction *getShowMultiplotSubMenuAct();
   QAction *getAddSeperatorAct();
   QAction *getXLogAct();
   QAction *getYLogAct();
@@ -211,6 +214,9 @@ public:
   QAction *getTextColorIndAct();
   QAction *getDisableGridAct();
   QAction *getUpdateEditElementTitleAct();
+  QAction *getConsecutiveColorbarsAct();
+  QAction *getFlipLayoutAct();
+  QAction *getTextScaleAct();
   QWidget *getEditElementWidget();
   QWidget *getTreeWidget();
   QWidget *getTableWidget();
@@ -222,6 +228,7 @@ public:
 protected:
   virtual void draw();
   void collectTooltips();
+  void exportGraphics(const QString &file_type, const QString &file_ext);
   void keyPressEvent(QKeyEvent *event) override;
   void keyReleaseEvent(QKeyEvent *event) override;
   void mouseMoveEvent(QMouseEvent *event) override;
@@ -234,6 +241,7 @@ protected:
   void leaveEvent(QEvent *event) override;
   void paint(QPaintDevice *paint_device);
   static Qt::KeyboardModifiers queryKeyboardModifiers();
+  void changeIconBarVisibility(bool visibility);
 
 signals:
   void pixmapRedrawn();
@@ -314,6 +322,8 @@ private slots:
   void yLimSlot();
   void zLimSlot();
   void addImageSlot();
+  void consecutiveColorbarsSlot();
+  void flipLayoutSlot();
   void listItemCheckStatusChanged(QListWidgetItem *item);
   void listItemPressed(QListWidgetItem *item);
   void showIconBarSlot();
@@ -321,6 +331,8 @@ private slots:
   void colorIndexSlot();
   void possibleElementsMenuSlot();
   void disableGridSlot();
+  void highlightMoveToPlotSlot(int index);
+  void textScaleSlot();
 
 private:
   struct MouseState
@@ -395,6 +407,11 @@ private:
       return std::visit([](const auto *tooltip) { return tooltip->x; }, tooltip_);
     };
 
+    char *xTime() const
+    {
+      return std::visit([](const auto *tooltip) { return tooltip->x_time; }, tooltip_);
+    };
+
     int xPx() const
     {
       return std::visit([](const auto *tooltip) { return tooltip->x_px; }, tooltip_);
@@ -457,16 +474,19 @@ private:
   QAction *pdf_act, *png_act, *jpeg_act, *svg_act;
   QAction *show_container_action, *save_file_action, *load_file_action, *editor_action, *add_element_action;
   QAction *moveable_mode_act, *selectable_grid_act;
+  QAction *consecutive_colorbars_act, *flip_layout_act;
   QAction *show_context_action, *add_context_action, *generate_linear_context_action, *add_grplot_data_context;
   QAction *hide_algo_menu_act, *show_algo_menu_act, *hide_marginal_sub_menu_act, *show_marginal_sub_menu_act,
       *hide_orientation_sub_menu_act, *show_orientation_sub_menu_act, *hide_aspect_ratio_sub_menu_act,
       *show_aspect_ratio_sub_menu_act, *hide_location_sub_menu_act, *show_location_sub_menu_act, *add_seperator_act,
       *undo_action, *redo_action, *advanced_editor_act, *hide_lim_sub_menu_act, *show_lim_sub_menu_act,
       *hide_log_sub_menu_act, *show_log_sub_menu_act, *hide_flip_sub_menu_act, *show_flip_sub_menu_act,
-      *hide_plot_type_sub_menu_act, *show_plot_type_sub_menu_act, *update_edit_element_title_act;
+      *hide_plot_type_sub_menu_act, *show_plot_type_sub_menu_act, *update_edit_element_title_act,
+      *hide_multiplot_sub_menu_act, *show_multiplot_sub_menu_act;
   QAction *x_flip_act, *y_flip_act, *z_flip_act, *theta_flip_act;
   QAction *x_log_act, *y_log_act, *z_log_act, *r_log_act;
-  QAction *use_gr3_act, *polar_with_pan_act, *keep_window_act, *colormap_act, *text_color_ind_act, *disable_grid_act;
+  QAction *use_gr3_act, *polar_with_pan_act, *keep_window_act, *colormap_act, *text_color_ind_act, *disable_grid_act,
+      *text_scale_act;
   QAction *keep_aspect_ratio_act, *only_square_aspect_ratio_act;
   QAction *vertical_orientation_act, *horizontal_orientation_act;
   QAction *legend_act, *colorbar_act, *left_axis_act, *right_axis_act, *bottom_axis_act, *top_axis_act,

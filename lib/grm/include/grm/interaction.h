@@ -19,6 +19,7 @@ extern "C" {
 
 typedef struct
 {
+  char *x_time;
   double x;
   double y;
   int x_px;
@@ -31,6 +32,7 @@ typedef struct
 typedef struct
 {
   int n;
+  char *x_time;
   double x;
   double *y;
   int x_px;

@@ -131,61 +131,6 @@ bool isValidKind(const std::string &kind)
   return std::find(kind_types.begin(), kind_types.end(), kind) != kind_types.end();
 }
 
-static std::string normalizeLine(const std::string &str)
-{
-  std::string s, item;
-  std::istringstream ss(str);
-
-  s = "";
-  while (ss >> item)
-    {
-      if (item[0] == '#') break;
-      if (!s.empty()) s += '\t';
-      s += item;
-    }
-  return s;
-}
-
-char detectDelimiter(char lines[][MAX_LEN], int n_lines)
-{
-  std::vector<char> candidates = {',', ';', '|', '\t', ' '};
-  auto best = candidates[0];
-  double best_score = -1.0;
-
-  for (int c = 0; c < candidates.size(); c++)
-    {
-      char delim = candidates[c];
-      double sum = 0.0, sum_sq = 0.0;
-      int skip_lines = 0;
-
-      for (int i = 0; i < n_lines; i++)
-        {
-          int fields = 0;
-          std::istringstream line_ss(normalizeLine(lines[i]));
-          std::string token;
-          for (int col = 0; std::getline(line_ss, token, delim) && token.length(); col++)
-            {
-              fields++;
-            }
-          if (fields == 0) skip_lines += 1;
-          sum += fields;
-          sum_sq += fields * fields;
-        }
-
-      double mean = sum / (n_lines - skip_lines);
-      double variance = sum_sq / (n_lines - skip_lines) - mean * mean;
-      double score = mean - variance;
-
-      if (score > best_score && mean > 1.0)
-        {
-          best_score = score;
-          best = delim;
-        }
-    }
-
-  return best;
-}
-
 grm_error_t parseColumns(std::list<int> *columns, const char *colms)
 {
   std::string token;
@@ -366,6 +311,21 @@ int parseParameterND(std::string *input, const std::string *key, std::vector<dou
       return 0;
     }
   return 1;
+}
+
+static std::string normalizeLine(const std::string &str)
+{
+  std::string s, item;
+  std::istringstream ss(str);
+
+  s = "";
+  while (ss >> item)
+    {
+      if (item[0] == '#') break;
+      if (!s.empty()) s += '\t';
+      s += item;
+    }
+  return s;
 }
 
 static bool kindOfSameGroup(std::string new_kind, std::vector<std::string> kinds)

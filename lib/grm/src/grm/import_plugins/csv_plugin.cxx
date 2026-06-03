@@ -17,6 +17,28 @@
 #include "grm/utilcpp_int.hxx"
 
 
+char detectDelimiter(const std::string &line)
+{
+  std::vector<char> candidates = {',', ';', '|', '\t', ' '};
+  unsigned int max_occurences = 0;
+  char best = candidates[0];
+
+  std::cerr << "Line: \"" << line << "\"" << std::endl;
+  for (char c : candidates)
+    {
+      auto occurences = std::count(line.begin(), line.end(), c);
+      std::cerr << c << ": " << occurences << std::endl;
+      if (occurences > max_occurences)
+        {
+          max_occurences = occurences;
+          best = c;
+        }
+    }
+  std::cerr << "Detected delimiter: \"" << best << "\"" << std::endl;
+  return best;
+}
+
+
 std::string CsvSource::normalizeLine(const std::string &str)
 {
   std::string s, item;
@@ -58,17 +80,6 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
   if ((error = parseColumns(&x_columns, x_colms)) != GRM_ERROR_NONE) return error;
   if ((error = parseColumns(&y_columns, y_colms)) != GRM_ERROR_NONE) return error;
   if ((error = parseColumns(&e_columns, e_colms)) != GRM_ERROR_NONE) return error;
-
-  // auto determine whats the data delimiter
-  FILE *f = fopen(path.c_str(), "r");
-  char lines[100][MAX_LEN];
-  int n = 0;
-  while (n < 100 && fgets(lines[n], MAX_LEN, f))
-    {
-      n++;
-    }
-  fclose(f);
-  auto delim = detectDelimiter(lines, n);
 
   std::istream &file = (path == "-") ? cin_path : file_path;
   /* read the lines from the file */
@@ -166,7 +177,9 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
         }
       else /* the line contains the labels for the plot */
         {
-          std::istringstream line_ss(normalizeLine(line));
+          auto normalized_line = normalizeLine(line);
+          auto delim = detectDelimiter(normalized_line);
+          std::istringstream line_ss(normalized_line);
           std::string split_label;
           if (skip_legend_line)
             break;
@@ -207,12 +220,13 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
   int skipped = 0;
   // Skip the first line read if the current `line` is not a legend line -> it already contains data
   bool skip_first_getline = !legend_line;
+  char delim = '\0';
   for (size_t row = 0; skip_first_getline ? true : static_cast<bool>(std::getline(file, line)); row++)
     {
       skip_first_getline = false;
-      std::istringstream line_ss(normalizeLine(line));
+      auto normalized_line = normalizeLine(line);
+      std::istringstream line_ss(normalized_line);
       int cnt = 0, start_with_nan = 0;
-      char det = delim;
       size_t col;
       if (line.empty())
         {
@@ -224,13 +238,14 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
           if (row == 0) skipped = 1;
           continue;
         }
+      if (delim == '\0') delim = detectDelimiter(normalized_line);
       if (std::find(line.begin(), line.end(), ',') != line.end())
         {
-          det = ',';
+          delim = ',';
           std::string tmp = ",";
           if (startsWith(trim(line), tmp)) start_with_nan = 1;
         }
-      for (col = 0; std::getline(line_ss, token, det) && (token.length() || start_with_nan); col++)
+      for (col = 0; std::getline(line_ss, token, delim) && (token.length() || start_with_nan); col++)
         {
           if ((!columns.empty() && std::find(columns.begin(), columns.end(), col + 1) != columns.end()) ||
               (columns.empty() && labels.empty() && (!input_flags.use_bins || col > 0)) ||
@@ -254,7 +269,7 @@ grm_error_t CsvSource::readDataFile(const std::string &path, std::vector<std::ve
                 {
                   trim(token);
                   token.erase(std::remove(token.begin(), token.end(), '\t'), token.end());
-                  if (token.empty() && det == ',')
+                  if (token.empty() && delim == ',')
                     {
                       data[depth][cnt].push_back(NAN);
                     }

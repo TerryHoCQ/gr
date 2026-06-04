@@ -23,18 +23,15 @@ char detectDelimiter(const std::string &line)
   unsigned int max_occurences = 0;
   char best = candidates[0];
 
-  std::cerr << "Line: \"" << line << "\"" << std::endl;
   for (char c : candidates)
     {
       auto occurences = std::count(line.begin(), line.end(), c);
-      std::cerr << c << ": " << occurences << std::endl;
       if (occurences > max_occurences)
         {
           max_occurences = occurences;
           best = c;
         }
     }
-  std::cerr << "Detected delimiter: \"" << best << "\"" << std::endl;
   return best;
 }
 

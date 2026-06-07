@@ -6,6 +6,7 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
+#include <inttypes.h>
 
 #if !defined(VMS) && !defined(_WIN32)
 #include <unistd.h>
@@ -590,17 +591,25 @@ static void pdf_close(PDF *p)
   struct tm ltime;
   long start_xref;
   int count, object, font, pattern;
-  int image, width, height, length;
+  int image, width, height;
   Byte *rgb, *alpha;
-  Byte red, green, blue, data[3];
   int mask_id, filter_id, i;
   stroke_data_t s;
 
+  char *env = (char *)gks_getenv("SOURCE_DATE_EPOCH");
+  if (env != NULL)
+    {
+      timer = strtol(env, NULL, 10);
+      ltime = *gmtime(&timer);
+    }
+  else
+    {
+      time(&timer);
+      ltime = *localtime(&timer);
+    }
+
   pdf_printf(p->stream, "%%PDF-1.4\n");
   pdf_printf(p->stream, "%%\344\343\317\322\n");
-
-  time(&timer);
-  ltime = *localtime(&timer);
 
   pdf_obj(p, p->info);
   pdf_dict(p);
